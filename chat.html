@@ -20,6 +20,16 @@
       max-width: 370px;
       height: calc(100vh - 32px);
       max-height: calc(100vh - 32px);
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(15px);
+      border-radius: 32px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+    }
+
+    #chat-screen.hidden {
+      display: none !important;
     }
 
     .messages-scroll {
@@ -39,6 +49,11 @@
       content: '';
       display: block;
       height: 20px;
+    }
+
+    /* Esconde o bottom nav quando necessário */
+    #bottom-nav.hidden {
+      display: none !important;
     }
   </style>
 </head>
@@ -78,10 +93,10 @@
     </div>
 
     <!-- Tela de Conversa Individual (escondida por padrão) -->
-    <div id="chat-screen" class="glass-card-chat relative hidden flex flex-col">
+    <div id="chat-screen" class="hidden flex-col glass-card-chat">
       
       <!-- Header da Conversa -->
-      <div class="flex items-center justify-between p-4 border-b border-gray-100 flex-shrink-0 bg-white">
+      <div class="flex items-center justify-between p-4 border-b border-gray-100 flex-shrink-0 bg-white rounded-t-[32px]">
         <div class="flex items-center gap-3">
           <button id="back-to-list" class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-700">
             <i class="fa-solid fa-arrow-left"></i>
@@ -105,7 +120,7 @@
       </div>
 
       <!-- Input de Mensagem -->
-      <div id="input-container" class="p-4 border-t border-gray-100 bg-white flex-shrink-0">
+      <div id="input-container" class="p-4 border-t border-gray-100 bg-white flex-shrink-0 rounded-b-[32px]">
         <div class="flex items-center gap-2">
           <button class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
             <i class="fa-solid fa-plus"></i>
@@ -125,8 +140,8 @@
 
     </div>
 
-    <!-- Bottom Navigation -->
-    <div class="flex justify-around items-center mt-8 bg-white/80 backdrop-blur-xl p-3 rounded-3xl shadow-lg border border-white">
+    <!-- Bottom Navigation - só aparece na lista de conversas -->
+    <div id="bottom-nav" class="flex justify-around items-center mt-8 bg-white/80 backdrop-blur-xl p-3 rounded-3xl shadow-lg border border-white">
       <a href="index.html" class="flex flex-col items-center text-gray-400">
         <i class="fa-solid fa-layer-group text-xl"></i>
         <span class="text-[9px] font-bold mt-1 uppercase">Explorar</span>
