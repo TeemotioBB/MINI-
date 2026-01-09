@@ -28,7 +28,7 @@
     <div class="glass-card p-5 mb-3">
       <div class="flex items-center gap-4">
         <div class="relative">
-          <img id="user-photo" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300" class="w-20 h-20 rounded-2xl object-cover border-2 border-white shadow-md" alt="Foto de perfil">
+          <img id="user-photo" src="https://via.placeholder.com/300x300/e5e7eb/9ca3af?text=Sem+Foto" class="w-20 h-20 rounded-2xl object-cover border-2 border-white shadow-md" alt="Foto de perfil">
           <button id="btn-change-photo" class="absolute -bottom-1 -right-1 bg-orange-500 w-7 h-7 rounded-full text-white flex items-center justify-center shadow-lg">
             <i class="fa-solid fa-camera text-xs"></i>
           </button>
@@ -36,12 +36,12 @@
 
         <div class="flex-1">
           <div class="flex items-center gap-2">
-            <h2 id="user-name" class="text-xl font-bold text-gray-900">João Silva</h2>
-            <span id="user-age" class="text-gray-500">, 28</span>
-            <i id="verified-badge" class="fa-solid fa-circle-check text-blue-500 text-sm"></i>
+            <h2 id="user-name" class="text-xl font-bold text-gray-900">Seu Nome</h2>
+            <span id="user-age" class="text-gray-500"></span>
+            <i id="verified-badge" class="fa-solid fa-circle-check text-blue-500 text-sm" style="display: none;"></i>
           </div>
           <p id="user-bio" class="text-gray-600 text-sm mt-1 line-clamp-1">
-            Desenvolvedor • Café ☕ • Viagens ✈️
+            Adicione uma bio
           </p>
           <button id="btn-edit-profile" class="mt-2 text-orange-500 text-xs font-bold flex items-center gap-1">
             <i class="fa-solid fa-pen text-[10px]"></i> Editar Perfil
@@ -149,8 +149,8 @@
   </div>
 
   <!-- MODAL: GERENCIAR FOTOS -->
-  <div id="modal-photos" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
-    <div class="w-full max-w-[370px] mx-auto bg-white rounded-t-3xl p-6 pb-8 animate-slide-up max-h-[85vh] overflow-y-auto">
+  <div id="modal-photos" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="w-full max-w-[370px] bg-white rounded-3xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-lg font-bold text-gray-800">Gerenciar Fotos</h2>
         <button class="btn-close-modal w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600">
@@ -176,8 +176,8 @@
   </div>
 
   <!-- MODAL: EDITAR PERFIL -->
-  <div id="modal-edit" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
-    <div class="w-full max-w-[370px] mx-auto bg-white rounded-t-3xl p-6 pb-8 animate-slide-up">
+  <div id="modal-edit" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="w-full max-w-[370px] bg-white rounded-3xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-lg font-bold text-gray-800">Editar Perfil</h2>
         <button id="btn-close-edit" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600">
@@ -188,18 +188,18 @@
       <div class="space-y-4">
         <div>
           <label class="text-xs font-bold text-gray-600 uppercase tracking-wide mb-1 block">Nome</label>
-          <input id="input-name" type="text" value="João Silva" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-orange-500 focus:outline-none">
+          <input id="input-name" type="text" placeholder="Seu nome" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-orange-500 focus:outline-none">
         </div>
 
         <div>
           <label class="text-xs font-bold text-gray-600 uppercase tracking-wide mb-1 block">Idade</label>
-          <input id="input-age" type="number" value="28" min="18" max="99" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-orange-500 focus:outline-none">
+          <input id="input-age" type="number" placeholder="18" min="18" max="99" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-orange-500 focus:outline-none">
         </div>
 
         <div>
           <label class="text-xs font-bold text-gray-600 uppercase tracking-wide mb-1 block">Bio (máx. 120 caracteres)</label>
-          <textarea id="input-bio" maxlength="120" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-orange-500 focus:outline-none resize-none" rows="3">Desenvolvedor • Café ☕ • Viagens ✈️</textarea>
-          <p class="text-xs text-gray-400 mt-1"><span id="bio-count">36</span>/120</p>
+          <textarea id="input-bio" maxlength="120" placeholder="Conte um pouco sobre você..." class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-orange-500 focus:outline-none resize-none" rows="3"></textarea>
+          <p class="text-xs text-gray-400 mt-1"><span id="bio-count">0</span>/120</p>
         </div>
 
         <div>
@@ -220,8 +220,8 @@
   </div>
 
   <!-- MODAL: PRIVACIDADE -->
-  <div id="modal-privacy" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
-    <div class="w-full max-w-[370px] mx-auto bg-white rounded-t-3xl p-6 pb-8 animate-slide-up max-h-[80vh] overflow-y-auto">
+  <div id="modal-privacy" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="w-full max-w-[370px] bg-white rounded-3xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-lg font-bold text-gray-800">Privacidade</h2>
         <button class="btn-close-modal w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600">
@@ -278,8 +278,8 @@
   </div>
 
   <!-- MODAL: NOTIFICAÇÕES -->
-  <div id="modal-notifications" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
-    <div class="w-full max-w-[370px] mx-auto bg-white rounded-t-3xl p-6 pb-8 animate-slide-up max-h-[80vh] overflow-y-auto">
+  <div id="modal-notifications" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="w-full max-w-[370px] bg-white rounded-3xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-lg font-bold text-gray-800">Notificações</h2>
         <button class="btn-close-modal w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600">
@@ -347,8 +347,8 @@
   </div>
 
   <!-- MODAL: PREMIUM -->
-  <div id="modal-premium" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
-    <div class="w-full max-w-[370px] mx-auto bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 rounded-t-3xl p-6 pb-8 animate-slide-up max-h-[85vh] overflow-y-auto">
+  <div id="modal-premium" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="w-full max-w-[370px] bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 rounded-3xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
       <div class="flex justify-end mb-4">
         <button class="btn-close-modal w-8 h-8 flex items-center justify-center rounded-full bg-white/20 text-white">
           <i class="fa-solid fa-xmark"></i>
@@ -407,8 +407,8 @@
   </div>
 
   <!-- MODAL: AJUDA -->
-  <div id="modal-help" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
-    <div class="w-full max-w-[370px] mx-auto bg-white rounded-t-3xl p-6 pb-8 animate-slide-up max-h-[80vh] overflow-y-auto">
+  <div id="modal-help" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="w-full max-w-[370px] bg-white rounded-3xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-lg font-bold text-gray-800">Ajuda & Suporte</h2>
         <button class="btn-close-modal w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600">
