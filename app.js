@@ -1,47 +1,3 @@
-// No início do app.js, adiciona essa função
-function checkProfileComplete() {
-    // Pega dados do localStorage ou do perfil.js
-    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-    
-    const hasName = userData.name && userData.name.trim() !== '';
-    const hasAge = userData.age && userData.age >= 18;
-    const hasPhoto = userData.photos && userData.photos.length > 0;
-    
-    if (!hasName || !hasAge || !hasPhoto) {
-        let missingItems = [];
-        if (!hasName) missingItems.push('• Nome');
-        if (!hasAge) missingItems.push('• Idade (mín. 18)');
-        if (!hasPhoto) missingItems.push('• Pelo menos 1 foto');
-        
-        alert(`⚠️ Complete seu perfil primeiro!\n\nFaltando:\n${missingItems.join('\n')}\n\nVá para a aba PERFIL e complete seus dados.`);
-        return false;
-    }
-    
-    return true;
-}
-
-// Modifica os botões de like, dislike e super like
-btnLike.addEventListener('click', () => {
-    if (!checkProfileComplete()) return; // BLOQUEIA se perfil incompleto
-    
-    if (currentProfileIndex >= profiles.length) return;
-    // ... resto do código
-});
-
-btnDislike.addEventListener('click', () => {
-    if (!checkProfileComplete()) return; // BLOQUEIA se perfil incompleto
-    
-    if (currentProfileIndex >= profiles.length) return;
-    // ... resto do código
-});
-
-btnStar.addEventListener('click', () => {
-    if (!checkProfileComplete()) return; // BLOQUEIA se perfil incompleto
-    
-    if (currentProfileIndex >= profiles.length) return;
-    // ... resto do código
-});
-
 // Elementos do HTML
 const profileImage = document.getElementById('profile-image');
 const profileName = document.getElementById('profile-name');
@@ -70,6 +26,28 @@ let currentPhotoIndex = 0;
 
 // Pega o card principal
 const card = document.querySelector('.glass-card');
+
+// ========== FUNÇÃO PARA VERIFICAR PERFIL COMPLETO ==========
+
+function checkProfileComplete() {
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    
+    const hasName = userData.name && userData.name.trim() !== '';
+    const hasAge = userData.age && userData.age >= 18;
+    const hasPhoto = userData.photos && userData.photos.length > 0;
+    
+    if (!hasName || !hasAge || !hasPhoto) {
+        let missingItems = [];
+        if (!hasName) missingItems.push('• Nome');
+        if (!hasAge) missingItems.push('• Idade (mín. 18)');
+        if (!hasPhoto) missingItems.push('• Pelo menos 1 foto');
+        
+        alert(`⚠️ Complete seu perfil primeiro!\n\nFaltando:\n${missingItems.join('\n')}\n\nVá para a aba PERFIL e complete seus dados.`);
+        return false;
+    }
+    
+    return true;
+}
 
 // ========== FUNÇÕES DE NAVEGAÇÃO DE FOTOS ==========
 
@@ -155,33 +133,6 @@ function updateArrowsVisibility(photosCount) {
     }
 }
 
-// ========== FUNÇÃO PARA MOSTRAR PERFIL ==========
-
-function showProfile() {
-    if (currentProfileIndex >= profiles.length) {
-        profileName.textContent = "Acabaram os perfis! 😢";
-        profileBio.textContent = "Volte mais tarde para ver mais pessoas";
-        profileImage.src = "https://via.placeholder.com/500x380?text=Sem+mais+perfis";
-        photoIndicators.innerHTML = '';
-        navArrows.classList.add('hidden');
-        return;
-    }
-
-    const profile = profiles[currentProfileIndex];
-    const photos = profile.photos || [profile.photo];
-    
-    // Reset para primeira foto
-    currentPhotoIndex = 0;
-    
-    profileName.textContent = `${profile.name}, ${profile.age}`;
-    profileBio.innerHTML = profile.bio;
-    profileImage.src = photos[0];
-    
-    // Cria indicadores
-    createPhotoIndicators(photos.length);
-    updateArrowsVisibility(photos.length);
-}
-
 // ========== FUNÇÕES DE ANIMAÇÃO ==========
 
 function createConfetti(color) {
@@ -235,7 +186,7 @@ function showProfile() {
         profileBio.textContent = "Volte mais tarde para ver mais pessoas";
         profileImage.src = "https://via.placeholder.com/500x380?text=Sem+mais+perfis";
         photoIndicators.innerHTML = '';
-        navArrows.style.display = 'none';
+        navArrows.classList.add('hidden');
         return;
     }
 
@@ -263,16 +214,20 @@ function nextProfile() {
 
 // ========== EVENT LISTENERS DE NAVEGAÇÃO DE FOTOS ==========
 
-btnPrevPhoto.addEventListener('click', prevPhoto);
-btnNextPhoto.addEventListener('click', nextPhoto);
-arrowLeft.addEventListener('click', (e) => {
-    e.stopPropagation();
-    prevPhoto();
-});
-arrowRight.addEventListener('click', (e) => {
-    e.stopPropagation();
-    nextPhoto();
-});
+if (btnPrevPhoto) btnPrevPhoto.addEventListener('click', prevPhoto);
+if (btnNextPhoto) btnNextPhoto.addEventListener('click', nextPhoto);
+if (arrowLeft) {
+    arrowLeft.addEventListener('click', (e) => {
+        e.stopPropagation();
+        prevPhoto();
+    });
+}
+if (arrowRight) {
+    arrowRight.addEventListener('click', (e) => {
+        e.stopPropagation();
+        nextPhoto();
+    });
+}
 
 // Suporte a teclado (setas esquerda/direita)
 document.addEventListener('keydown', (e) => {
@@ -283,6 +238,9 @@ document.addEventListener('keydown', (e) => {
 // ========== BOTÃO LIKE ==========
 
 btnLike.addEventListener('click', () => {
+    // VERIFICA SE PERFIL ESTÁ COMPLETO
+    if (!checkProfileComplete()) return;
+    
     if (currentProfileIndex >= profiles.length) return;
     
     const profile = profiles[currentProfileIndex];
@@ -302,6 +260,9 @@ btnLike.addEventListener('click', () => {
 // ========== BOTÃO DISLIKE ==========
 
 btnDislike.addEventListener('click', () => {
+    // VERIFICA SE PERFIL ESTÁ COMPLETO
+    if (!checkProfileComplete()) return;
+    
     if (currentProfileIndex >= profiles.length) return;
     
     const profile = profiles[currentProfileIndex];
@@ -320,6 +281,9 @@ btnDislike.addEventListener('click', () => {
 // ========== BOTÃO SUPER LIKE ==========
 
 btnStar.addEventListener('click', () => {
+    // VERIFICA SE PERFIL ESTÁ COMPLETO
+    if (!checkProfileComplete()) return;
+    
     if (currentProfileIndex >= profiles.length) return;
     
     const profile = profiles[currentProfileIndex];
@@ -345,4 +309,3 @@ btnBoost.addEventListener('click', () => {
 // ========== INICIALIZAR ==========
 
 showProfile();
-
