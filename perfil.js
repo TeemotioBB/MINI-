@@ -2,12 +2,14 @@
 const userName = document.getElementById('user-name');
 const userAge = document.getElementById('user-age');
 const userBio = document.getElementById('user-bio');
+const userBioDisplay = document.getElementById('user-bio-display');
+const userLocationDisplay = document.getElementById('user-location-display');
 const userPlan = document.getElementById('user-plan');
 const verifiedBadge = document.getElementById('verified-badge');
-const userPhotosContainer = document.getElementById('user-photos-container');
+const userPhotosGrid = document.getElementById('user-photos-grid');
 
 // Botões principais
-const btnAddPhoto = document.getElementById('btn-add-photo');
+const btnManagePhotos = document.getElementById('btn-manage-photos');
 const btnEditProfile = document.getElementById('btn-edit-profile');
 const btnPrivacy = document.getElementById('btn-privacy');
 const btnNotifications = document.getElementById('btn-notifications');
@@ -18,6 +20,7 @@ const btnLogout = document.getElementById('btn-logout');
 
 // Modais
 const modalEdit = document.getElementById('modal-edit');
+const modalPhotos = document.getElementById('modal-photos');
 const modalPrivacy = document.getElementById('modal-privacy');
 const modalNotifications = document.getElementById('modal-notifications');
 const modalPremium = document.getElementById('modal-premium');
@@ -31,11 +34,29 @@ const inputInstagram = document.getElementById('input-instagram');
 const inputCity = document.getElementById('input-city');
 const bioCount = document.getElementById('bio-count');
 
+// Modal de fotos
+const photosManagerGrid = document.getElementById('photos-manager-grid');
+const btnSavePhotos = document.getElementById('btn-save-photos');
+
 // Botões de fechar modais
 const btnCloseEdit = document.getElementById('btn-close-edit');
 const btnSave = document.getElementById('btn-save');
 const btnSubscribe = document.getElementById('btn-subscribe');
 const btnBoostOnly = document.getElementById('btn-boost-only');
+
+// Fotos disponíveis para seleção
+const availablePhotos = [
+    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=500",
+    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=500",
+    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=500",
+    "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=500",
+    "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=500",
+    "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=500",
+    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=500",
+    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=500",
+    "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=500",
+    "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=500"
+];
 
 // ========== DADOS DO USUÁRIO ==========
 let userData = {
@@ -68,76 +89,177 @@ let userData = {
 
 // ========== FUNÇÕES PRINCIPAIS ==========
 
-// Renderiza fotos do usuário
+// Renderiza fotos do usuário no grid principal
 function renderUserPhotos() {
-    userPhotosContainer.innerHTML = '';
+    userPhotosGrid.innerHTML = '';
     
-    userData.photos.forEach((photo, index) => {
+    // Cria slots para até 4 fotos
+    for (let i = 0; i < 4; i++) {
         const photoDiv = document.createElement('div');
-        photoDiv.className = 'relative flex-shrink-0';
+        photoDiv.className = 'relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100';
         
-        photoDiv.innerHTML = `
-            <img src="${photo}" class="w-24 h-32 object-cover rounded-xl shadow-md" alt="Foto ${index + 1}">
-            ${index === 0 ? '<span class="absolute top-1 left-1 bg-orange-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-full">Principal</span>' : ''}
-            <button class="btn-delete-photo absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-md opacity-0 hover:opacity-100 transition-opacity" data-index="${index}">
-                <i class="fa-solid fa-xmark text-xs"></i>
-            </button>
-        `;
+        if (userData.photos[i]) {
+            photoDiv.innerHTML = `
+                <img src="${userData.photos[i]}" class="w-full h-full object-cover" alt="Foto ${i + 1}">
+                ${i === 0 ? '<span class="absolute top-2 left-2 bg-orange-500 text-white text-[9px] font-bold px-2 py-1 rounded-full shadow-md">Principal</span>' : ''}
+                <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+            `;
+        } else {
+            photoDiv.innerHTML = `
+                <div class="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                    <i class="fa-solid fa-image text-3xl mb-2"></i>
+                    <span class="text-xs">Slot ${i + 1}</span>
+                </div>
+            `;
+        }
         
-        userPhotosContainer.appendChild(photoDiv);
-    });
+        userPhotosGrid.appendChild(photoDiv);
+    }
+}
+
+// Renderiza grid de gerenciamento de fotos
+function renderPhotosManager() {
+    photosManagerGrid.innerHTML = '';
     
-    // Event listeners para deletar foto
-    document.querySelectorAll('.btn-delete-photo').forEach(btn => {
+    // Cria 4 slots
+    for (let i = 0; i < 4; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 border-2 border-dashed border-gray-300';
+        slot.dataset.index = i;
+        
+        if (userData.photos[i]) {
+            // Slot com foto
+            slot.classList.remove('border-dashed');
+            slot.classList.add('border-solid', 'border-orange-500');
+            slot.innerHTML = `
+                <img src="${userData.photos[i]}" class="w-full h-full object-cover" alt="Foto ${i + 1}">
+                ${i === 0 ? '<span class="absolute top-2 left-2 bg-orange-500 text-white text-[9px] font-bold px-2 py-1 rounded-full shadow-md z-10">Principal</span>' : ''}
+                <button class="btn-remove-photo absolute top-2 right-2 bg-red-500 text-white w-7 h-7 rounded-full flex items-center justify-center shadow-lg z-10 hover:bg-red-600 transition-all" data-index="${i}">
+                    <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+                <button class="btn-change-photo absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-all flex items-center justify-center text-white z-0" data-index="${i}">
+                    <i class="fa-solid fa-camera text-2xl"></i>
+                </button>
+            `;
+        } else {
+            // Slot vazio
+            slot.innerHTML = `
+                <button class="btn-add-photo-slot w-full h-full flex flex-col items-center justify-center text-gray-400 hover:text-orange-500 hover:border-orange-500 transition-all" data-index="${i}">
+                    <i class="fa-solid fa-plus text-3xl mb-2"></i>
+                    <span class="text-xs font-medium">Adicionar</span>
+                    ${i === 0 ? '<span class="text-[9px] text-gray-400 mt-1">(Principal)</span>' : ''}
+                </button>
+            `;
+        }
+        
+        photosManagerGrid.appendChild(slot);
+    }
+    
+    // Event listeners
+    document.querySelectorAll('.btn-add-photo-slot').forEach(btn => {
         btn.addEventListener('click', () => {
             const index = parseInt(btn.dataset.index);
-            deletePhoto(index);
+            selectPhoto(index);
+        });
+    });
+    
+    document.querySelectorAll('.btn-change-photo').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const index = parseInt(btn.dataset.index);
+            selectPhoto(index);
+        });
+    });
+    
+    document.querySelectorAll('.btn-remove-photo').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const index = parseInt(btn.dataset.index);
+            removePhoto(index);
         });
     });
 }
 
-// Adiciona nova foto
-function addPhoto() {
-    if (userData.photos.length >= 6) {
-        showToast('⚠️ Máximo de 6 fotos permitido', 'warning');
+// Seleciona foto de uma galeria
+function selectPhoto(index) {
+    // Cria modal de seleção
+    const photoSelector = document.createElement('div');
+    photoSelector.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-end animate-slide-up';
+    photoSelector.innerHTML = `
+        <div class="w-full max-w-[370px] mx-auto bg-white rounded-t-3xl p-6 pb-8 max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-gray-800">Escolha uma foto</h3>
+                <button class="btn-close-selector w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="grid grid-cols-3 gap-3" id="photo-gallery">
+                ${availablePhotos.map((photo, i) => `
+                    <button class="photo-option aspect-square rounded-xl overflow-hidden hover:ring-4 hover:ring-orange-500 transition-all" data-photo="${photo}">
+                        <img src="${photo}" class="w-full h-full object-cover" alt="Opção ${i + 1}">
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(photoSelector);
+    
+    // Event listeners
+    photoSelector.querySelector('.btn-close-selector').addEventListener('click', () => {
+        photoSelector.remove();
+    });
+    
+    photoSelector.addEventListener('click', (e) => {
+        if (e.target === photoSelector) photoSelector.remove();
+    });
+    
+    photoSelector.querySelectorAll('.photo-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const photoUrl = btn.dataset.photo;
+            userData.photos[index] = photoUrl;
+            renderPhotosManager();
+            photoSelector.remove();
+            showToast('📸 Foto adicionada!');
+        });
+    });
+}
+
+// Remove foto
+function removePhoto(index) {
+    if (index === 0 && userData.photos.length > 1) {
+        showToast('⚠️ A primeira foto é a principal. Mova as outras antes de remover.', 'warning');
         return;
     }
     
-    // Simulação de seleção de foto
-    const availablePhotos = [
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300",
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=300",
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300",
-        "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=300",
-        "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=300",
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=300"
-    ];
-    
-    const randomPhoto = availablePhotos[Math.floor(Math.random() * availablePhotos.length)];
-    userData.photos.push(randomPhoto);
-    renderUserPhotos();
-    showToast('📸 Foto adicionada!');
-}
-
-// Deleta foto
-function deletePhoto(index) {
-    if (userData.photos.length <= 1) {
+    if (userData.photos.length === 1) {
         showToast('⚠️ Você precisa ter pelo menos 1 foto', 'warning');
         return;
     }
     
-    if (confirm('Tem certeza que deseja excluir esta foto?')) {
-        userData.photos.splice(index, 1);
-        renderUserPhotos();
-        showToast('🗑️ Foto removida');
+    userData.photos.splice(index, 1);
+    renderPhotosManager();
+    showToast('🗑️ Foto removida');
+}
+
+// Salva fotos
+function savePhotos() {
+    if (userData.photos.length === 0) {
+        showToast('❌ Adicione pelo menos 1 foto', 'error');
+        return;
     }
+    
+    renderUserPhotos();
+    closeModal(modalPhotos);
+    showToast('✅ Fotos salvas com sucesso!');
+    console.log('📸 Fotos salvas:', userData.photos);
 }
 
 // Carrega dados do usuário
 function loadUserProfile() {
     userName.textContent = userData.name;
     userAge.textContent = `, ${userData.age}`;
-    userBio.textContent = userData.bio;
+    userBioDisplay.textContent = userData.bio;
+    userLocationDisplay.innerHTML = `<i class="fa-solid fa-location-dot text-orange-500"></i> ${userData.city}`;
     userPlan.textContent = userData.plan;
     verifiedBadge.style.display = userData.verified ? 'inline' : 'none';
     renderUserPhotos();
@@ -157,7 +279,7 @@ function closeModal(modal) {
 
 // Fecha todos os modais
 function closeAllModals() {
-    [modalEdit, modalPrivacy, modalNotifications, modalPremium, modalHelp].forEach(modal => {
+    [modalEdit, modalPhotos, modalPrivacy, modalNotifications, modalPremium, modalHelp].forEach(modal => {
         if (modal) closeModal(modal);
     });
 }
@@ -367,7 +489,7 @@ document.querySelectorAll('.btn-close-modal').forEach(btn => {
 });
 
 // Fechar modais clicando fora
-[modalEdit, modalPrivacy, modalNotifications, modalPremium, modalHelp].forEach(modal => {
+[modalEdit, modalPhotos, modalPrivacy, modalNotifications, modalPremium, modalHelp].forEach(modal => {
     if (modal) {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
