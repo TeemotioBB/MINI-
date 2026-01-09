@@ -1,171 +1,317 @@
-<!DOCTYPE html>
-<html lang="pt-br">
+// ========== ELEMENTOS DO HTML ==========
+const chatListScreen = document.getElementById('chat-list-screen');
+const chatScreen = document.getElementById('chat-screen');
+const chatList = document.getElementById('chat-list');
+const noChats = document.getElementById('no-chats');
+const messagesContainer = document.getElementById('messages-container');
+const messageInput = document.getElementById('message-input');
+const sendBtn = document.getElementById('send-btn');
+const backToList = document.getElementById('back-to-list');
+const chatUserName = document.getElementById('chat-user-name');
+const chatUserPhoto = document.getElementById('chat-user-photo');
+const inputContainer = document.getElementById('input-container');
+const bottomNav = document.getElementById('bottom-nav');
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat - Spark</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css">
-  <style>
-    /* CSS específico para o chat */
-    #chat-screen {
-      position: fixed;
-      top: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: calc(100% - 32px);
-      max-width: 370px;
-      height: calc(100vh - 32px);
-      max-height: calc(100vh - 32px);
-      z-index: 50;
-      background: rgba(255, 255, 255, 0.92);
-      backdrop-filter: blur(15px);
-      border-radius: 32px;
-      border: 1px solid rgba(255, 255, 255, 0.4);
-      box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+// ========== DADOS SIMULADOS DE CONVERSAS ==========
+const conversations = [
+    {
+        id: 1,
+        name: "Amanda",
+        photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=300",
+        lastMessage: "Oi! Tudo bem? 😊",
+        time: "Agora",
+        unread: 2,
+        online: true,
+        messages: [
+            { sender: "other", text: "Oi! Vi que deu match 💕", time: "14:30" },
+            { sender: "me", text: "Sim! Adorei seu perfil 😊", time: "14:32" },
+            { sender: "other", text: "Que legal! O que você gosta de fazer?", time: "14:35" },
+            { sender: "me", text: "Adoro viajar e conhecer lugares novos!", time: "14:36" },
+            { sender: "other", text: "Oi! Tudo bem? 😊", time: "14:40" }
+        ]
+    },
+    {
+        id: 2,
+        name: "Lucas",
+        photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=300",
+        lastMessage: "Bora sair algum dia? 🍕",
+        time: "2h atrás",
+        unread: 0,
+        online: false,
+        messages: [
+            { sender: "other", text: "E aí! Como vai?", time: "12:00" },
+            { sender: "me", text: "Tudo ótimo! E você?", time: "12:15" },
+            { sender: "other", text: "Bora sair algum dia? 🍕", time: "12:30" }
+        ]
+    },
+    {
+        id: 3,
+        name: "Júlia",
+        photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=300",
+        lastMessage: "Também amo séries! Qual tá assistindo?",
+        time: "Ontem",
+        unread: 1,
+        online: true,
+        messages: [
+            { sender: "other", text: "Oi! Vi que você curte séries", time: "Ontem 20:00" },
+            { sender: "me", text: "Sim! Vicio total 📺", time: "Ontem 20:05" },
+            { sender: "other", text: "Também amo séries! Qual tá assistindo?", time: "Ontem 20:10" }
+        ]
+    },
+    {
+        id: 4,
+        name: "Rafael",
+        photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300",
+        lastMessage: "Show! Depois me manda suas artes",
+        time: "2 dias",
+        unread: 0,
+        online: false,
+        messages: [
+            { sender: "me", text: "Vi que você é designer!", time: "2 dias 15:00" },
+            { sender: "other", text: "Sim! Trabalho com design gráfico", time: "2 dias 15:30" },
+            { sender: "other", text: "Show! Depois me manda suas artes", time: "2 dias 15:31" }
+        ]
+    }
+];
+
+let currentChat = null;
+
+// ========== RENDERIZAR LISTA DE CONVERSAS ==========
+function renderChatList() {
+    console.log('Renderizando lista de conversas...');
+    console.log('Número de conversas:', conversations.length);
+    
+    if (conversations.length === 0) {
+        noChats.classList.remove('hidden');
+        console.log('Nenhuma conversa encontrada');
+        return;
     }
 
-    #chat-screen.hidden {
-      display: none !important;
-    }
-
-    .messages-scroll {
-      scroll-behavior: smooth;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    /* Garante que o input fique sempre visível */
-    #input-container {
-      position: sticky;
-      bottom: 0;
-      z-index: 10;
-    }
-
-    /* Adiciona padding extra no final das mensagens */
-    #messages-container::after {
-      content: '';
-      display: block;
-      height: 80px;
-    }
-
-    /* Esconde o bottom nav quando necessário */
-    #bottom-nav.hidden {
-      display: none !important;
-    }
-  </style>
-</head>
-
-<body>
-
-  <div class="w-full max-w-[370px] p-4">
-    <!-- Tela de Lista de Conversas -->
-    <div id="chat-list-screen" class="glass-card p-6 relative">
-
-      <!-- Header -->
-      <div class="flex justify-between items-center mb-6">
-        <a href="index.html" class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-700">
-          <i class="fa-solid fa-arrow-left"></i>
-        </a>
-        <h1 class="text-xl font-bold text-gray-800">Conversas</h1>
-        <button class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
-          <i class="fa-solid fa-ellipsis-vertical"></i>
-        </button>
-      </div>
-
-      <!-- Lista de Matches/Conversas -->
-      <div id="chat-list" class="space-y-3">
-        <!-- As conversas serão inseridas aqui pelo JavaScript -->
-      </div>
-
-      <!-- Mensagem quando não tem conversas -->
-      <div id="no-chats" class="text-center py-12 hidden">
-        <i class="fa-solid fa-comment-slash text-6xl text-gray-300 mb-4"></i>
-        <h3 class="text-lg font-bold text-gray-700 mb-2">Nenhuma conversa ainda</h3>
-        <p class="text-gray-500 text-sm">Comece dando likes para fazer matches!</p>
-        <a href="index.html" class="inline-block mt-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold py-3 px-6 rounded-full">
-          Explorar perfis
-        </a>
-      </div>
-
-    </div>
-
-    <!-- Tela de Conversa Individual (escondida por padrão) -->
-    <div id="chat-screen" class="hidden flex-col glass-card-chat">
-      
-      <!-- Header da Conversa -->
-      <div class="flex items-center justify-between p-4 border-b border-gray-100 flex-shrink-0 bg-white rounded-t-[32px]">
-        <div class="flex items-center gap-3">
-          <button id="back-to-list" class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-700">
-            <i class="fa-solid fa-arrow-left"></i>
-          </button>
-          <img id="chat-user-photo" src="" class="w-12 h-12 rounded-full object-cover border-2 border-white shadow">
-          <div>
-            <h2 id="chat-user-name" class="font-bold text-gray-800"></h2>
-            <p class="text-xs text-green-500 flex items-center gap-1">
-              <i class="fa-solid fa-circle text-[6px]"></i> Online
-            </p>
-          </div>
+    chatList.innerHTML = conversations.map(conv => {
+        console.log('Renderizando conversa:', conv.name);
+        return `
+        <div class="chat-item flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-50 cursor-pointer transition-all" data-chat-id="${conv.id}">
+            <div class="relative">
+                <img src="${conv.photo}" class="w-14 h-14 rounded-full object-cover border-2 border-white shadow">
+                ${conv.online ? '<div class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>' : ''}
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex justify-between items-center mb-1">
+                    <h3 class="font-bold text-gray-800">${conv.name}</h3>
+                    <span class="text-xs text-gray-400">${conv.time}</span>
+                </div>
+                <p class="text-sm text-gray-500 truncate">${conv.lastMessage}</p>
+            </div>
+            ${conv.unread > 0 ? `
+                <div class="bg-gradient-to-r from-orange-500 to-pink-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full">
+                    ${conv.unread}
+                </div>
+            ` : ''}
         </div>
-        <button class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
-          <i class="fa-solid fa-ellipsis-vertical"></i>
-        </button>
-      </div>
+    `;
+    }).join('');
 
-      <!-- Área de Mensagens -->
-      <div id="messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 messages-scroll">
-        <!-- Mensagens serão inseridas aqui -->
-      </div>
+    console.log('HTML inserido:', chatList.innerHTML.length, 'caracteres');
 
-      <!-- Input de Mensagem -->
-      <div id="input-container" class="p-4 border-t border-gray-100 bg-white flex-shrink-0 rounded-b-[32px]">
-        <div class="flex items-center gap-2">
-          <button class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
-            <i class="fa-solid fa-plus"></i>
-          </button>
-          <input 
-            id="message-input" 
-            type="text" 
-            placeholder="Escreva uma mensagem..." 
-            class="flex-1 bg-gray-100 rounded-full px-4 py-3 outline-none text-sm"
-            autocomplete="off"
-          >
-          <button id="send-btn" class="w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-pink-500 text-white">
-            <i class="fa-solid fa-paper-plane"></i>
-          </button>
-        </div>
-      </div>
+    // Adiciona evento de clique em cada conversa
+    document.querySelectorAll('.chat-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const chatId = parseInt(item.dataset.chatId);
+            console.log('Conversa clicada:', chatId);
+            openChat(chatId);
+        });
+    });
+}
 
-    </div>
+// ========== ABRIR CONVERSA ==========
+function openChat(chatId) {
+    currentChat = conversations.find(c => c.id === chatId);
+    if (!currentChat) return;
 
-    <!-- Bottom Navigation - só aparece na lista de conversas -->
-    <div id="bottom-nav" class="flex justify-around items-center mt-8 bg-white/80 backdrop-blur-xl p-3 rounded-3xl shadow-lg border border-white">
-      <a href="index.html" class="flex flex-col items-center text-gray-400">
-        <i class="fa-solid fa-layer-group text-xl"></i>
-        <span class="text-[9px] font-bold mt-1 uppercase">Explorar</span>
-      </a>
+    // Atualiza informações do header
+    chatUserName.textContent = currentChat.name;
+    chatUserPhoto.src = currentChat.photo;
 
-      <a href="likes.html" class="flex flex-col items-center text-gray-400 relative">
-        <i class="fa-solid fa-star text-xl"></i>
-        <span class="absolute -top-1 -right-2 bg-pink-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">33</span>
-        <span class="text-[9px] font-bold mt-1 uppercase">Likes</span>
-      </a>
+    // Renderiza as mensagens
+    renderMessages();
 
-      <a href="chat.html" class="flex flex-col items-center text-orange-500">
-        <i class="fa-solid fa-comment-dots text-xl"></i>
-        <span class="text-[9px] font-bold mt-1 uppercase">Chat</span>
-      </a>
+    // Esconde lista e bottom nav, mostra chat
+    chatListScreen.classList.add('hidden');
+    bottomNav.classList.add('hidden');
+    chatScreen.classList.remove('hidden');
 
-      <a href="perfil.html" class="flex flex-col items-center text-gray-400">
-        <i class="fa-solid fa-circle-user text-xl"></i>
-        <span class="text-[9px] font-bold mt-1 uppercase">Perfil</span>
-      </a>
-    </div>
-  </div>
+    // Scroll para o fim quando abrir o chat
+    setTimeout(() => {
+        scrollToBottom();
+    }, 150);
+}
 
-  <script src="chat.js"></script>
-</body>
+// ========== RENDERIZAR MENSAGENS ==========
+function renderMessages() {
+    if (!currentChat) return;
 
-</html>
+    messagesContainer.innerHTML = currentChat.messages.map(msg => {
+        const isMe = msg.sender === 'me';
+        return `
+            <div class="flex ${isMe ? 'justify-end' : 'justify-start'}">
+                <div class="${isMe ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white' : 'bg-white text-gray-800'} 
+                            rounded-2xl px-4 py-2 max-w-[70%] shadow-sm">
+                    <p class="text-sm">${msg.text}</p>
+                    <span class="text-xs ${isMe ? 'text-white/70' : 'text-gray-400'} mt-1 block text-right">${msg.time}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Scroll imediato múltiplas vezes para garantir
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 50);
+    
+    setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 100);
+}
+
+// ========== ENVIAR MENSAGEM ==========
+function sendMessage() {
+    const text = messageInput.value.trim();
+    if (!text || !currentChat) return;
+
+    const now = new Date();
+    const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+    // Adiciona mensagem do usuário
+    currentChat.messages.push({
+        sender: 'me',
+        text: text,
+        time: time
+    });
+
+    // Limpa input
+    messageInput.value = '';
+
+    // Renderiza mensagens
+    renderMessages();
+
+    // Força scroll imediato para a última mensagem
+    setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 50);
+
+    // Simula resposta automática após 2 segundos
+    setTimeout(() => {
+        const responses = [
+            "Que legal! 😊",
+            "Verdade! Adorei isso",
+            "Hahaha muito bom!",
+            "Sério? Conta mais!",
+            "Também acho! 💕",
+            "Combinamos então! 🎉"
+        ];
+        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+
+        currentChat.messages.push({
+            sender: 'other',
+            text: randomResponse,
+            time: time
+        });
+
+        // Atualiza última mensagem na lista
+        currentChat.lastMessage = randomResponse;
+        currentChat.time = "Agora";
+
+        renderMessages();
+        
+        // Força scroll para a resposta
+        setTimeout(() => {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }, 50);
+    }, 2000);
+}
+
+// Auto-scroll quando o teclado aparece
+messageInput.addEventListener('focus', () => {
+    // Força scroll múltiplas vezes para garantir
+    setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 100);
+    
+    setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 300);
+    
+    setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 500);
+});
+
+// Detecta quando o teclado fecha
+messageInput.addEventListener('blur', () => {
+    setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 100);
+});
+
+// Função helper para scroll suave
+function scrollToBottom() {
+    // Força scroll imediato
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Detecta mudanças no tamanho da viewport (quando teclado abre/fecha)
+let lastHeight = window.innerHeight;
+let scrollInterval = null;
+
+window.addEventListener('resize', () => {
+    const currentHeight = window.innerHeight;
+    
+    // Se a altura diminuiu, provavelmente o teclado abriu
+    if (currentHeight < lastHeight && !chatScreen.classList.contains('hidden')) {
+        // Limpa intervalo anterior se existir
+        if (scrollInterval) {
+            clearInterval(scrollInterval);
+        }
+        
+        // Força scroll múltiplas vezes durante 1 segundo
+        scrollInterval = setInterval(() => {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }, 50);
+        
+        setTimeout(() => {
+            if (scrollInterval) {
+                clearInterval(scrollInterval);
+                scrollInterval = null;
+            }
+            // Um último scroll para garantir
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }, 1000);
+    }
+    
+    lastHeight = currentHeight;
+});
+
+// ========== VOLTAR PARA LISTA ==========
+backToList.addEventListener('click', () => {
+    chatScreen.classList.add('hidden');
+    chatListScreen.classList.remove('hidden');
+    bottomNav.classList.remove('hidden');
+    currentChat = null;
+    renderChatList(); // Atualiza a lista
+});
+
+// ========== ENVIAR MENSAGEM ==========
+sendBtn.addEventListener('click', sendMessage);
+
+messageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        sendMessage();
+    }
+});
+
+// ========== INICIALIZAR ==========
+console.log('Chat.js carregado!');
+console.log('Conversas:', conversations);
+renderChatList();
