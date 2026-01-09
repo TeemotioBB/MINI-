@@ -86,54 +86,57 @@ function prevPhoto() {
 
 function updateArrowsVisibility(photosCount) {
     if (photosCount <= 1) {
-        navArrows.style.display = 'none';
+        navArrows.classList.add('hidden');
         return;
     }
     
-    navArrows.style.display = 'block';
+    // Mostra as setas se houver mais de 1 foto
+    navArrows.classList.remove('hidden');
     
-    // Esconde seta esquerda se estiver na primeira foto
-    arrowLeft.style.opacity = currentPhotoIndex === 0 ? '0' : '1';
-    arrowLeft.style.pointerEvents = currentPhotoIndex === 0 ? 'none' : 'auto';
+    // Controla a opacidade e interação das setas
+    if (currentPhotoIndex === 0) {
+        arrowLeft.style.opacity = '0.3';
+        arrowLeft.style.pointerEvents = 'none';
+    } else {
+        arrowLeft.style.opacity = '1';
+        arrowLeft.style.pointerEvents = 'auto';
+    }
     
-    // Esconde seta direita se estiver na última foto
-    arrowRight.style.opacity = currentPhotoIndex === photosCount - 1 ? '0' : '1';
-    arrowRight.style.pointerEvents = currentPhotoIndex === photosCount - 1 ? 'none' : 'auto';
+    if (currentPhotoIndex === photosCount - 1) {
+        arrowRight.style.opacity = '0.3';
+        arrowRight.style.pointerEvents = 'none';
+    } else {
+        arrowRight.style.opacity = '1';
+        arrowRight.style.pointerEvents = 'auto';
+    }
 }
 
-// Mostra setas no hover/toque
-const imageContainer = profileImage.parentElement;
-imageContainer.addEventListener('mouseenter', () => {
-    if (currentProfileIndex < profiles.length) {
-        const photos = profiles[currentProfileIndex].photos || [];
-        if (photos.length > 1) {
-            navArrows.style.opacity = '1';
-        }
+// ========== FUNÇÃO PARA MOSTRAR PERFIL ==========
+
+function showProfile() {
+    if (currentProfileIndex >= profiles.length) {
+        profileName.textContent = "Acabaram os perfis! 😢";
+        profileBio.textContent = "Volte mais tarde para ver mais pessoas";
+        profileImage.src = "https://via.placeholder.com/500x380?text=Sem+mais+perfis";
+        photoIndicators.innerHTML = '';
+        navArrows.classList.add('hidden');
+        return;
     }
-});
 
-imageContainer.addEventListener('mouseleave', () => {
-    navArrows.style.opacity = '0';
-});
-
-// Touch para mobile
-let touchStarted = false;
-imageContainer.addEventListener('touchstart', () => {
-    touchStarted = true;
-    if (currentProfileIndex < profiles.length) {
-        const photos = profiles[currentProfileIndex].photos || [];
-        if (photos.length > 1) {
-            navArrows.style.opacity = '1';
-            setTimeout(() => {
-                if (!touchStarted) navArrows.style.opacity = '0';
-            }, 2000);
-        }
-    }
-});
-
-imageContainer.addEventListener('touchend', () => {
-    touchStarted = false;
-});
+    const profile = profiles[currentProfileIndex];
+    const photos = profile.photos || [profile.photo];
+    
+    // Reset para primeira foto
+    currentPhotoIndex = 0;
+    
+    profileName.textContent = `${profile.name}, ${profile.age}`;
+    profileBio.innerHTML = profile.bio;
+    profileImage.src = photos[0];
+    
+    // Cria indicadores
+    createPhotoIndicators(photos.length);
+    updateArrowsVisibility(photos.length);
+}
 
 // ========== FUNÇÕES DE ANIMAÇÃO ==========
 
