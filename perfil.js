@@ -187,49 +187,43 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Seleciona foto de uma galeria
+    // Seleciona foto da galeria do dispositivo
     function selectPhoto(index) {
-        // Cria modal de seleção
-        const photoSelector = document.createElement('div');
-        photoSelector.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-end animate-slide-up';
-        photoSelector.innerHTML = `
-            <div class="w-full max-w-[370px] mx-auto bg-white rounded-t-3xl p-6 pb-8 max-h-[80vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-lg font-bold text-gray-800">Escolha uma foto</h3>
-                    <button class="btn-close-selector w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-                <div class="grid grid-cols-3 gap-3" id="photo-gallery">
-                    ${availablePhotos.map((photo, i) => `
-                        <button class="photo-option aspect-square rounded-xl overflow-hidden hover:ring-4 hover:ring-orange-500 transition-all" data-photo="${photo}">
-                            <img src="${photo}" class="w-full h-full object-cover" alt="Opção ${i + 1}">
-                        </button>
-                    `).join('')}
-                </div>
-            </div>
-        `;
+        // Cria input de arquivo invisível
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.style.display = 'none';
         
-        document.body.appendChild(photoSelector);
-        
-        // Event listeners
-        photoSelector.querySelector('.btn-close-selector').addEventListener('click', () => {
-            photoSelector.remove();
-        });
-        
-        photoSelector.addEventListener('click', (e) => {
-            if (e.target === photoSelector) photoSelector.remove();
-        });
-        
-        photoSelector.querySelectorAll('.photo-option').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const photoUrl = btn.dataset.photo;
-                userData.photos[index] = photoUrl;
+        input.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Verifica se é imagem
+            if (!file.type.startsWith('image/')) {
+                showToast('❌ Por favor, selecione uma imagem', 'error');
+                return;
+            }
+            
+            // Verifica tamanho (máx 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('❌ Imagem muito grande! Máx 5MB', 'error');
+                return;
+            }
+            
+            // Converte para base64 e salva
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                userData.photos[index] = event.target.result;
                 renderPhotosManager();
-                photoSelector.remove();
                 showToast('📸 Foto adicionada!');
-            });
+                console.log(`Foto ${index + 1} adicionada:`, file.name);
+            };
+            reader.readAsDataURL(file);
         });
+        
+        // Abre o seletor de arquivos
+        input.click();
     }
 
     // Remove foto
