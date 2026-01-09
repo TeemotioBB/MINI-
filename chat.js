@@ -9,6 +9,7 @@ const sendBtn = document.getElementById('send-btn');
 const backToList = document.getElementById('back-to-list');
 const chatUserName = document.getElementById('chat-user-name');
 const chatUserPhoto = document.getElementById('chat-user-photo');
+const inputContainer = document.getElementById('input-container');
 
 // ========== DADOS SIMULADOS DE CONVERSAS ==========
 const conversations = [
@@ -129,8 +130,8 @@ function openChat(chatId) {
 
     // Scroll para o fim quando abrir o chat
     setTimeout(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }, 100);
+        scrollToBottom();
+    }, 150);
 }
 
 // ========== RENDERIZAR MENSAGENS ==========
@@ -150,10 +151,8 @@ function renderMessages() {
         `;
     }).join('');
 
-    // Scroll suave para última mensagem
-    setTimeout(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }, 50);
+    // Scroll imediato para última mensagem
+    scrollToBottom();
 }
 
 // ========== ENVIAR MENSAGEM ==========
@@ -205,9 +204,40 @@ function sendMessage() {
 
 // Auto-scroll quando o teclado aparece
 messageInput.addEventListener('focus', () => {
+    // Pequeno delay para o teclado aparecer
     setTimeout(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }, 300);
+        scrollToBottom();
+    }, 400);
+});
+
+// Detecta quando o teclado fecha
+messageInput.addEventListener('blur', () => {
+    setTimeout(() => {
+        scrollToBottom();
+    }, 100);
+});
+
+// Função helper para scroll suave
+function scrollToBottom() {
+    messagesContainer.scrollTo({
+        top: messagesContainer.scrollHeight,
+        behavior: 'smooth'
+    });
+}
+
+// Detecta mudanças no tamanho da viewport (quando teclado abre/fecha)
+let lastHeight = window.innerHeight;
+window.addEventListener('resize', () => {
+    const currentHeight = window.innerHeight;
+    
+    // Se a altura diminuiu, provavelmente o teclado abriu
+    if (currentHeight < lastHeight && !chatScreen.classList.contains('hidden')) {
+        setTimeout(() => {
+            scrollToBottom();
+        }, 100);
+    }
+    
+    lastHeight = currentHeight;
 });
 
 // ========== VOLTAR PARA LISTA ==========
