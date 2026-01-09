@@ -21,13 +21,12 @@
         <i class="fa-solid fa-arrow-left"></i>
       </a>
       <h1 class="text-lg font-bold text-gray-800">Meu Perfil</h1>
-      <div class="w-10"></div> <!-- Espaçador -->
+      <div class="w-10"></div>
     </div>
 
     <!-- SEÇÃO 1: PERFIL RESUMIDO -->
     <div class="glass-card p-5 mb-3">
       <div class="flex items-center gap-4">
-        <!-- Foto -->
         <div class="relative">
           <img id="user-photo" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300" class="w-20 h-20 rounded-2xl object-cover border-2 border-white shadow-md" alt="Foto de perfil">
           <button id="btn-change-photo" class="absolute -bottom-1 -right-1 bg-orange-500 w-7 h-7 rounded-full text-white flex items-center justify-center shadow-lg">
@@ -35,12 +34,11 @@
           </button>
         </div>
 
-        <!-- Info -->
         <div class="flex-1">
           <div class="flex items-center gap-2">
             <h2 id="user-name" class="text-xl font-bold text-gray-900">João Silva</h2>
             <span id="user-age" class="text-gray-500">, 28</span>
-            <i class="fa-solid fa-circle-check text-blue-500 text-sm"></i>
+            <i id="verified-badge" class="fa-solid fa-circle-check text-blue-500 text-sm"></i>
           </div>
           <p id="user-bio" class="text-gray-600 text-sm mt-1 line-clamp-1">
             Desenvolvedor • Café ☕ • Viagens ✈️
@@ -56,7 +54,6 @@
     <div class="glass-card p-4 mb-3">
       <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 px-1">Configurações</h3>
       
-      <!-- Privacidade -->
       <button id="btn-privacy" class="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-all">
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center">
@@ -67,7 +64,6 @@
         <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
       </button>
 
-      <!-- Notificações -->
       <button id="btn-notifications" class="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-all">
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center">
@@ -78,7 +74,6 @@
         <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
       </button>
 
-      <!-- Boost & Premium -->
       <button id="btn-premium" class="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-all">
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center">
@@ -109,7 +104,7 @@
     </div>
 
     <!-- SEÇÃO 4: CONTA -->
-    <div class="glass-card p-4 mb-20">
+    <div class="glass-card p-4 mb-24">
       <button id="btn-help" class="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-all mb-1">
         <div class="flex items-center gap-3">
           <i class="fa-solid fa-circle-question text-gray-500"></i>
@@ -127,7 +122,7 @@
     </div>
 
     <!-- BOTTOM NAVIGATION -->
-    <div class="fixed bottom-4 left-1/2 -translate-x-1/2 w-full max-w-[370px] px-4">
+    <div class="fixed bottom-4 left-1/2 -translate-x-1/2 w-full max-w-[370px] px-4 z-40">
       <div class="flex justify-around items-center bg-white/80 backdrop-blur-xl p-3 rounded-3xl shadow-lg border border-white">
         <a href="index.html" class="flex flex-col items-center text-gray-400">
           <i class="fa-solid fa-layer-group text-xl"></i>
@@ -158,7 +153,7 @@
     <div class="w-full max-w-[370px] mx-auto bg-white rounded-t-3xl p-6 pb-8 animate-slide-up">
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-lg font-bold text-gray-800">Editar Perfil</h2>
-        <button id="btn-close-modal" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600">
+        <button id="btn-close-edit" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
@@ -171,7 +166,7 @@
 
         <div>
           <label class="text-xs font-bold text-gray-600 uppercase tracking-wide mb-1 block">Idade</label>
-          <input id="input-age" type="number" value="28" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-orange-500 focus:outline-none">
+          <input id="input-age" type="number" value="28" min="18" max="99" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-orange-500 focus:outline-none">
         </div>
 
         <div>
@@ -184,11 +179,263 @@
           <label class="text-xs font-bold text-gray-600 uppercase tracking-wide mb-1 block">Instagram (opcional)</label>
           <input id="input-instagram" type="text" placeholder="@seu_usuario" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-orange-500 focus:outline-none">
         </div>
+
+        <div>
+          <label class="text-xs font-bold text-gray-600 uppercase tracking-wide mb-1 block">Cidade</label>
+          <input id="input-city" type="text" placeholder="São Paulo, SP" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-orange-500 focus:outline-none">
+        </div>
       </div>
 
       <button id="btn-save" class="w-full mt-6 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold py-4 rounded-2xl shadow-lg">
         Salvar Alterações
       </button>
+    </div>
+  </div>
+
+  <!-- MODAL: PRIVACIDADE -->
+  <div id="modal-privacy" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
+    <div class="w-full max-w-[370px] mx-auto bg-white rounded-t-3xl p-6 pb-8 animate-slide-up max-h-[80vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-lg font-bold text-gray-800">Privacidade</h2>
+        <button class="btn-close-modal w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+          <div>
+            <p class="font-medium text-gray-800 text-sm">Mostrar idade</p>
+            <p class="text-xs text-gray-500 mt-1">Exibir sua idade no perfil</p>
+          </div>
+          <label class="relative inline-block w-12 h-6">
+            <input type="checkbox" id="toggle-age" class="toggle-switch" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+          <div>
+            <p class="font-medium text-gray-800 text-sm">Mostrar Instagram</p>
+            <p class="text-xs text-gray-500 mt-1">Exibir @ do Instagram</p>
+          </div>
+          <label class="relative inline-block w-12 h-6">
+            <input type="checkbox" id="toggle-instagram" class="toggle-switch" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+          <div>
+            <p class="font-medium text-gray-800 text-sm">Aparecer em busca</p>
+            <p class="text-xs text-gray-500 mt-1">Deixar outros te encontrarem</p>
+          </div>
+          <label class="relative inline-block w-12 h-6">
+            <input type="checkbox" id="toggle-discovery" class="toggle-switch" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+          <div>
+            <p class="font-medium text-gray-800 text-sm">Perfil privado</p>
+            <p class="text-xs text-gray-500 mt-1">Só matches podem ver seu perfil</p>
+          </div>
+          <label class="relative inline-block w-12 h-6">
+            <input type="checkbox" id="toggle-private" class="toggle-switch">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NOTIFICAÇÕES -->
+  <div id="modal-notifications" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
+    <div class="w-full max-w-[370px] mx-auto bg-white rounded-t-3xl p-6 pb-8 animate-slide-up max-h-[80vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-lg font-bold text-gray-800">Notificações</h2>
+        <button class="btn-close-modal w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+          <div>
+            <p class="font-medium text-gray-800 text-sm">Novos Likes</p>
+            <p class="text-xs text-gray-500 mt-1">Quando alguém te der like</p>
+          </div>
+          <label class="relative inline-block w-12 h-6">
+            <input type="checkbox" id="notif-likes" class="toggle-switch" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+          <div>
+            <p class="font-medium text-gray-800 text-sm">Novos Matches</p>
+            <p class="text-xs text-gray-500 mt-1">Quando você der match</p>
+          </div>
+          <label class="relative inline-block w-12 h-6">
+            <input type="checkbox" id="notif-matches" class="toggle-switch" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+          <div>
+            <p class="font-medium text-gray-800 text-sm">Mensagens</p>
+            <p class="text-xs text-gray-500 mt-1">Novas mensagens no chat</p>
+          </div>
+          <label class="relative inline-block w-12 h-6">
+            <input type="checkbox" id="notif-messages" class="toggle-switch" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+          <div>
+            <p class="font-medium text-gray-800 text-sm">Super Likes</p>
+            <p class="text-xs text-gray-500 mt-1">Quando te derem super like</p>
+          </div>
+          <label class="relative inline-block w-12 h-6">
+            <input type="checkbox" id="notif-superlikes" class="toggle-switch" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+          <div>
+            <p class="font-medium text-gray-800 text-sm">Promoções</p>
+            <p class="text-xs text-gray-500 mt-1">Ofertas e novidades</p>
+          </div>
+          <label class="relative inline-block w-12 h-6">
+            <input type="checkbox" id="notif-promo" class="toggle-switch">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PREMIUM -->
+  <div id="modal-premium" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
+    <div class="w-full max-w-[370px] mx-auto bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 rounded-t-3xl p-6 pb-8 animate-slide-up max-h-[85vh] overflow-y-auto">
+      <div class="flex justify-end mb-4">
+        <button class="btn-close-modal w-8 h-8 flex items-center justify-center rounded-full bg-white/20 text-white">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="text-center mb-6">
+        <i class="fa-solid fa-crown text-6xl text-yellow-300 mb-3"></i>
+        <h2 class="text-2xl font-black text-white mb-2">Spark Premium</h2>
+        <p class="text-white/80 text-sm">Desbloqueie todos os recursos</p>
+      </div>
+
+      <div class="space-y-3 mb-6">
+        <div class="flex items-center gap-3 text-white">
+          <i class="fa-solid fa-check-circle text-yellow-300"></i>
+          <span class="text-sm">Likes ilimitados</span>
+        </div>
+        <div class="flex items-center gap-3 text-white">
+          <i class="fa-solid fa-check-circle text-yellow-300"></i>
+          <span class="text-sm">Veja quem te deu like</span>
+        </div>
+        <div class="flex items-center gap-3 text-white">
+          <i class="fa-solid fa-check-circle text-yellow-300"></i>
+          <span class="text-sm">5 Super Likes por dia</span>
+        </div>
+        <div class="flex items-center gap-3 text-white">
+          <i class="fa-solid fa-check-circle text-yellow-300"></i>
+          <span class="text-sm">1 Boost grátis por semana</span>
+        </div>
+        <div class="flex items-center gap-3 text-white">
+          <i class="fa-solid fa-check-circle text-yellow-300"></i>
+          <span class="text-sm">Sem anúncios</span>
+        </div>
+        <div class="flex items-center gap-3 text-white">
+          <i class="fa-solid fa-check-circle text-yellow-300"></i>
+          <span class="text-sm">Controles de privacidade avançados</span>
+        </div>
+      </div>
+
+      <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 mb-4">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-white font-bold">Plano Mensal</span>
+          <span class="text-yellow-300 font-black text-lg">R$ 29,90</span>
+        </div>
+        <p class="text-white/70 text-xs">Renovação automática</p>
+      </div>
+
+      <button id="btn-subscribe" class="w-full bg-white text-pink-600 font-black py-4 rounded-2xl shadow-xl mb-3 hover:bg-gray-50 transition-all">
+        Assinar Agora
+      </button>
+
+      <button id="btn-boost-only" class="w-full bg-white/20 backdrop-blur-md text-white font-bold py-3 rounded-2xl border-2 border-white/30">
+        <i class="fa-solid fa-bolt text-yellow-300"></i> Apenas 1 Boost - R$ 4,90
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: AJUDA -->
+  <div id="modal-help" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
+    <div class="w-full max-w-[370px] mx-auto bg-white rounded-t-3xl p-6 pb-8 animate-slide-up max-h-[80vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-lg font-bold text-gray-800">Ajuda & Suporte</h2>
+        <button class="btn-close-modal w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <button class="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all">
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-question text-blue-500"></i>
+            <span class="text-gray-800 text-sm font-medium">Perguntas Frequentes</span>
+          </div>
+          <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
+        </button>
+
+        <button class="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all">
+          <div class="flex items-center gap-3">
+            <i class="fa-brands fa-telegram text-blue-500"></i>
+            <span class="text-gray-800 text-sm font-medium">Suporte via Telegram</span>
+          </div>
+          <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
+        </button>
+
+        <button class="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all">
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-shield-halved text-purple-500"></i>
+            <span class="text-gray-800 text-sm font-medium">Segurança e Privacidade</span>
+          </div>
+          <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
+        </button>
+
+        <button class="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all">
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-file-lines text-gray-500"></i>
+            <span class="text-gray-800 text-sm font-medium">Termos de Uso</span>
+          </div>
+          <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
+        </button>
+
+        <button class="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all">
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-flag text-red-500"></i>
+            <span class="text-gray-800 text-sm font-medium">Reportar Problema</span>
+          </div>
+          <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
+        </button>
+      </div>
+
+      <div class="mt-6 p-4 bg-blue-50 rounded-xl">
+        <p class="text-xs text-gray-600 text-center">
+          <i class="fa-solid fa-info-circle text-blue-500"></i> Versão 1.0.0
+        </p>
+      </div>
     </div>
   </div>
 
