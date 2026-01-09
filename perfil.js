@@ -64,18 +64,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ========== DADOS DO USUÁRIO ==========
     let userData = {
-        name: "João Silva",
-        age: 28,
-        photos: [
-            "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300",
-            "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=300",
-            "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300"
-        ],
-        bio: "Desenvolvedor • Café ☕ • Viagens ✈️",
-        instagram: "@joaosilva",
-        city: "São Paulo, SP",
+        name: "",
+        age: null,
+        photos: [], // Começa vazio
+        bio: "",
+        instagram: "",
+        city: "",
         plan: "Spark Free",
-        verified: true,
+        verified: false,
         privacy: {
             showAge: true,
             showInstagram: true,
@@ -92,6 +88,14 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // ========== FUNÇÕES PRINCIPAIS ==========
+
+    // Verifica se o perfil está completo
+    function isProfileComplete() {
+        return userData.name && 
+               userData.age && 
+               userData.age >= 18 && 
+               userData.photos.length > 0;
+    }
 
     // Renderiza fotos do usuário no grid principal
     function renderUserPhotos() {
@@ -258,12 +262,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Carrega dados do usuário
     function loadUserProfile() {
-        if (userName) userName.textContent = userData.name;
-        if (userAge) userAge.textContent = `, ${userData.age}`;
-        if (userBioDisplay) userBioDisplay.textContent = userData.bio;
-        if (userLocationDisplay) userLocationDisplay.innerHTML = `<i class="fa-solid fa-location-dot text-orange-500"></i> ${userData.city}`;
+        // Se não tiver nome, mostra placeholder
+        if (userName) userName.textContent = userData.name || "Seu Nome";
+        if (userAge) userAge.textContent = userData.age ? `, ${userData.age}` : "";
+        if (userBioDisplay) userBioDisplay.textContent = userData.bio || "Adicione uma bio";
+        if (userLocationDisplay) userLocationDisplay.innerHTML = `<i class="fa-solid fa-location-dot text-orange-500"></i> ${userData.city || "Sua Cidade"}`;
         if (userPlan) userPlan.textContent = userData.plan;
         if (verifiedBadge) verifiedBadge.style.display = userData.verified ? 'inline' : 'none';
+        
+        // Atualiza foto do perfil
+        const userPhotoElement = document.getElementById('user-photo');
+        if (userPhotoElement) {
+            if (userData.photos.length > 0) {
+                userPhotoElement.src = userData.photos[0];
+            } else {
+                // Mostra placeholder quando não tem foto
+                userPhotoElement.src = "https://via.placeholder.com/300x300/e5e7eb/9ca3af?text=Sem+Foto";
+            }
+        }
+        
         renderUserPhotos();
     }
 
@@ -318,11 +335,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // ========== EDITAR PERFIL ==========
 
     function openEditModal() {
-        if (inputName) inputName.value = userData.name;
-        if (inputAge) inputAge.value = userData.age;
-        if (inputBio) inputBio.value = userData.bio;
-        if (inputInstagram) inputInstagram.value = userData.instagram;
-        if (inputCity) inputCity.value = userData.city;
+        if (inputName) inputName.value = userData.name || "";
+        if (inputAge) inputAge.value = userData.age || "";
+        if (inputBio) inputBio.value = userData.bio || "";
+        if (inputInstagram) inputInstagram.value = userData.instagram || "";
+        if (inputCity) inputCity.value = userData.city || "";
         updateBioCount();
         openModal(modalEdit);
     }
