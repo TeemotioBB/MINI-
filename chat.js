@@ -127,8 +127,10 @@ function openChat(chatId) {
     chatListScreen.classList.add('hidden');
     chatScreen.classList.remove('hidden');
 
-    // Foca no input
-    messageInput.focus();
+    // Scroll para o fim quando abrir o chat
+    setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 100);
 }
 
 // ========== RENDERIZAR MENSAGENS ==========
@@ -148,8 +150,10 @@ function renderMessages() {
         `;
     }).join('');
 
-    // Scroll para última mensagem
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    // Scroll suave para última mensagem
+    setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 50);
 }
 
 // ========== ENVIAR MENSAGEM ==========
@@ -198,6 +202,13 @@ function sendMessage() {
         renderMessages();
     }, 2000);
 }
+
+// Auto-scroll quando o teclado aparece
+messageInput.addEventListener('focus', () => {
+    setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 300);
+});
 
 // ========== VOLTAR PARA LISTA ==========
 backToList.addEventListener('click', () => {
