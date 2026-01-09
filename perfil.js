@@ -1,13 +1,13 @@
 // ========== ELEMENTOS DO HTML ==========
-const userPhoto = document.getElementById('user-photo');
 const userName = document.getElementById('user-name');
 const userAge = document.getElementById('user-age');
 const userBio = document.getElementById('user-bio');
 const userPlan = document.getElementById('user-plan');
 const verifiedBadge = document.getElementById('verified-badge');
+const userPhotosContainer = document.getElementById('user-photos-container');
 
 // Botões principais
-const btnChangePhoto = document.getElementById('btn-change-photo');
+const btnAddPhoto = document.getElementById('btn-add-photo');
 const btnEditProfile = document.getElementById('btn-edit-profile');
 const btnPrivacy = document.getElementById('btn-privacy');
 const btnNotifications = document.getElementById('btn-notifications');
@@ -41,7 +41,11 @@ const btnBoostOnly = document.getElementById('btn-boost-only');
 let userData = {
     name: "João Silva",
     age: 28,
-    photo: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300",
+    photos: [
+        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300",
+        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=300",
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300"
+    ],
     bio: "Desenvolvedor • Café ☕ • Viagens ✈️",
     instagram: "@joaosilva",
     city: "São Paulo, SP",
@@ -64,14 +68,79 @@ let userData = {
 
 // ========== FUNÇÕES PRINCIPAIS ==========
 
+// Renderiza fotos do usuário
+function renderUserPhotos() {
+    userPhotosContainer.innerHTML = '';
+    
+    userData.photos.forEach((photo, index) => {
+        const photoDiv = document.createElement('div');
+        photoDiv.className = 'relative flex-shrink-0';
+        
+        photoDiv.innerHTML = `
+            <img src="${photo}" class="w-24 h-32 object-cover rounded-xl shadow-md" alt="Foto ${index + 1}">
+            ${index === 0 ? '<span class="absolute top-1 left-1 bg-orange-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-full">Principal</span>' : ''}
+            <button class="btn-delete-photo absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-md opacity-0 hover:opacity-100 transition-opacity" data-index="${index}">
+                <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+        `;
+        
+        userPhotosContainer.appendChild(photoDiv);
+    });
+    
+    // Event listeners para deletar foto
+    document.querySelectorAll('.btn-delete-photo').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const index = parseInt(btn.dataset.index);
+            deletePhoto(index);
+        });
+    });
+}
+
+// Adiciona nova foto
+function addPhoto() {
+    if (userData.photos.length >= 6) {
+        showToast('⚠️ Máximo de 6 fotos permitido', 'warning');
+        return;
+    }
+    
+    // Simulação de seleção de foto
+    const availablePhotos = [
+        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300",
+        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=300",
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300",
+        "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=300",
+        "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=300",
+        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=300"
+    ];
+    
+    const randomPhoto = availablePhotos[Math.floor(Math.random() * availablePhotos.length)];
+    userData.photos.push(randomPhoto);
+    renderUserPhotos();
+    showToast('📸 Foto adicionada!');
+}
+
+// Deleta foto
+function deletePhoto(index) {
+    if (userData.photos.length <= 1) {
+        showToast('⚠️ Você precisa ter pelo menos 1 foto', 'warning');
+        return;
+    }
+    
+    if (confirm('Tem certeza que deseja excluir esta foto?')) {
+        userData.photos.splice(index, 1);
+        renderUserPhotos();
+        showToast('🗑️ Foto removida');
+    }
+}
+
 // Carrega dados do usuário
 function loadUserProfile() {
     userName.textContent = userData.name;
     userAge.textContent = `, ${userData.age}`;
-    userPhoto.src = userData.photo;
     userBio.textContent = userData.bio;
     userPlan.textContent = userData.plan;
     verifiedBadge.style.display = userData.verified ? 'inline' : 'none';
+    renderUserPhotos();
 }
 
 // Abre modal genérico
