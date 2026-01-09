@@ -1,3 +1,47 @@
+// No início do app.js, adiciona essa função
+function checkProfileComplete() {
+    // Pega dados do localStorage ou do perfil.js
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    
+    const hasName = userData.name && userData.name.trim() !== '';
+    const hasAge = userData.age && userData.age >= 18;
+    const hasPhoto = userData.photos && userData.photos.length > 0;
+    
+    if (!hasName || !hasAge || !hasPhoto) {
+        let missingItems = [];
+        if (!hasName) missingItems.push('• Nome');
+        if (!hasAge) missingItems.push('• Idade (mín. 18)');
+        if (!hasPhoto) missingItems.push('• Pelo menos 1 foto');
+        
+        alert(`⚠️ Complete seu perfil primeiro!\n\nFaltando:\n${missingItems.join('\n')}\n\nVá para a aba PERFIL e complete seus dados.`);
+        return false;
+    }
+    
+    return true;
+}
+
+// Modifica os botões de like, dislike e super like
+btnLike.addEventListener('click', () => {
+    if (!checkProfileComplete()) return; // BLOQUEIA se perfil incompleto
+    
+    if (currentProfileIndex >= profiles.length) return;
+    // ... resto do código
+});
+
+btnDislike.addEventListener('click', () => {
+    if (!checkProfileComplete()) return; // BLOQUEIA se perfil incompleto
+    
+    if (currentProfileIndex >= profiles.length) return;
+    // ... resto do código
+});
+
+btnStar.addEventListener('click', () => {
+    if (!checkProfileComplete()) return; // BLOQUEIA se perfil incompleto
+    
+    if (currentProfileIndex >= profiles.length) return;
+    // ... resto do código
+});
+
 // Elementos do HTML
 const profileImage = document.getElementById('profile-image');
 const profileName = document.getElementById('profile-name');
@@ -301,3 +345,4 @@ btnBoost.addEventListener('click', () => {
 // ========== INICIALIZAR ==========
 
 showProfile();
+
