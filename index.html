@@ -29,6 +29,21 @@
       <!-- Profile Card -->
       <div class="relative">
         <img id="profile-image" src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=500" class="profile-img mb-4" alt="Perfil">
+        
+        <!-- Indicador de fotos (barrinha) -->
+        <div id="photo-indicators" class="absolute top-2 left-2 right-2 flex gap-1">
+          <!-- Será preenchido dinamicamente -->
+        </div>
+        
+        <!-- Setas de navegação -->
+        <button id="prev-photo" class="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 hover:opacity-100 transition-opacity">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        
+        <button id="next-photo" class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 hover:opacity-100 transition-opacity">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        
         <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1">
           <i class="fa-solid fa-circle-check text-blue-500 text-xs"></i>
           <span class="text-[10px] font-bold text-gray-700 uppercase">Verificada</span>
@@ -93,6 +108,15 @@
 
   <script src="profiles.js"></script>
   <script src="app.js"></script>
+  <style>
+    /* Setas aparecem ao passar o mouse */
+    .profile-img:hover ~ #prev-photo,
+    .profile-img:hover ~ #next-photo,
+    #prev-photo:hover,
+    #next-photo:hover {
+      opacity: 0.7 !important;
+    }
+  </style>
 </body>
 
 </html>
