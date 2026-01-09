@@ -48,25 +48,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnSubscribe = document.getElementById('btn-subscribe');
     const btnBoostOnly = document.getElementById('btn-boost-only');
 
-    // Fotos disponíveis para seleção
-    const availablePhotos = [
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=500",
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=500",
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=500",
-        "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=500",
-        "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=500",
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=500",
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=500",
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=500",
-        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=500",
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=500"
-    ];
-
     // ========== DADOS DO USUÁRIO ==========
     let userData = {
         name: "",
         age: null,
-        photos: [], // Começa vazio
+        photos: [],
         bio: "",
         instagram: "",
         city: "",
@@ -103,7 +89,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         userPhotosGrid.innerHTML = '';
         
-        // Cria slots para até 4 fotos
         for (let i = 0; i < 4; i++) {
             const photoDiv = document.createElement('div');
             photoDiv.className = 'relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100';
@@ -133,14 +118,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         photosManagerGrid.innerHTML = '';
         
-        // Cria 4 slots
         for (let i = 0; i < 4; i++) {
             const slot = document.createElement('div');
             slot.className = 'relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 border-2 border-dashed border-gray-300';
             slot.dataset.index = i;
             
             if (userData.photos[i]) {
-                // Slot com foto
                 slot.classList.remove('border-dashed');
                 slot.classList.add('border-solid', 'border-orange-500');
                 slot.innerHTML = `
@@ -154,7 +137,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
                 `;
             } else {
-                // Slot vazio
                 slot.innerHTML = `
                     <button class="btn-add-photo-slot w-full h-full flex flex-col items-center justify-center text-gray-400 hover:text-orange-500 hover:border-orange-500 transition-all" data-index="${i}">
                         <i class="fa-solid fa-plus text-3xl mb-2"></i>
@@ -193,7 +175,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Seleciona foto da galeria do dispositivo
     function selectPhoto(index) {
-        // Cria input de arquivo invisível
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
@@ -203,19 +184,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const file = e.target.files[0];
             if (!file) return;
             
-            // Verifica se é imagem
             if (!file.type.startsWith('image/')) {
                 showToast('❌ Por favor, selecione uma imagem', 'error');
                 return;
             }
             
-            // Verifica tamanho (máx 5MB)
             if (file.size > 5 * 1024 * 1024) {
                 showToast('❌ Imagem muito grande! Máx 5MB', 'error');
                 return;
             }
             
-            // Converte para base64 e salva
             const reader = new FileReader();
             reader.onload = (event) => {
                 userData.photos[index] = event.target.result;
@@ -226,7 +204,6 @@ document.addEventListener('DOMContentLoaded', function() {
             reader.readAsDataURL(file);
         });
         
-        // Abre o seletor de arquivos
         input.click();
     }
 
@@ -254,7 +231,10 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        localStorage.setItem('userData', JSON.stringify(userData));
+        
         renderUserPhotos();
+        loadUserProfile();
         closeModal(modalPhotos);
         showToast('✅ Fotos salvas com sucesso!');
         console.log('📸 Fotos salvas:', userData.photos);
@@ -262,7 +242,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Carrega dados do usuário
     function loadUserProfile() {
-        // Se não tiver nome, mostra placeholder
         if (userName) userName.textContent = userData.name || "Seu Nome";
         if (userAge) userAge.textContent = userData.age ? `, ${userData.age}` : "";
         if (userBioDisplay) userBioDisplay.textContent = userData.bio || "Adicione uma bio";
@@ -270,13 +249,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (userPlan) userPlan.textContent = userData.plan;
         if (verifiedBadge) verifiedBadge.style.display = userData.verified ? 'inline' : 'none';
         
-        // Atualiza foto do perfil
         const userPhotoElement = document.getElementById('user-photo');
         if (userPhotoElement) {
             if (userData.photos.length > 0) {
                 userPhotoElement.src = userData.photos[0];
             } else {
-                // Mostra placeholder quando não tem foto
                 userPhotoElement.src = "https://via.placeholder.com/300x300/e5e7eb/9ca3af?text=Sem+Foto";
             }
         }
@@ -345,7 +322,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function saveProfile() {
-        // Validação
         if (!inputName || !inputName.value.trim()) {
             showToast('❌ Nome não pode estar vazio', 'error');
             return;
@@ -356,30 +332,26 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Salva dados
         userData.name = inputName.value.trim();
         userData.age = parseInt(inputAge.value);
         if (inputBio) userData.bio = inputBio.value.trim();
         if (inputInstagram) userData.instagram = inputInstagram.value.trim();
         if (inputCity) userData.city = inputCity.value.trim();
         
+        localStorage.setItem('userData', JSON.stringify(userData));
+        
         loadUserProfile();
         closeModal(modalEdit);
         showToast('✅ Perfil atualizado com sucesso!');
         
-        // Aqui você salvaria no backend/Telegram
         console.log('📝 Dados salvos:', userData);
     }
 
     // ========== TROCAR FOTO ==========
 
-    // Pega todos os possíveis botões de trocar foto
-    const btnChangePhoto = document.getElementById('btn-change-photo');
-    const btnEditPhoto = document.getElementById('btn-edit-photo');
-    const userPhoto = document.getElementById('user-photo');
-    const cameraIcon = document.querySelector('.fa-camera')?.parentElement;
+    const btnCameraIcon = document.getElementById('btn-change-photo');
+    const userPhotoClick = document.getElementById('user-photo');
     
-    // Função para abrir gerenciador de fotos
     function openPhotoManager(e) {
         if (e) e.preventDefault();
         console.log('📸 Abrindo gerenciador de fotos!');
@@ -387,23 +359,13 @@ document.addEventListener('DOMContentLoaded', function() {
         openModal(modalPhotos);
     }
     
-    // Adiciona event listeners em todos os possíveis botões
-    if (btnChangePhoto) {
-        btnChangePhoto.addEventListener('click', openPhotoManager);
+    if (btnCameraIcon) {
+        btnCameraIcon.addEventListener('click', openPhotoManager);
     }
     
-    if (btnEditPhoto) {
-        btnEditPhoto.addEventListener('click', openPhotoManager);
-    }
-    
-    if (userPhoto) {
-        userPhoto.style.cursor = 'pointer';
-        userPhoto.addEventListener('click', openPhotoManager);
-    }
-    
-    if (cameraIcon) {
-        cameraIcon.style.cursor = 'pointer';
-        cameraIcon.addEventListener('click', openPhotoManager);
+    if (userPhotoClick) {
+        userPhotoClick.style.cursor = 'pointer';
+        userPhotoClick.addEventListener('click', openPhotoManager);
     }
 
     // ========== PRIVACIDADE ==========
@@ -474,7 +436,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ========== EVENT LISTENERS ==========
 
-    // Gerenciar fotos
     if (btnManagePhotos) {
         btnManagePhotos.addEventListener('click', () => {
             renderPhotosManager();
@@ -482,41 +443,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Salvar fotos
     if (btnSavePhotos) {
         btnSavePhotos.addEventListener('click', savePhotos);
     }
 
-    // Botão da câmera e foto de perfil
-    const btnCameraIcon = document.getElementById('btn-change-photo');
-    const userPhotoClick = document.getElementById('user-photo');
-    
-    if (btnCameraIcon) {
-        btnCameraIcon.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('📸 Câmera clicada!');
-            renderPhotosManager();
-            openModal(modalPhotos);
-        });
-    }
-    
-    if (userPhotoClick) {
-        userPhotoClick.style.cursor = 'pointer';
-        userPhotoClick.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('📸 Foto clicada!');
-            renderPhotosManager();
-            openModal(modalPhotos);
-        });
-    }
-
-    // Editar perfil
     if (btnEditProfile) btnEditProfile.addEventListener('click', openEditModal);
     if (btnCloseEdit) btnCloseEdit.addEventListener('click', () => closeModal(modalEdit));
     if (btnSave) btnSave.addEventListener('click', saveProfile);
     if (inputBio) inputBio.addEventListener('input', updateBioCount);
 
-    // Privacidade
     if (btnPrivacy) {
         btnPrivacy.addEventListener('click', () => {
             loadPrivacySettings();
@@ -524,12 +459,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Salva privacidade automaticamente quando muda toggle
     document.querySelectorAll('#modal-privacy .toggle-switch').forEach(toggle => {
         toggle.addEventListener('change', savePrivacySettings);
     });
 
-    // Notificações
     if (btnNotifications) {
         btnNotifications.addEventListener('click', () => {
             loadNotificationSettings();
@@ -537,20 +470,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Salva notificações automaticamente quando muda toggle
     document.querySelectorAll('#modal-notifications .toggle-switch').forEach(toggle => {
         toggle.addEventListener('change', saveNotificationSettings);
     });
 
-    // Premium
     if (btnPremium) btnPremium.addEventListener('click', () => openModal(modalPremium));
     if (btnUpgrade) btnUpgrade.addEventListener('click', () => openModal(modalPremium));
 
-    // Assinar Premium
     if (btnSubscribe) {
         btnSubscribe.addEventListener('click', () => {
             if (confirm('💎 Confirmar assinatura Spark Premium por R$ 29,90/mês?')) {
-                // Aqui você integraria com Telegram Stars ou outro método de pagamento
                 showToast('🎉 Processando pagamento...', 'info');
                 setTimeout(() => {
                     userData.plan = 'Spark Premium';
@@ -562,7 +491,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Comprar Boost
     if (btnBoostOnly) {
         btnBoostOnly.addEventListener('click', () => {
             if (confirm('⚡ Comprar 1 Boost de 1 hora por R$ 4,90?')) {
@@ -572,10 +500,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Ajuda
     if (btnHelp) btnHelp.addEventListener('click', () => openModal(modalHelp));
 
-    // Logout
     if (btnLogout) {
         btnLogout.addEventListener('click', () => {
             if (confirm('🚪 Tem certeza que deseja sair da conta?')) {
@@ -587,14 +513,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Fechar modais clicando no X
     document.querySelectorAll('.btn-close-modal').forEach(btn => {
         btn.addEventListener('click', () => {
             closeAllModals();
         });
     });
 
-    // Fechar modais clicando fora
     [modalEdit, modalPhotos, modalPrivacy, modalNotifications, modalPremium, modalHelp].forEach(modal => {
         if (modal) {
             modal.addEventListener('click', (e) => {
@@ -606,6 +530,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ========== INICIALIZAÇÃO ==========
+    
+    const savedData = localStorage.getItem('userData');
+    if (savedData) {
+        try {
+            const parsedData = JSON.parse(savedData);
+            userData = { ...userData, ...parsedData };
+            console.log('✅ Dados carregados do localStorage:', userData);
+        } catch (e) {
+            console.error('❌ Erro ao carregar dados:', e);
+        }
+    }
+    
     loadUserProfile();
     console.log('🎉 perfil.js carregado com sucesso!');
 
@@ -627,7 +563,6 @@ document.addEventListener('DOMContentLoaded', function() {
             animation: slide-up 0.3s ease-out;
         }
         
-        /* Toggle Switch */
         .toggle-switch {
             opacity: 0;
             width: 0;
@@ -666,7 +601,6 @@ document.addEventListener('DOMContentLoaded', function() {
             transform: translateX(24px);
         }
         
-        /* Line clamp */
         .line-clamp-1 {
             display: -webkit-box;
             -webkit-line-clamp: 1;
