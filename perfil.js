@@ -47,7 +47,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnSave = document.getElementById('btn-save');
     const btnSubscribe = document.getElementById('btn-subscribe');
     const btnBoostOnly = document.getElementById('btn-boost-only');
-    const btnChangePhoto = document.getElementById('btn-change-photo');
 
     // Fotos disponíveis para seleção
     const availablePhotos = [
@@ -363,24 +362,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ========== TROCAR FOTO ==========
 
+    // Pega todos os possíveis botões de trocar foto
+    const btnChangePhoto = document.getElementById('btn-change-photo');
+    const btnEditPhoto = document.getElementById('btn-edit-photo');
+    const userPhoto = document.getElementById('user-photo');
+    const cameraIcon = document.querySelector('.fa-camera')?.parentElement;
+    
+    // Função para abrir gerenciador de fotos
+    function openPhotoManager(e) {
+        if (e) e.preventDefault();
+        console.log('📸 Abrindo gerenciador de fotos!');
+        renderPhotosManager();
+        openModal(modalPhotos);
+    }
+    
+    // Adiciona event listeners em todos os possíveis botões
     if (btnChangePhoto) {
-        btnChangePhoto.addEventListener('click', () => {
-            // Simulação de seletor de foto
-            const photos = [
-                "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300",
-                "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=300",
-                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300",
-                "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=300"
-            ];
-            
-            const randomPhoto = photos[Math.floor(Math.random() * photos.length)];
-            userData.photo = randomPhoto;
-            const userPhoto = document.getElementById('user-photo');
-            if (userPhoto) userPhoto.src = randomPhoto;
-            showToast('📸 Foto atualizada!');
-            
-            // Em produção, aqui abriria um seletor de imagem
-        });
+        btnChangePhoto.addEventListener('click', openPhotoManager);
+    }
+    
+    if (btnEditPhoto) {
+        btnEditPhoto.addEventListener('click', openPhotoManager);
+    }
+    
+    if (userPhoto) {
+        userPhoto.style.cursor = 'pointer';
+        userPhoto.addEventListener('click', openPhotoManager);
+    }
+    
+    if (cameraIcon) {
+        cameraIcon.style.cursor = 'pointer';
+        cameraIcon.addEventListener('click', openPhotoManager);
     }
 
     // ========== PRIVACIDADE ==========
@@ -462,6 +474,29 @@ document.addEventListener('DOMContentLoaded', function() {
     // Salvar fotos
     if (btnSavePhotos) {
         btnSavePhotos.addEventListener('click', savePhotos);
+    }
+
+    // Botão da câmera e foto de perfil
+    const btnCameraIcon = document.getElementById('btn-change-photo');
+    const userPhotoClick = document.getElementById('user-photo');
+    
+    if (btnCameraIcon) {
+        btnCameraIcon.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('📸 Câmera clicada!');
+            renderPhotosManager();
+            openModal(modalPhotos);
+        });
+    }
+    
+    if (userPhotoClick) {
+        userPhotoClick.style.cursor = 'pointer';
+        userPhotoClick.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('📸 Foto clicada!');
+            renderPhotosManager();
+            openModal(modalPhotos);
+        });
     }
 
     // Editar perfil
