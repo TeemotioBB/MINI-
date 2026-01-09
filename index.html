@@ -36,11 +36,11 @@
         </div>
         
         <!-- Setas de navegação -->
-        <button id="prev-photo" class="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 hover:opacity-100 transition-opacity">
+        <button id="prev-photo" class="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-70 hover:opacity-100 transition-opacity">
           <i class="fa-solid fa-chevron-left"></i>
         </button>
         
-        <button id="next-photo" class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 hover:opacity-100 transition-opacity">
+        <button id="next-photo" class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-70 hover:opacity-100 transition-opacity">
           <i class="fa-solid fa-chevron-right"></i>
         </button>
         
@@ -108,15 +108,6 @@
 
   <script src="profiles.js"></script>
   <script src="app.js"></script>
-  <style>
-    /* Setas aparecem ao passar o mouse */
-    .profile-img:hover ~ #prev-photo,
-    .profile-img:hover ~ #next-photo,
-    #prev-photo:hover,
-    #next-photo:hover {
-      opacity: 0.7 !important;
-    }
-  </style>
 </body>
 
 </html>
