@@ -269,8 +269,4 @@ profileModal.addEventListener('click', (e) => {
 });
 
 // ========== INICIALIZAR ==========
-document.querySelector('.modal-content').style.transition = 'all 0.3s ease';
-document.querySelector('.modal-content').style.transform = 'scale(0.95)';
-document.querySelector('.modal-content').style.opacity = '0';
-
 renderLikes();
