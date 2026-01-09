@@ -10,6 +10,7 @@ const backToList = document.getElementById('back-to-list');
 const chatUserName = document.getElementById('chat-user-name');
 const chatUserPhoto = document.getElementById('chat-user-photo');
 const inputContainer = document.getElementById('input-container');
+const bottomNav = document.getElementById('bottom-nav');
 
 // ========== DADOS SIMULADOS DE CONVERSAS ==========
 const conversations = [
@@ -124,8 +125,9 @@ function openChat(chatId) {
     // Renderiza as mensagens
     renderMessages();
 
-    // Esconde lista e mostra chat
+    // Esconde lista e bottom nav, mostra chat
     chatListScreen.classList.add('hidden');
+    bottomNav.classList.add('hidden');
     chatScreen.classList.remove('hidden');
 
     // Scroll para o fim quando abrir o chat
@@ -244,6 +246,7 @@ window.addEventListener('resize', () => {
 backToList.addEventListener('click', () => {
     chatScreen.classList.add('hidden');
     chatListScreen.classList.remove('hidden');
+    bottomNav.classList.remove('hidden');
     currentChat = null;
     renderChatList(); // Atualiza a lista
 });
