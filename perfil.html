@@ -148,6 +148,33 @@
     </div>
   </div>
 
+  <!-- MODAL: GERENCIAR FOTOS -->
+  <div id="modal-photos" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
+    <div class="w-full max-w-[370px] mx-auto bg-white rounded-t-3xl p-6 pb-8 animate-slide-up max-h-[85vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-lg font-bold text-gray-800">Gerenciar Fotos</h2>
+        <button class="btn-close-modal w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="bg-blue-50 rounded-xl p-4 mb-6">
+        <p class="text-xs text-blue-800">
+          <i class="fa-solid fa-info-circle"></i> Adicione até 4 fotos que aparecerão quando outros usuários virem seu perfil no Spark.
+        </p>
+      </div>
+
+      <!-- Grid de fotos -->
+      <div class="grid grid-cols-2 gap-3 mb-6" id="photos-manager-grid">
+        <!-- Slots de fotos gerados dinamicamente -->
+      </div>
+
+      <button id="btn-save-photos" class="w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold py-4 rounded-2xl shadow-lg">
+        Salvar Fotos
+      </button>
+    </div>
+  </div>
+
   <!-- MODAL: EDITAR PERFIL -->
   <div id="modal-edit" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
     <div class="w-full max-w-[370px] mx-auto bg-white rounded-t-3xl p-6 pb-8 animate-slide-up">
