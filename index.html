@@ -37,12 +37,12 @@
           <button id="btn-prev-photo" class="absolute left-0 top-0 bottom-0 w-1/3 z-10 opacity-0 hover:opacity-0"></button>
           <button id="btn-next-photo" class="absolute right-0 top-0 bottom-0 w-1/3 z-10 opacity-0 hover:opacity-0"></button>
           
-          <!-- Setas de navegação (aparecem no hover/toque) -->
-          <div id="nav-arrows" class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-200">
-            <button id="arrow-left" class="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white pointer-events-auto">
+          <!-- Setas de navegação (fixas e claras) -->
+          <div id="nav-arrows" class="absolute inset-0 pointer-events-none hidden">
+            <button id="arrow-left" class="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-gray-800 pointer-events-auto shadow-lg hover:bg-white transition-all">
               <i class="fa-solid fa-chevron-left"></i>
             </button>
-            <button id="arrow-right" class="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white pointer-events-auto">
+            <button id="arrow-right" class="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-gray-800 pointer-events-auto shadow-lg hover:bg-white transition-all">
               <i class="fa-solid fa-chevron-right"></i>
             </button>
           </div>
