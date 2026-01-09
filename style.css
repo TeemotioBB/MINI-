@@ -45,6 +45,12 @@ body {
   transform: scale(1.05);
 }
 
+/* ========== INDICADORES DE FOTO ========== */
+.photo-indicator {
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
 /* ========== ANIMAÇÕES DE SWIPE SUAVES ========== */
 
 /* Swipe pra DIREITA (LIKE) */
