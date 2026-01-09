@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil - Spark</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="w-full max-w-[370px] p-4">
+    <!-- Tela de Perfil -->
+    <div class="glass-card p-6 relative">
+
+      <!-- Header com botão voltar -->
+      <div class="flex justify-between items-center mb-6">
+        <a href="index.html" class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-700">
+          <i class="fa-solid fa-arrow-left"></i>
+        </a>
+        <h1 class="text-xl font-bold text-gray-800">Meu Perfil</h1>
+        <button id="btn-edit" class="w-10 h-10 flex items-center justify-center rounded-full bg-orange-500 text-white">
+          <i class="fa-solid fa-pen"></i>
+        </button>
+      </div>
+
+      <!-- Foto de Perfil -->
+      <div class="flex justify-center mb-6">
+        <div class="relative">
+          <img id="user-photo" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300" class="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg" alt="Foto de perfil">
+          <div class="absolute bottom-0 right-0 bg-green-500 w-8 h-8 rounded-full border-4 border-white flex items-center justify-center">
+            <i class="fa-solid fa-check text-white text-xs"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Informações do usuário -->
+      <div class="text-center mb-6">
+        <h2 id="user-name" class="text-2xl font-extrabold text-gray-900">João Silva</h2>
+        <p id="user-age" class="text-gray-500 text-lg">28 anos</p>
+      </div>
+
+      <!-- Bio -->
+      <div class="mb-6 bg-gray-50 rounded-2xl p-4">
+        <h3 class="text-sm font-bold text-gray-600 mb-2 uppercase tracking-wide">Sobre mim</h3>
+        <p id="user-bio" class="text-gray-700 leading-relaxed">
+          Desenvolvedor apaixonado por tecnologia 💻 | Amo viajar e conhecer novas culturas ✈️ | Viciado em café ☕
+        </p>
+      </div>
+
+      <!-- Informações adicionais -->
+      <div class="space-y-3 mb-6">
+        <div class="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
+          <i class="fa-solid fa-location-dot text-orange-500 text-lg"></i>
+          <span id="user-location" class="text-gray-700">São Paulo, SP</span>
+        </div>
+
+        <div class="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
+          <i class="fa-solid fa-briefcase text-orange-500 text-lg"></i>
+          <span id="user-job" class="text-gray-700">Desenvolvedor Full Stack</span>
+        </div>
+
+        <div class="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
+          <i class="fa-solid fa-graduation-cap text-orange-500 text-lg"></i>
+          <span id="user-education" class="text-gray-700">Ciência da Computação - USP</span>
+        </div>
+      </div>
+
+      <!-- Estatísticas -->
+      <div class="grid grid-cols-3 gap-3 mb-6">
+        <div class="bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl p-4 text-center text-white">
+          <div class="text-2xl font-black">156</div>
+          <div class="text-xs uppercase font-bold opacity-90">Likes</div>
+        </div>
+
+        <div class="bg-gradient-to-br from-pink-400 to-rose-500 rounded-2xl p-4 text-center text-white">
+          <div class="text-2xl font-black">42</div>
+          <div class="text-xs uppercase font-bold opacity-90">Matches</div>
+        </div>
+
+        <div class="bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl p-4 text-center text-white">
+          <div class="text-2xl font-black">8</div>
+          <div class="text-xs uppercase font-bold opacity-90">Super Likes</div>
+        </div>
+      </div>
+
+      <!-- Botões de ação -->
+      <div class="space-y-3">
+        <button class="w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all">
+          <i class="fa-solid fa-crown"></i>
+          Assinar Premium
+        </button>
+
+        <button id="btn-logout" class="w-full bg-gray-100 text-gray-700 font-bold py-4 rounded-2xl hover:bg-gray-200 transition-all">
+          Sair da conta
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="flex justify-around items-center mt-8 bg-white/80 backdrop-blur-xl p-3 rounded-3xl shadow-lg border border-white">
+      <a href="index.html" class="flex flex-col items-center text-gray-400">
+        <i class="fa-solid fa-layer-group text-xl"></i>
+        <span class="text-[9px] font-bold mt-1 uppercase">Explorar</span>
+      </a>
+
+      <a href="likes.html" class="flex flex-col items-center text-gray-400 relative">
+        <i class="fa-solid fa-star text-xl"></i>
+        <span class="absolute -top-1 -right-2 bg-pink-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">33</span>
+        <span class="text-[9px] font-bold mt-1 uppercase">Likes</span>
+      </a>
+
+      <a href="chat.html" class="flex flex-col items-center text-gray-400">
+        <i class="fa-solid fa-comment-dots text-xl"></i>
+        <span class="text-[9px] font-bold mt-1 uppercase">Chat</span>
+      </a>
+
+      <a href="perfil.html" class="flex flex-col items-center text-orange-500">
+        <i class="fa-solid fa-circle-user text-xl"></i>
+        <span class="text-[9px] font-bold mt-1 uppercase">Perfil</span>
+      </a>
+    </div>
+  </div>
+
+  <script src="perfil.js"></script>
+</body>
+
+</html>
