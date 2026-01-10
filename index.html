@@ -3,18 +3,12 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spark Mini App - Premium Match</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
-  <style>
-    * {
-      touch-action: manipulation;
-      -webkit-tap-highlight-color: transparent;
-    }
-  </style>
 </head>
 
 <body>
@@ -35,21 +29,6 @@
       <!-- Profile Card -->
       <div class="relative">
         <img id="profile-image" src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=500" class="profile-img mb-4" alt="Perfil">
-        
-        <!-- Indicador de fotos (barrinha) -->
-        <div id="photo-indicators" class="absolute top-2 left-2 right-2 flex gap-1">
-          <!-- Será preenchido dinamicamente -->
-        </div>
-        
-        <!-- Setas de navegação -->
-        <button id="prev-photo" class="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-70 hover:opacity-100 transition-opacity">
-          <i class="fa-solid fa-chevron-left"></i>
-        </button>
-        
-        <button id="next-photo" class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-70 hover:opacity-100 transition-opacity">
-          <i class="fa-solid fa-chevron-right"></i>
-        </button>
-        
         <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1">
           <i class="fa-solid fa-circle-check text-blue-500 text-xs"></i>
           <span class="text-[10px] font-bold text-gray-700 uppercase">Verificada</span>
@@ -89,16 +68,16 @@
 
     <!-- Bottom Navigation -->
     <div class="flex justify-around items-center mt-8 bg-white/80 backdrop-blur-xl p-3 rounded-3xl shadow-lg border border-white">
-      <a href="index.html" class="flex flex-col items-center text-orange-500">
+      <button class="flex flex-col items-center text-orange-500">
         <i class="fa-solid fa-layer-group text-xl"></i>
         <span class="text-[9px] font-bold mt-1 uppercase">Explorar</span>
-      </a>
+      </button>
 
-      <a href="likes.html" class="flex flex-col items-center text-gray-400 relative">
+      <button class="flex flex-col items-center text-gray-400 relative">
         <i class="fa-solid fa-star text-xl"></i>
         <span class="absolute -top-1 -right-2 bg-pink-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">33</span>
         <span class="text-[9px] font-bold mt-1 uppercase">Likes</span>
-      </a>
+      </button>
 
       <a href="chat.html" class="flex flex-col items-center text-gray-400">
         <i class="fa-solid fa-comment-dots text-xl"></i>
@@ -112,14 +91,11 @@
     </div>
   </div>
 
-  </div>
-
   <!-- ⚡ ORDEM IMPORTANTE DOS SCRIPTS! -->
   <script src="profiles.js"></script>
-  <script src="config.js"></script>
+  <script src="config.js"></script> <!-- 👈 Adicione esta linha! -->
   <script src="match.js"></script>
   <script src="app.js"></script>
 </body>
 
 </html>
-
