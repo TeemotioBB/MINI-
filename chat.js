@@ -368,11 +368,25 @@ console.log('Conversas:', conversations);
 renderChatList();
 
 // ========== ABRIR CHAT AUTOMATICAMENTE SE VIER DO MATCH ==========
-setTimeout(() => {
-    const openChatId = localStorage.getItem('openChatId');
-    if (openChatId) {
-        console.log('🎯 Abrindo chat automaticamente - ID:', openChatId);
-        localStorage.removeItem('openChatId'); // Remove para não abrir de novo
-        openChat(parseInt(openChatId));
-    }
-}, 200);
+// Verifica IMEDIATAMENTE
+const openChatIdNow = localStorage.getItem('openChatId');
+console.log('🔍 Verificando openChatId:', openChatIdNow);
+
+if (openChatIdNow) {
+    console.log('🎯 ID encontrado! Abrindo chat em 300ms...');
+    
+    setTimeout(() => {
+        const chatId = parseInt(openChatIdNow);
+        console.log('🚀 Abrindo chat com ID:', chatId);
+        
+        // Remove ANTES de abrir para evitar loops
+        localStorage.removeItem('openChatId');
+        
+        // Abre o chat
+        openChat(chatId);
+        
+        console.log('✅ Chat aberto com sucesso!');
+    }, 300);
+} else {
+    console.log('ℹ️ Nenhum chat para abrir automaticamente');
+}
