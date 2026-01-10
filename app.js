@@ -2,9 +2,6 @@
 const profileImage = document.getElementById('profile-image');
 const profileName = document.getElementById('profile-name');
 const profileBio = document.getElementById('profile-bio');
-const photoIndicators = document.getElementById('photo-indicators');
-const prevPhotoBtn = document.getElementById('prev-photo');
-const nextPhotoBtn = document.getElementById('next-photo');
 
 const btnLike = document.getElementById('btn-like');
 const btnDislike = document.getElementById('btn-dislike');
@@ -77,63 +74,6 @@ function showStarAnimation() {
     setTimeout(() => star.remove(), 1000);
 }
 
-// ========== NAVEGAÇÃO DE FOTOS ==========
-
-function updatePhotoIndicators() {
-    const profile = profiles[currentProfileIndex];
-    if (!profile || !profile.photos) return;
-    
-    const totalPhotos = profile.photos.length;
-    
-    // Se só tem 1 foto, esconde os indicadores e setas
-    if (totalPhotos <= 1) {
-        photoIndicators.innerHTML = '';
-        prevPhotoBtn.style.display = 'none';
-        nextPhotoBtn.style.display = 'none';
-        return;
-    }
-    
-    // Mostra setas
-    prevPhotoBtn.style.display = 'flex';
-    nextPhotoBtn.style.display = 'flex';
-    
-    // Cria as barrinhas indicadoras
-    photoIndicators.innerHTML = profile.photos.map((_, index) => `
-        <div class="h-1 flex-1 rounded-full ${index === currentPhotoIndex ? 'bg-white' : 'bg-white/40'}"></div>
-    `).join('');
-}
-
-function showPhoto(index) {
-    const profile = profiles[currentProfileIndex];
-    if (!profile || !profile.photos) return;
-    
-    // Garante que o índice está dentro do range
-    currentPhotoIndex = Math.max(0, Math.min(index, profile.photos.length - 1));
-    
-    // Atualiza a foto
-    profileImage.src = profile.photos[currentPhotoIndex];
-    
-    // Atualiza indicadores
-    updatePhotoIndicators();
-}
-
-// Botão anterior
-prevPhotoBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (currentPhotoIndex > 0) {
-        showPhoto(currentPhotoIndex - 1);
-    }
-});
-
-// Botão próximo
-nextPhotoBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const profile = profiles[currentProfileIndex];
-    if (profile && currentPhotoIndex < profile.photos.length - 1) {
-        showPhoto(currentPhotoIndex + 1);
-    }
-});
-
 // ========== FUNÇÃO PARA MOSTRAR PERFIL ==========
 
 function showProfile() {
@@ -141,23 +81,14 @@ function showProfile() {
         profileName.textContent = "Acabaram os perfis! 😢";
         profileBio.textContent = "Volte mais tarde para ver mais pessoas";
         profileImage.src = "https://via.placeholder.com/500x380?text=Sem+mais+perfis";
-        photoIndicators.innerHTML = '';
-        prevPhotoBtn.style.display = 'none';
-        nextPhotoBtn.style.display = 'none';
         return;
     }
 
     const profile = profiles[currentProfileIndex];
     
-    // Reset photo index
-    currentPhotoIndex = 0;
-    
     profileName.textContent = `${profile.name}, ${profile.age}`;
     profileBio.innerHTML = profile.bio;
-    profileImage.src = profile.photos[0];
-    
-    // Atualiza indicadores de fotos
-    updatePhotoIndicators();
+    profileImage.src = profile.photo;
 }
 
 // ========== FUNÇÃO PARA PRÓXIMO PERFIL ==========
@@ -177,15 +108,36 @@ btnLike.addEventListener('click', () => {
     console.log('❤️ Você deu LIKE em:', profile.name);
     console.log('Total de likes:', likedProfiles.length);
     
-    // Animações
-    card.classList.add('swipe-right');
-    showHeartAnimation();
+    // ✨ VERIFICA SE HÁ MATCH ✨
+    const hasMatch = checkForMatch(profile);
     
-    // Espera animação terminar
-    setTimeout(() => {
-        card.classList.remove('swipe-right');
-        nextProfile();
-    }, 500);
+    if (hasMatch) {
+        console.log('🎉 MATCH COM:', profile.name);
+        
+        // Animações normais primeiro
+        card.classList.add('swipe-right');
+        showHeartAnimation();
+        
+        // Depois mostra o match
+        setTimeout(() => {
+            card.classList.remove('swipe-right');
+            nextProfile();
+            
+            // Mostra tela de match após 300ms
+            setTimeout(() => {
+                showMatchAnimation(profile);
+            }, 300);
+        }, 500);
+    } else {
+        // Sem match, apenas animações normais
+        card.classList.add('swipe-right');
+        showHeartAnimation();
+        
+        setTimeout(() => {
+            card.classList.remove('swipe-right');
+            nextProfile();
+        }, 500);
+    }
 });
 
 // ========== BOTÃO DISLIKE (X vermelho) ==========
@@ -218,15 +170,33 @@ btnStar.addEventListener('click', () => {
     console.log('⭐ Você deu SUPER LIKE em:', profile.name);
     console.log('Total de super likes:', superLikedProfiles.length);
     
-    // Animações
-    card.classList.add('swipe-up');
-    showStarAnimation();
+    // ✨ VERIFICA SE HÁ MATCH (Super Like também pode dar match!) ✨
+    const hasMatch = checkForMatch(profile);
     
-    // Espera animação terminar
-    setTimeout(() => {
-        card.classList.remove('swipe-up');
-        nextProfile();
-    }, 600);
+    if (hasMatch) {
+        console.log('🎉 MATCH COM:', profile.name);
+        
+        card.classList.add('swipe-up');
+        showStarAnimation();
+        
+        setTimeout(() => {
+            card.classList.remove('swipe-up');
+            nextProfile();
+            
+            setTimeout(() => {
+                showMatchAnimation(profile);
+            }, 300);
+        }, 600);
+    } else {
+        // Sem match
+        card.classList.add('swipe-up');
+        showStarAnimation();
+        
+        setTimeout(() => {
+            card.classList.remove('swipe-up');
+            nextProfile();
+        }, 600);
+    }
 });
 
 // ========== BOTÃO BOOST ==========
