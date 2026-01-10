@@ -6,11 +6,8 @@ const rateLimit = require('express-rate-limit');
 const { Pool } = require('pg');
 require('dotenv').config();
 
-// Importa rotas
-const uploadRoutes = require('./routes/upload');
-
-// Importa middleware de autenticação
-const { requireTelegramAuth, optionalTelegramAuth } = require('./middleware/telegramAuth');
+const uploadRoutes = require('./upload');
+const { requireTelegramAuth, optionalTelegramAuth } = require('./telegramAuth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -420,4 +417,5 @@ app.use((req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+
 });
