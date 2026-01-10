@@ -18,7 +18,6 @@ const card = document.querySelector('.glass-card');
 
 // ========== FUNÇÕES DE ANIMAÇÃO ==========
 
-// Cria confete colorido
 function createConfetti(color) {
     for (let i = 0; i < 30; i++) {
         const confetti = document.createElement('div');
@@ -34,7 +33,6 @@ function createConfetti(color) {
     }
 }
 
-// Mostra ícone de coração COM CONFETE
 function showHeartAnimation() {
     const heart = document.createElement('div');
     heart.innerHTML = '<i class="fa-solid fa-heart"></i>';
@@ -46,7 +44,6 @@ function showHeartAnimation() {
     setTimeout(() => heart.remove(), 800);
 }
 
-// Mostra ícone de X COM CONFETE
 function showXAnimation() {
     const x = document.createElement('div');
     x.innerHTML = '<i class="fa-solid fa-xmark"></i>';
@@ -58,7 +55,6 @@ function showXAnimation() {
     setTimeout(() => x.remove(), 800);
 }
 
-// Mostra ícone de estrela COM EXPLOSÃO
 function showStarAnimation() {
     const star = document.createElement('div');
     star.innerHTML = '<i class="fa-solid fa-star"></i>';
@@ -95,37 +91,39 @@ function nextProfile() {
     showProfile();
 }
 
-// ========== BOTÃO LIKE (coração verde) ==========
+// ========== BOTÃO LIKE (coração verde) - COM VIP ==========
 btnLike.addEventListener('click', () => {
     if (currentProfileIndex >= profiles.length) return;
+    
+    // ✅ VERIFICAÇÃO VIP - PODE DAR LIKE?
+    if (!window.vipSystem.registerLike()) {
+        console.log('❌ Limite de likes atingido');
+        return; // Bloqueia se não puder dar like
+    }
     
     const profile = profiles[currentProfileIndex];
     likedProfiles.push(profile);
     console.log('❤️ Você deu LIKE em:', profile.name);
     console.log('📊 Total de likes:', likedProfiles.length);
     
-    // ✨ VERIFICA SE HÁ MATCH ✨
+    // Verifica se há match
     const hasMatch = checkForMatch(profile);
     
     if (hasMatch) {
         console.log('🎉 MATCH COM:', profile.name);
         
-        // Animações normais primeiro
         card.classList.add('swipe-right');
         showHeartAnimation();
         
-        // Depois mostra o match
         setTimeout(() => {
             card.classList.remove('swipe-right');
             nextProfile();
             
-            // Mostra tela de match após 300ms
             setTimeout(() => {
                 showMatchAnimation(profile);
             }, 300);
         }, 500);
     } else {
-        // Sem match, apenas animações normais
         card.classList.add('swipe-right');
         showHeartAnimation();
         
@@ -144,27 +142,30 @@ btnDislike.addEventListener('click', () => {
     dislikedProfiles.push(profile);
     console.log('❌ Você deu DISLIKE em:', profile.name);
     
-    // Animações
     card.classList.add('swipe-left');
     showXAnimation();
     
-    // Espera animação terminar
     setTimeout(() => {
         card.classList.remove('swipe-left');
         nextProfile();
     }, 500);
 });
 
-// ========== BOTÃO SUPER LIKE (estrela azul) ==========
+// ========== BOTÃO SUPER LIKE (estrela azul) - COM VIP ==========
 btnStar.addEventListener('click', () => {
     if (currentProfileIndex >= profiles.length) return;
+    
+    // ✅ VERIFICAÇÃO VIP - PODE DAR SUPER LIKE?
+    if (!window.vipSystem.registerSuperLike()) {
+        console.log('❌ Sem Super Likes disponíveis');
+        return; // Bloqueia se não puder dar super like
+    }
     
     const profile = profiles[currentProfileIndex];
     superLikedProfiles.push(profile);
     console.log('⭐ Você deu SUPER LIKE em:', profile.name);
     console.log('📊 Total de super likes:', superLikedProfiles.length);
     
-    // ✨ VERIFICA SE HÁ MATCH (Super Like também pode dar match!) ✨
     const hasMatch = checkForMatch(profile);
     
     if (hasMatch) {
@@ -182,7 +183,6 @@ btnStar.addEventListener('click', () => {
             }, 300);
         }, 600);
     } else {
-        // Sem match
         card.classList.add('swipe-up');
         showStarAnimation();
         
@@ -193,16 +193,31 @@ btnStar.addEventListener('click', () => {
     }
 });
 
-// ========== BOTÃO BOOST ==========
+// ========== BOTÃO BOOST - COM VIP ==========
 btnBoost.addEventListener('click', () => {
-    alert('⚡ Boost ativado por 1 hora! (função em desenvolvimento)');
+    // ✅ VERIFICAÇÃO VIP - PODE DAR BOOST?
+    if (!window.vipSystem.registerBoost()) {
+        console.log('❌ Sem Boosts disponíveis');
+        return; // Bloqueia se não puder dar boost
+    }
+    
+    console.log('⚡ Boost ativado com sucesso!');
 });
 
 // ========== INICIALIZAR ==========
 console.log('🚀 app.js iniciando...');
 console.log('📋 Perfis disponíveis:', profiles.length);
 
-// Mostrar o primeiro perfil quando carregar a página
+// Aguarda VIP System carregar
+setTimeout(() => {
+    if (window.vipSystem) {
+        window.vipSystem.updateUI();
+        console.log('✅ Sistema VIP integrado com sucesso!');
+        console.log('📊 Stats VIP:', window.vipSystem.getStats());
+    }
+}, 100);
+
+// Mostrar o primeiro perfil
 showProfile();
 
 console.log('✅ app.js carregado com sucesso!');
