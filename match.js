@@ -1,12 +1,43 @@
 // ========== SISTEMA DE MATCH ==========
 
+// ========== DADOS DO USUÁRIO ATUAL ==========
+// Usa configuração do config.js se disponível
+let currentUser = typeof USER_CONFIG !== 'undefined' && USER_CONFIG ? {...USER_CONFIG} : {
+    id: 1293602874,  // Seu ID do Telegram
+    name: "Você",
+    photo: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300"
+};
+
+// Tenta pegar dados reais do Telegram (sobrescreve config)
+if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+    const tg = Telegram.WebApp;
+    const telegramUser = tg.initDataUnsafe?.user;
+    
+    if (telegramUser) {
+        currentUser.id = telegramUser.id || currentUser.id;
+        currentUser.name = telegramUser.first_name || currentUser.name;
+        currentUser.photo = telegramUser.photo_url || currentUser.photo;
+        console.log('👤 Usuário do Telegram detectado:', currentUser);
+    } else {
+        console.log('👤 Usando ID configurado:', currentUser.id);
+    }
+} else {
+    console.log('👤 Telegram não disponível. Usando ID:', currentUser.id);
+}
+
 // Simula likes que outros usuários deram em você
-// Na prática, isso viria do backend
-const likesRecebidos = [
-    { userId: 2, userName: "Lucas", userPhoto: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=300" },
-    { userId: 4, userName: "Rafael", userPhoto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300" },
-    { userId: 7, userName: "Camila", userPhoto: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300" }
-];
+// Usa configuração do config.js se disponível, senão usa padrão
+const likesRecebidos = typeof LIKES_RECEBIDOS_CONFIG !== 'undefined' && LIKES_RECEBIDOS_CONFIG 
+    ? LIKES_RECEBIDOS_CONFIG 
+    : [
+        { userId: 2, userName: "Lucas", userPhoto: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=300" },
+        { userId: 4, userName: "Rafael", userPhoto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300" },
+        { userId: 7, userName: "Camila", userPhoto: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300" }
+    ];
+
+console.log('✅ Sistema de Match inicializado');
+console.log('🆔 Seu ID:', currentUser.id);
+console.log('💕 Perfis que vão dar match:', likesRecebidos.map(l => l.userName).join(', '));
 
 // ========== VERIFICAR SE HÁ MATCH ==========
 function checkForMatch(profile) {
@@ -28,8 +59,8 @@ function showMatchAnimation(profile) {
             
             <div class="match-photos">
                 <div class="match-photo-container">
-                    <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300" 
-                         class="match-photo match-photo-left" alt="Você">
+                    <img src="${currentUser.photo}" 
+                         class="match-photo match-photo-left" alt="${currentUser.name}">
                 </div>
                 <div class="match-heart">
                     <i class="fa-solid fa-heart"></i>
@@ -59,25 +90,37 @@ function showMatchAnimation(profile) {
     // Confete MASSIVO
     createMatchConfetti();
     
-    // Eventos dos botões
-    document.getElementById('match-send-message').addEventListener('click', () => {
-        createMatchConversation(profile);
-        overlay.remove();
-        window.location.href = 'chat.html';
-    });
-    
-    document.getElementById('match-continue').addEventListener('click', () => {
-        createMatchConversation(profile);
-        overlay.remove();
-    });
-    
-    // Fecha ao clicar fora
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
-            createMatchConversation(profile);
-            overlay.remove();
+    // Aguarda o DOM estar pronto antes de adicionar eventos
+    setTimeout(() => {
+        // Eventos dos botões
+        const btnSendMessage = document.getElementById('match-send-message');
+        const btnContinue = document.getElementById('match-continue');
+        
+        if (btnSendMessage) {
+            btnSendMessage.addEventListener('click', (e) => {
+                e.stopPropagation();
+                createMatchConversation(profile);
+                overlay.remove();
+                window.location.href = 'chat.html';
+            });
         }
-    });
+        
+        if (btnContinue) {
+            btnContinue.addEventListener('click', (e) => {
+                e.stopPropagation();
+                createMatchConversation(profile);
+                overlay.remove();
+            });
+        }
+        
+        // Fecha ao clicar fora (no overlay, não nos botões)
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                createMatchConversation(profile);
+                overlay.remove();
+            }
+        });
+    }, 100);
 }
 
 // ========== CRIAR CONVERSA APÓS MATCH ==========
