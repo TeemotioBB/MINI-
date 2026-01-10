@@ -483,10 +483,17 @@ body {
   pointer-events: auto !important;
   user-select: none !important;
   -webkit-user-select: none !important;
+  text-decoration: none !important;
 }
 
 .match-btn * {
   pointer-events: none !important;
+}
+
+.match-btn:visited,
+.match-btn:hover,
+.match-btn:active {
+  text-decoration: none !important;
 }
 
 @media (min-width: 768px) {
