@@ -2,102 +2,119 @@
 <html lang="pt-br">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spark Mini App - Premium Match</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spark Mini App - Premium Match</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-  <div class="w-full max-w-[370px] p-4">
-    <div class="glass-card p-4 relative">
+    <div class="w-full max-w-[370px] p-4">
+        <div class="glass-card p-4 relative">
 
-      <!-- Header -->
-      <div class="flex justify-between items-center mb-4 px-2">
-        <div class="flex items-center gap-2 font-black text-2xl text-gray-800 tracking-tighter">
-          <i class="fa-solid fa-fire-flame-curved text-orange-500"></i> SPARK
+            <!-- Header -->
+            <div class="flex justify-between items-center mb-4 px-2">
+                <div class="flex items-center gap-2 font-black text-2xl text-gray-800 tracking-tighter">
+                    <i class="fa-solid fa-fire-flame-curved text-orange-500"></i> SPARK
+                </div>
+                <button class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                    <i class="fa-solid fa-sliders"></i>
+                </button>
+            </div>
+
+            <!-- Contador de Likes Premium -->
+            <div id="likes-counter" class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-3 mb-4 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] uppercase font-bold opacity-90">Likes restantes hoje</p>
+                        <p class="text-xl font-black">10 de 10</p>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur-sm rounded-full p-2">
+                        <i class="fa-solid fa-heart text-xl"></i>
+                    </div>
+                </div>
+                <button onclick="window.vipSystem.showUpgradeModal('likes')" class="w-full bg-white/20 backdrop-blur-sm text-white font-bold py-2 rounded-full mt-2 hover:bg-white/30 transition-all flex items-center justify-center gap-2 text-xs">
+                    <i class="fa-solid fa-crown text-sm"></i>
+                    Premium: Likes Ilimitados
+                </button>
+            </div>
+
+            <!-- Profile Card -->
+            <div class="relative">
+                <img id="profile-image" src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=500" class="profile-img mb-4" alt="Perfil">
+                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1">
+                    <i class="fa-solid fa-circle-check text-blue-500 text-xs"></i>
+                    <span class="text-[10px] font-bold text-gray-700 uppercase">Verificada</span>
+                </div>
+            </div>
+
+            <!-- Profile Info -->
+            <div class="px-2 mb-6 text-center">
+                <h2 id="profile-name" class="text-2xl font-extrabold text-gray-900">Brenda, 26</h2>
+                <p id="profile-bio" class="text-gray-500 text-sm mt-1">
+                    Chama lá no insta <span class="text-blue-500 font-semibold">@brendahonoratoo_</span>
+                </p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-center items-center gap-4 px-2 pb-2">
+                <button id="btn-star" class="btn-action bg-blue-100 text-blue-500">
+                    <i class="fa-solid fa-star text-lg"></i>
+                </button>
+
+                <button id="btn-dislike" class="btn-action bg-white text-red-500 border border-red-50 text-2xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+                <button id="btn-like" class="btn-action bg-gradient-to-br from-green-400 to-emerald-500 text-white text-2xl">
+                    <i class="fa-solid fa-heart"></i>
+                </button>
+
+                <div class="relative">
+                    <button id="btn-boost" class="btn-action bg-gradient-to-tr from-purple-600 to-indigo-600 text-white">
+                        <i class="fa-solid fa-bolt-lightning text-lg"></i>
+                    </button>
+                    <span class="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[8px] font-black text-purple-600 uppercase whitespace-nowrap">Boost 1h</span>
+                </div>
+            </div>
         </div>
-        <button class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
-          <i class="fa-solid fa-sliders"></i>
-        </button>
-      </div>
 
-      <!-- Profile Card -->
-      <div class="relative">
-        <img id="profile-image" src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=500" class="profile-img mb-4" alt="Perfil">
-        <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1">
-          <i class="fa-solid fa-circle-check text-blue-500 text-xs"></i>
-          <span class="text-[10px] font-bold text-gray-700 uppercase">Verificada</span>
+        <!-- Bottom Navigation -->
+        <div class="flex justify-around items-center mt-8 bg-white/80 backdrop-blur-xl p-3 rounded-3xl shadow-lg border border-white">
+            <button class="flex flex-col items-center text-orange-500">
+                <i class="fa-solid fa-layer-group text-xl"></i>
+                <span class="text-[9px] font-bold mt-1 uppercase">Explorar</span>
+            </button>
+
+            <button class="flex flex-col items-center text-gray-400 relative">
+                <i class="fa-solid fa-star text-xl"></i>
+                <span class="absolute -top-1 -right-2 bg-pink-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">33</span>
+                <span class="text-[9px] font-bold mt-1 uppercase">Likes</span>
+            </button>
+
+            <a href="chat.html" class="flex flex-col items-center text-gray-400">
+                <i class="fa-solid fa-comment-dots text-xl"></i>
+                <span class="text-[9px] font-bold mt-1 uppercase">Chat</span>
+            </a>
+
+            <a href="perfil.html" class="flex flex-col items-center text-gray-400">
+                <i class="fa-solid fa-circle-user text-xl"></i>
+                <span class="text-[9px] font-bold mt-1 uppercase">Perfil</span>
+            </a>
         </div>
-      </div>
-
-      <!-- Profile Info -->
-      <div class="px-2 mb-6 text-center">
-        <h2 id="profile-name" class="text-2xl font-extrabold text-gray-900">Brenda, 26</h2>
-        <p id="profile-bio" class="text-gray-500 text-sm mt-1">
-          Chama lá no insta <span class="text-blue-500 font-semibold">@brendahonoratoo_</span>
-        </p>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="flex justify-center items-center gap-4 px-2 pb-2">
-        <button id="btn-star" class="btn-action bg-blue-100 text-blue-500">
-          <i class="fa-solid fa-star text-lg"></i>
-        </button>
-
-        <button id="btn-dislike" class="btn-action bg-white text-red-500 border border-red-50 text-2xl">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-
-        <button id="btn-like" class="btn-action bg-gradient-to-br from-green-400 to-emerald-500 text-white text-2xl">
-          <i class="fa-solid fa-heart"></i>
-        </button>
-
-        <div class="relative">
-          <button id="btn-boost" class="btn-action bg-gradient-to-tr from-purple-600 to-indigo-600 text-white">
-            <i class="fa-solid fa-bolt-lightning text-lg"></i>
-          </button>
-          <span class="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[8px] font-black text-purple-600 uppercase whitespace-nowrap">Boost 1h</span>
-        </div>
-      </div>
     </div>
 
-    <!-- Bottom Navigation -->
-    <div class="flex justify-around items-center mt-8 bg-white/80 backdrop-blur-xl p-3 rounded-3xl shadow-lg border border-white">
-      <button class="flex flex-col items-center text-orange-500">
-        <i class="fa-solid fa-layer-group text-xl"></i>
-        <span class="text-[9px] font-bold mt-1 uppercase">Explorar</span>
-      </button>
+    <!-- ⚡ ORDEM IMPORTANTE DOS SCRIPTS! -->
+    <script src="profiles.js"></script>
+    <script src="config.js"></script>
+    <script src="vip.js"></script>
+    <script src="match.js"></script>
+    <script src="app.js"></script>
 
-      <button class="flex flex-col items-center text-gray-400 relative">
-        <i class="fa-solid fa-star text-xl"></i>
-        <span class="absolute -top-1 -right-2 bg-pink-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">33</span>
-        <span class="text-[9px] font-bold mt-1 uppercase">Likes</span>
-      </button>
-
-      <a href="chat.html" class="flex flex-col items-center text-gray-400">
-        <i class="fa-solid fa-comment-dots text-xl"></i>
-        <span class="text-[9px] font-bold mt-1 uppercase">Chat</span>
-      </a>
-
-      <a href="perfil.html" class="flex flex-col items-center text-gray-400">
-        <i class="fa-solid fa-circle-user text-xl"></i>
-        <span class="text-[9px] font-bold mt-1 uppercase">Perfil</span>
-      </a>
-    </div>
-  </div>
-
-  <!-- ⚡ ORDEM IMPORTANTE DOS SCRIPTS! -->
-  <script src="profiles.js"></script>
-  <script src="config.js"></script> <!-- 👈 Adicione esta linha! -->
-  <script src="match.js"></script>
-  <script src="vip.js"></script>
-  <script src="app.js"></script>
 </body>
 
 </html>
-
