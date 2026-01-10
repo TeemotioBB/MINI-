@@ -48,121 +48,128 @@ function checkForMatch(profile) {
 
 // ========== ANIMAÇÃO DE MATCH ==========
 function showMatchAnimation(profile) {
+    console.log('🎉 Iniciando animação de match com:', profile.name);
+    
     // Cria overlay escuro
     const overlay = document.createElement('div');
     overlay.className = 'match-overlay';
-    overlay.innerHTML = `
-        <div class="match-content" id="match-content-box">
-            <div class="match-sparkles">✨</div>
-            <h1 class="match-title">É UM MATCH!</h1>
-            <p class="match-subtitle">Vocês se curtiram mutuamente! 💕</p>
-            
-            <div class="match-photos">
-                <div class="match-photo-container">
-                    <img src="${currentUser.photo}" 
-                         class="match-photo match-photo-left" alt="${currentUser.name}">
-                </div>
-                <div class="match-heart">
-                    <i class="fa-solid fa-heart"></i>
-                </div>
-                <div class="match-photo-container">
-                    <img src="${profile.photo}" 
-                         class="match-photo match-photo-right" alt="${profile.name}">
-                </div>
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;';
+    
+    const content = document.createElement('div');
+    content.className = 'match-content';
+    content.innerHTML = `
+        <div class="match-sparkles">✨</div>
+        <h1 class="match-title">É UM MATCH!</h1>
+        <p class="match-subtitle">Vocês se curtiram mutuamente! 💕</p>
+        
+        <div class="match-photos">
+            <div class="match-photo-container">
+                <img src="${currentUser.photo}" 
+                     class="match-photo match-photo-left" alt="${currentUser.name}">
             </div>
-            
-            <h2 class="match-name">${profile.name}</h2>
-            
-            <div class="match-buttons">
-                <button id="match-send-message" class="match-btn match-btn-primary">
-                    <i class="fa-solid fa-comment-dots"></i>
-                    Enviar Mensagem
-                </button>
-                <button id="match-continue" class="match-btn match-btn-secondary">
-                    Continuar Explorando
-                </button>
+            <div class="match-heart">
+                <i class="fa-solid fa-heart"></i>
             </div>
+            <div class="match-photo-container">
+                <img src="${profile.photo}" 
+                     class="match-photo match-photo-right" alt="${profile.name}">
+            </div>
+        </div>
+        
+        <h2 class="match-name">${profile.name}</h2>
+        
+        <div class="match-buttons">
+            <button type="button" class="match-btn match-btn-primary" data-action="message">
+                <i class="fa-solid fa-comment-dots"></i>
+                Enviar Mensagem
+            </button>
+            <button type="button" class="match-btn match-btn-secondary" data-action="continue">
+                Continuar Explorando
+            </button>
         </div>
     `;
     
+    overlay.appendChild(content);
     document.body.appendChild(overlay);
+    
+    console.log('✅ Overlay adicionado ao DOM');
     
     // Confete MASSIVO
     createMatchConfetti();
     
-    // Aguarda o DOM estar pronto antes de adicionar eventos
-    setTimeout(() => {
-        const btnSendMessage = document.getElementById('match-send-message');
-        const btnContinue = document.getElementById('match-continue');
-        const contentBox = document.getElementById('match-content-box');
-        
-        console.log('🔘 Botões encontrados:', { btnSendMessage, btnContinue });
-        
-        // Evento no botão "Enviar Mensagem"
-        if (btnSendMessage) {
-            btnSendMessage.addEventListener('click', function(e) {
-                console.log('🟢 Clicou em Enviar Mensagem');
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-                
-                createMatchConversation(profile);
-                overlay.remove();
-                window.location.href = 'chat.html';
-            }, { capture: true });
+    // Função para fechar o match
+    function closeMatch() {
+        console.log('🚪 Fechando tela de match');
+        createMatchConversation(profile);
+        overlay.remove();
+    }
+    
+    // Função para ir ao chat
+    function goToChat() {
+        console.log('💬 Indo para o chat');
+        createMatchConversation(profile);
+        overlay.remove();
+        window.location.href = 'chat.html';
+    }
+    
+    // Aguarda renderização
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            // Pega TODOS os botões
+            const allButtons = overlay.querySelectorAll('button');
+            console.log('🔍 Botões encontrados:', allButtons.length);
             
-            // Touch para mobile
-            btnSendMessage.addEventListener('touchend', function(e) {
-                console.log('👆 Touch em Enviar Mensagem');
-                e.preventDefault();
-                e.stopPropagation();
+            allButtons.forEach((btn, index) => {
+                console.log(`Botão ${index}:`, btn.getAttribute('data-action'));
                 
-                createMatchConversation(profile);
-                overlay.remove();
-                window.location.href = 'chat.html';
-            }, { capture: true });
-        }
-        
-        // Evento no botão "Continuar Explorando"
-        if (btnContinue) {
-            btnContinue.addEventListener('click', function(e) {
-                console.log('🟢 Clicou em Continuar');
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
+                // Remove eventos antigos se existirem
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
                 
-                createMatchConversation(profile);
-                overlay.remove();
-            }, { capture: true });
-            
-            // Touch para mobile
-            btnContinue.addEventListener('touchend', function(e) {
-                console.log('👆 Touch em Continuar');
-                e.preventDefault();
-                e.stopPropagation();
+                // Adiciona novo evento
+                newBtn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const action = newBtn.getAttribute('data-action');
+                    console.log('🖱️ CLIQUE DETECTADO! Ação:', action);
+                    
+                    if (action === 'message') {
+                        goToChat();
+                    } else {
+                        closeMatch();
+                    }
+                };
                 
-                createMatchConversation(profile);
-                overlay.remove();
-            }, { capture: true });
-        }
-        
-        // Bloqueia propagação no content box para não fechar ao clicar dentro
-        if (contentBox) {
-            contentBox.addEventListener('click', function(e) {
-                e.stopPropagation();
+                // Também adiciona onmousedown como backup
+                newBtn.onmousedown = function(e) {
+                    e.preventDefault();
+                    console.log('🖱️ MOUSEDOWN! Ação:', newBtn.getAttribute('data-action'));
+                };
+                
+                // Touch para mobile
+                newBtn.ontouchstart = function(e) {
+                    console.log('👆 TOUCH START! Ação:', newBtn.getAttribute('data-action'));
+                };
+                
+                newBtn.ontouchend = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const action = newBtn.getAttribute('data-action');
+                    console.log('👆 TOUCH END! Ação:', action);
+                    
+                    if (action === 'message') {
+                        goToChat();
+                    } else {
+                        closeMatch();
+                    }
+                };
             });
-        }
-        
-        // Fecha APENAS ao clicar no fundo (overlay)
-        overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) {
-                console.log('🟡 Clicou no overlay (fundo)');
-                createMatchConversation(profile);
-                overlay.remove();
-            }
+            
+            console.log('✅ Eventos configurados');
         });
-        
-    }, 150);
+    });
 }
 
 // ========== CRIAR CONVERSA APÓS MATCH ==========
