@@ -13,103 +13,48 @@ const inputContainer = document.getElementById('input-container');
 const bottomNav = document.getElementById('bottom-nav');
 
 // ========== DADOS DE CONVERSAS ==========
-// Conversas padrão (exemplo)
-let conversations = [
-    {
-        id: 1,
-        name: "Amanda",
-        photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=300",
-        lastMessage: "Oi! Tudo bem? 😊",
-        time: "Agora",
-        unread: 2,
-        online: true,
-        messages: [
-            { sender: "other", text: "Oi! Vi que deu match 💕", time: "14:30" },
-            { sender: "me", text: "Sim! Adorei seu perfil 😊", time: "14:32" },
-            { sender: "other", text: "Que legal! O que você gosta de fazer?", time: "14:35" },
-            { sender: "me", text: "Adoro viajar e conhecer lugares novos!", time: "14:36" },
-            { sender: "other", text: "Oi! Tudo bem? 😊", time: "14:40" }
-        ]
-    },
-    {
-        id: 2,
-        name: "Lucas",
-        photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=300",
-        lastMessage: "Bora sair algum dia? 🍕",
-        time: "2h atrás",
-        unread: 0,
-        online: false,
-        messages: [
-            { sender: "other", text: "E aí! Como vai?", time: "12:00" },
-            { sender: "me", text: "Tudo ótimo! E você?", time: "12:15" },
-            { sender: "other", text: "Bora sair algum dia? 🍕", time: "12:30" }
-        ]
-    },
-    {
-        id: 3,
-        name: "Júlia",
-        photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=300",
-        lastMessage: "Também amo séries! Qual tá assistindo?",
-        time: "Ontem",
-        unread: 1,
-        online: true,
-        messages: [
-            { sender: "other", text: "Oi! Vi que você curte séries", time: "Ontem 20:00" },
-            { sender: "me", text: "Sim! Vicio total 📺", time: "Ontem 20:05" },
-            { sender: "other", text: "Também amo séries! Qual tá assistindo?", time: "Ontem 20:10" }
-        ]
-    },
-    {
-        id: 4,
-        name: "Rafael",
-        photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300",
-        lastMessage: "Show! Depois me manda suas artes",
-        time: "2 dias",
-        unread: 0,
-        online: false,
-        messages: [
-            { sender: "me", text: "Vi que você é designer!", time: "2 dias 15:00" },
-            { sender: "other", text: "Sim! Trabalho com design gráfico", time: "2 dias 15:30" },
-            { sender: "other", text: "Show! Depois me manda suas artes", time: "2 dias 15:31" }
-        ]
-    }
-];
+let conversations = [];
+let currentChat = null;
 
 // ========== CARREGAR CONVERSAS DO LOCALSTORAGE ==========
 function loadConversationsFromStorage() {
+    console.log('📦 Carregando conversas do localStorage...');
     try {
         const saved = localStorage.getItem('sparkConversations');
         if (saved) {
             const parsed = JSON.parse(saved);
-            // Adiciona novas conversas sem duplicar
-            parsed.forEach(savedConv => {
-                const exists = conversations.find(c => c.id === savedConv.id || c.name === savedConv.name);
-                if (!exists) {
-                    conversations.unshift(savedConv); // Adiciona no início
-                }
-            });
-            console.log('✅ Conversas carregadas do localStorage');
+            console.log('✅ Conversas encontradas:', parsed.length);
+            
+            // Substitui completamente o array de conversas
+            conversations = parsed;
+            
+            console.log('📝 Conversas carregadas com sucesso!');
+        } else {
+            console.log('ℹ️ Nenhuma conversa salva ainda');
+            conversations = [];
         }
     } catch (e) {
-        console.error('Erro ao carregar conversas:', e);
+        console.error('❌ Erro ao carregar conversas:', e);
+        conversations = [];
     }
 }
 
-let currentChat = null;
-
 // ========== RENDERIZAR LISTA DE CONVERSAS ==========
 function renderChatList() {
-    console.log('Renderizando lista de conversas...');
-    console.log('Número de conversas:', conversations.length);
+    console.log('🎨 Renderizando lista de conversas...');
+    console.log('📊 Total de conversas:', conversations.length);
     
     if (conversations.length === 0) {
+        chatList.innerHTML = '';
         noChats.classList.remove('hidden');
-        console.log('Nenhuma conversa encontrada');
+        console.log('ℹ️ Nenhuma conversa para exibir');
         return;
     }
 
+    noChats.classList.add('hidden');
+    
     chatList.innerHTML = conversations.map(conv => {
-        console.log('Renderizando conversa:', conv.name);
+        console.log('📌 Renderizando:', conv.name);
         return `
         <div class="chat-item flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-50 cursor-pointer transition-all" data-chat-id="${conv.id}">
             <div class="relative">
@@ -132,13 +77,13 @@ function renderChatList() {
     `;
     }).join('');
 
-    console.log('HTML inserido:', chatList.innerHTML.length, 'caracteres');
+    console.log('✅ Lista renderizada com sucesso!');
 
     // Adiciona evento de clique em cada conversa
     document.querySelectorAll('.chat-item').forEach(item => {
         item.addEventListener('click', () => {
             const chatId = parseInt(item.dataset.chatId);
-            console.log('Conversa clicada:', chatId);
+            console.log('🖱️ Conversa clicada:', chatId);
             openChat(chatId);
         });
     });
@@ -146,12 +91,24 @@ function renderChatList() {
 
 // ========== ABRIR CONVERSA ==========
 function openChat(chatId) {
+    console.log('💬 Abrindo chat ID:', chatId);
+    
     currentChat = conversations.find(c => c.id === chatId);
-    if (!currentChat) return;
+    
+    if (!currentChat) {
+        console.error('❌ Conversa não encontrada:', chatId);
+        return;
+    }
+
+    console.log('✅ Conversa encontrada:', currentChat.name);
 
     // Atualiza informações do header
     chatUserName.textContent = currentChat.name;
     chatUserPhoto.src = currentChat.photo;
+
+    // Marca mensagens como lidas
+    currentChat.unread = 0;
+    saveConversationsToStorage();
 
     // Renderiza as mensagens
     renderMessages();
@@ -165,11 +122,16 @@ function openChat(chatId) {
     setTimeout(() => {
         scrollToBottom();
     }, 150);
+    
+    console.log('✅ Chat aberto com sucesso!');
 }
 
 // ========== RENDERIZAR MENSAGENS ==========
 function renderMessages() {
     if (!currentChat) return;
+
+    console.log('💬 Renderizando mensagens para:', currentChat.name);
+    console.log('📝 Total de mensagens:', currentChat.messages.length);
 
     messagesContainer.innerHTML = currentChat.messages.map(msg => {
         // Mensagem do sistema (match)
@@ -195,22 +157,19 @@ function renderMessages() {
         `;
     }).join('');
 
-    // Scroll imediato múltiplas vezes para garantir
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    // Scroll múltiplo para garantir
+    setTimeout(() => scrollToBottom(), 50);
+    setTimeout(() => scrollToBottom(), 100);
     
-    setTimeout(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }, 50);
-    
-    setTimeout(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }, 100);
+    console.log('✅ Mensagens renderizadas!');
 }
 
 // ========== ENVIAR MENSAGEM ==========
 function sendMessage() {
     const text = messageInput.value.trim();
     if (!text || !currentChat) return;
+
+    console.log('📤 Enviando mensagem:', text);
 
     const now = new Date();
     const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -235,10 +194,10 @@ function sendMessage() {
     // Salva no localStorage
     saveConversationsToStorage();
 
-    // Força scroll imediato para a última mensagem
-    setTimeout(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }, 50);
+    // Força scroll imediato
+    setTimeout(() => scrollToBottom(), 50);
+
+    console.log('✅ Mensagem enviada!');
 
     // Simula resposta automática após 2 segundos
     setTimeout(() => {
@@ -258,17 +217,15 @@ function sendMessage() {
             time: time
         });
 
-        // Atualiza última mensagem na lista
         currentChat.lastMessage = randomResponse;
         currentChat.time = "Agora";
 
         renderMessages();
         saveConversationsToStorage();
         
-        // Força scroll para a resposta
-        setTimeout(() => {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }, 50);
+        setTimeout(() => scrollToBottom(), 50);
+        
+        console.log('🤖 Resposta automática enviada');
     }, 2000);
 }
 
@@ -276,67 +233,46 @@ function sendMessage() {
 function saveConversationsToStorage() {
     try {
         localStorage.setItem('sparkConversations', JSON.stringify(conversations));
-        console.log('💾 Conversas salvas no localStorage');
+        console.log('💾 Conversas salvas:', conversations.length);
     } catch (e) {
-        console.error('Erro ao salvar conversas:', e);
+        console.error('❌ Erro ao salvar conversas:', e);
     }
 }
 
-// Auto-scroll quando o teclado aparece
-messageInput.addEventListener('focus', () => {
-    // Força scroll múltiplas vezes para garantir
-    setTimeout(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }, 100);
-    
-    setTimeout(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }, 300);
-    
-    setTimeout(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }, 500);
-});
-
-// Detecta quando o teclado fecha
-messageInput.addEventListener('blur', () => {
-    setTimeout(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }, 100);
-});
-
-// Função helper para scroll suave
+// ========== SCROLL PARA BAIXO ==========
 function scrollToBottom() {
-    // Força scroll imediato
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
-// Detecta mudanças no tamanho da viewport (quando teclado abre/fecha)
+// ========== AUTO-SCROLL QUANDO TECLADO APARECE ==========
+messageInput.addEventListener('focus', () => {
+    setTimeout(() => scrollToBottom(), 100);
+    setTimeout(() => scrollToBottom(), 300);
+    setTimeout(() => scrollToBottom(), 500);
+});
+
+messageInput.addEventListener('blur', () => {
+    setTimeout(() => scrollToBottom(), 100);
+});
+
+// ========== DETECTA RESIZE (TECLADO) ==========
 let lastHeight = window.innerHeight;
 let scrollInterval = null;
 
 window.addEventListener('resize', () => {
     const currentHeight = window.innerHeight;
     
-    // Se a altura diminuiu, provavelmente o teclado abriu
     if (currentHeight < lastHeight && !chatScreen.classList.contains('hidden')) {
-        // Limpa intervalo anterior se existir
-        if (scrollInterval) {
-            clearInterval(scrollInterval);
-        }
+        if (scrollInterval) clearInterval(scrollInterval);
         
-        // Força scroll múltiplas vezes durante 1 segundo
-        scrollInterval = setInterval(() => {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }, 50);
+        scrollInterval = setInterval(() => scrollToBottom(), 50);
         
         setTimeout(() => {
             if (scrollInterval) {
                 clearInterval(scrollInterval);
                 scrollInterval = null;
             }
-            // Um último scroll para garantir
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            scrollToBottom();
         }, 1000);
     }
     
@@ -345,14 +281,15 @@ window.addEventListener('resize', () => {
 
 // ========== VOLTAR PARA LISTA ==========
 backToList.addEventListener('click', () => {
+    console.log('⬅️ Voltando para lista de conversas');
     chatScreen.classList.add('hidden');
     chatListScreen.classList.remove('hidden');
     bottomNav.classList.remove('hidden');
     currentChat = null;
-    renderChatList(); // Atualiza a lista
+    renderChatList();
 });
 
-// ========== ENVIAR MENSAGEM ==========
+// ========== ENVIAR MENSAGEM (EVENTOS) ==========
 sendBtn.addEventListener('click', sendMessage);
 
 messageInput.addEventListener('keypress', (e) => {
@@ -361,32 +298,32 @@ messageInput.addEventListener('keypress', (e) => {
     }
 });
 
-// ========== INICIALIZAR ==========
-console.log('Chat.js carregado!');
-loadConversationsFromStorage(); // Carrega conversas salvas
-console.log('Conversas:', conversations);
+// ========== INICIALIZAÇÃO ==========
+console.log('🚀 chat.js iniciando...');
+
+// Carrega conversas
+loadConversationsFromStorage();
+
+// Renderiza lista
 renderChatList();
 
-// ========== ABRIR CHAT AUTOMATICAMENTE SE VIER DO MATCH ==========
-// Verifica IMEDIATAMENTE
-const openChatIdNow = localStorage.getItem('openChatId');
-console.log('🔍 Verificando openChatId:', openChatIdNow);
+// ========== ABRE CHAT AUTOMATICAMENTE SE VIER DO MATCH ==========
+const openChatId = localStorage.getItem('openChatId');
 
-if (openChatIdNow) {
-    console.log('🎯 ID encontrado! Abrindo chat em 300ms...');
+if (openChatId) {
+    console.log('🎯 Detectado pedido para abrir chat:', openChatId);
     
+    // Remove IMEDIATAMENTE para evitar loops
+    localStorage.removeItem('openChatId');
+    
+    // Aguarda um pouco para garantir que tudo carregou
     setTimeout(() => {
-        const chatId = parseInt(openChatIdNow);
-        console.log('🚀 Abrindo chat com ID:', chatId);
-        
-        // Remove ANTES de abrir para evitar loops
-        localStorage.removeItem('openChatId');
-        
-        // Abre o chat
+        const chatId = parseInt(openChatId);
+        console.log('🚀 Abrindo chat automaticamente:', chatId);
         openChat(chatId);
-        
-        console.log('✅ Chat aberto com sucesso!');
-    }, 300);
+    }, 500);
 } else {
     console.log('ℹ️ Nenhum chat para abrir automaticamente');
 }
+
+console.log('✅ chat.js carregado com sucesso!');
