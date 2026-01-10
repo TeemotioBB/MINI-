@@ -1,223 +1,260 @@
-// ========== ELEMENTOS DO HTML ==========
-const profileImage = document.getElementById('profile-image');
-const profileName = document.getElementById('profile-name');
-const profileBio = document.getElementById('profile-bio');
+// ========== AGUARDA O DOM CARREGAR ==========
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 app.js iniciando...');
 
-const btnLike = document.getElementById('btn-like');
-const btnDislike = document.getElementById('btn-dislike');
-const btnStar = document.getElementById('btn-star');
-const btnBoost = document.getElementById('btn-boost');
+    // ========== ELEMENTOS DO HTML ==========
+    const profileImage = document.getElementById('profile-image');
+    const profileName = document.getElementById('profile-name');
+    const profileBio = document.getElementById('profile-bio');
 
-// ========== ARRAYS PARA SALVAR AÇÕES ==========
-let likedProfiles = [];
-let dislikedProfiles = [];
-let superLikedProfiles = [];
+    const btnLike = document.getElementById('btn-like');
+    const btnDislike = document.getElementById('btn-dislike');
+    const btnStar = document.getElementById('btn-star');
+    const btnBoost = document.getElementById('btn-boost');
 
-// ========== CARD PRINCIPAL ==========
-const card = document.querySelector('.glass-card');
-
-// ========== FUNÇÕES DE ANIMAÇÃO ==========
-
-function createConfetti(color) {
-    for (let i = 0; i < 30; i++) {
-        const confetti = document.createElement('div');
-        confetti.className = 'confetti';
-        confetti.style.left = Math.random() * 100 + '%';
-        confetti.style.top = '50%';
-        confetti.style.backgroundColor = color;
-        confetti.style.animationDelay = Math.random() * 0.3 + 's';
-        confetti.style.animationDuration = (Math.random() * 1 + 1) + 's';
-        document.body.appendChild(confetti);
-        
-        setTimeout(() => confetti.remove(), 2000);
-    }
-}
-
-function showHeartAnimation() {
-    const heart = document.createElement('div');
-    heart.innerHTML = '<i class="fa-solid fa-heart"></i>';
-    heart.className = 'heart-animation';
-    document.body.appendChild(heart);
-    
-    createConfetti('#10b981');
-    
-    setTimeout(() => heart.remove(), 800);
-}
-
-function showXAnimation() {
-    const x = document.createElement('div');
-    x.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-    x.className = 'x-animation';
-    document.body.appendChild(x);
-    
-    createConfetti('#ef4444');
-    
-    setTimeout(() => x.remove(), 800);
-}
-
-function showStarAnimation() {
-    const star = document.createElement('div');
-    star.innerHTML = '<i class="fa-solid fa-star"></i>';
-    star.className = 'star-animation';
-    document.body.appendChild(star);
-    
-    createConfetti('#3b82f6');
-    setTimeout(() => createConfetti('#60a5fa'), 200);
-    
-    setTimeout(() => star.remove(), 1000);
-}
-
-// ========== FUNÇÃO PARA MOSTRAR PERFIL ==========
-function showProfile() {
-    if (currentProfileIndex >= profiles.length) {
-        profileName.textContent = "Acabaram os perfis! 😢";
-        profileBio.textContent = "Volte mais tarde para ver mais pessoas";
-        profileImage.src = "https://via.placeholder.com/500x380?text=Sem+mais+perfis";
+    // Verifica se os elementos existem
+    if (!btnLike || !btnDislike || !btnStar || !btnBoost) {
+        console.error('❌ Botões não encontrados! Verifique o HTML.');
         return;
     }
 
-    const profile = profiles[currentProfileIndex];
-    
-    profileName.textContent = `${profile.name}, ${profile.age}`;
-    profileBio.innerHTML = profile.bio;
-    profileImage.src = profile.photo;
-    
-    console.log('👤 Mostrando perfil:', profile.name);
-}
+    console.log('✅ Botões encontrados:', {
+        like: !!btnLike,
+        dislike: !!btnDislike,
+        star: !!btnStar,
+        boost: !!btnBoost
+    });
 
-// ========== FUNÇÃO PARA PRÓXIMO PERFIL ==========
-function nextProfile() {
-    currentProfileIndex++;
-    showProfile();
-}
+    // ========== ARRAYS PARA SALVAR AÇÕES ==========
+    let likedProfiles = [];
+    let dislikedProfiles = [];
+    let superLikedProfiles = [];
 
-// ========== BOTÃO LIKE (coração verde) - COM VIP ==========
-btnLike.addEventListener('click', () => {
-    if (currentProfileIndex >= profiles.length) return;
-    
-    // ✅ VERIFICAÇÃO VIP - PODE DAR LIKE?
-    if (!window.vipSystem.registerLike()) {
-        console.log('❌ Limite de likes atingido');
-        return; // Bloqueia se não puder dar like
+    // ========== CARD PRINCIPAL ==========
+    const card = document.querySelector('.glass-card');
+
+    // ========== FUNÇÕES DE ANIMAÇÃO ==========
+    function createConfetti(color) {
+        for (let i = 0; i < 30; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.top = '50%';
+            confetti.style.backgroundColor = color;
+            confetti.style.animationDelay = Math.random() * 0.3 + 's';
+            confetti.style.animationDuration = (Math.random() * 1 + 1) + 's';
+            document.body.appendChild(confetti);
+            
+            setTimeout(() => confetti.remove(), 2000);
+        }
     }
-    
-    const profile = profiles[currentProfileIndex];
-    likedProfiles.push(profile);
-    console.log('❤️ Você deu LIKE em:', profile.name);
-    console.log('📊 Total de likes:', likedProfiles.length);
-    
-    // Verifica se há match
-    const hasMatch = checkForMatch(profile);
-    
-    if (hasMatch) {
-        console.log('🎉 MATCH COM:', profile.name);
+
+    function showHeartAnimation() {
+        const heart = document.createElement('div');
+        heart.innerHTML = '<i class="fa-solid fa-heart"></i>';
+        heart.className = 'heart-animation';
+        document.body.appendChild(heart);
         
-        card.classList.add('swipe-right');
-        showHeartAnimation();
+        createConfetti('#10b981');
         
-        setTimeout(() => {
-            card.classList.remove('swipe-right');
-            nextProfile();
+        setTimeout(() => heart.remove(), 800);
+    }
+
+    function showXAnimation() {
+        const x = document.createElement('div');
+        x.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        x.className = 'x-animation';
+        document.body.appendChild(x);
+        
+        createConfetti('#ef4444');
+        
+        setTimeout(() => x.remove(), 800);
+    }
+
+    function showStarAnimation() {
+        const star = document.createElement('div');
+        star.innerHTML = '<i class="fa-solid fa-star"></i>';
+        star.className = 'star-animation';
+        document.body.appendChild(star);
+        
+        createConfetti('#3b82f6');
+        setTimeout(() => createConfetti('#60a5fa'), 200);
+        
+        setTimeout(() => star.remove(), 1000);
+    }
+
+    // ========== FUNÇÃO PARA MOSTRAR PERFIL ==========
+    function showProfile() {
+        if (currentProfileIndex >= profiles.length) {
+            profileName.textContent = "Acabaram os perfis! 😢";
+            profileBio.textContent = "Volte mais tarde para ver mais pessoas";
+            profileImage.src = "https://via.placeholder.com/500x380?text=Sem+mais+perfis";
+            return;
+        }
+
+        const profile = profiles[currentProfileIndex];
+        
+        profileName.textContent = `${profile.name}, ${profile.age}`;
+        profileBio.innerHTML = profile.bio;
+        profileImage.src = profile.photo;
+        
+        console.log('👤 Mostrando perfil:', profile.name);
+    }
+
+    // ========== FUNÇÃO PARA PRÓXIMO PERFIL ==========
+    function nextProfile() {
+        currentProfileIndex++;
+        showProfile();
+    }
+
+    // ========== BOTÃO LIKE (coração verde) - COM VIP ==========
+    btnLike.addEventListener('click', () => {
+        console.log('🖱️ Botão LIKE clicado!');
+        
+        if (currentProfileIndex >= profiles.length) {
+            console.log('⚠️ Sem mais perfis');
+            return;
+        }
+        
+        // ✅ VERIFICAÇÃO VIP - PODE DAR LIKE?
+        if (window.vipSystem && !window.vipSystem.registerLike()) {
+            console.log('❌ VIP bloqueou o like');
+            return;
+        }
+        
+        const profile = profiles[currentProfileIndex];
+        likedProfiles.push(profile);
+        console.log('❤️ LIKE dado em:', profile.name);
+        
+        // Verifica se há match
+        const hasMatch = typeof checkForMatch !== 'undefined' && checkForMatch(profile);
+        
+        if (hasMatch) {
+            console.log('🎉 MATCH COM:', profile.name);
+            
+            card.classList.add('swipe-right');
+            showHeartAnimation();
             
             setTimeout(() => {
-                showMatchAnimation(profile);
-            }, 300);
-        }, 500);
-    } else {
-        card.classList.add('swipe-right');
-        showHeartAnimation();
+                card.classList.remove('swipe-right');
+                nextProfile();
+                
+                setTimeout(() => {
+                    if (typeof showMatchAnimation !== 'undefined') {
+                        showMatchAnimation(profile);
+                    }
+                }, 300);
+            }, 500);
+        } else {
+            console.log('💚 Like normal, sem match');
+            card.classList.add('swipe-right');
+            showHeartAnimation();
+            
+            setTimeout(() => {
+                card.classList.remove('swipe-right');
+                nextProfile();
+            }, 500);
+        }
+    });
+
+    // ========== BOTÃO DISLIKE (X vermelho) ==========
+    btnDislike.addEventListener('click', () => {
+        console.log('🖱️ Botão DISLIKE clicado!');
+        
+        if (currentProfileIndex >= profiles.length) return;
+        
+        const profile = profiles[currentProfileIndex];
+        dislikedProfiles.push(profile);
+        console.log('❌ DISLIKE dado em:', profile.name);
+        
+        card.classList.add('swipe-left');
+        showXAnimation();
         
         setTimeout(() => {
-            card.classList.remove('swipe-right');
+            card.classList.remove('swipe-left');
             nextProfile();
         }, 500);
-    }
-});
+    });
 
-// ========== BOTÃO DISLIKE (X vermelho) ==========
-btnDislike.addEventListener('click', () => {
-    if (currentProfileIndex >= profiles.length) return;
-    
-    const profile = profiles[currentProfileIndex];
-    dislikedProfiles.push(profile);
-    console.log('❌ Você deu DISLIKE em:', profile.name);
-    
-    card.classList.add('swipe-left');
-    showXAnimation();
-    
+    // ========== BOTÃO SUPER LIKE (estrela azul) - COM VIP ==========
+    btnStar.addEventListener('click', () => {
+        console.log('🖱️ Botão SUPER LIKE clicado!');
+        
+        if (currentProfileIndex >= profiles.length) return;
+        
+        // ✅ VERIFICAÇÃO VIP - PODE DAR SUPER LIKE?
+        if (window.vipSystem && !window.vipSystem.registerSuperLike()) {
+            console.log('❌ VIP bloqueou o super like');
+            return;
+        }
+        
+        const profile = profiles[currentProfileIndex];
+        superLikedProfiles.push(profile);
+        console.log('⭐ SUPER LIKE dado em:', profile.name);
+        
+        const hasMatch = typeof checkForMatch !== 'undefined' && checkForMatch(profile);
+        
+        if (hasMatch) {
+            console.log('🎉 MATCH COM:', profile.name);
+            
+            card.classList.add('swipe-up');
+            showStarAnimation();
+            
+            setTimeout(() => {
+                card.classList.remove('swipe-up');
+                nextProfile();
+                
+                setTimeout(() => {
+                    if (typeof showMatchAnimation !== 'undefined') {
+                        showMatchAnimation(profile);
+                    }
+                }, 300);
+            }, 600);
+        } else {
+            console.log('⭐ Super Like normal, sem match');
+            card.classList.add('swipe-up');
+            showStarAnimation();
+            
+            setTimeout(() => {
+                card.classList.remove('swipe-up');
+                nextProfile();
+            }, 600);
+        }
+    });
+
+    // ========== BOTÃO BOOST - COM VIP ==========
+    btnBoost.addEventListener('click', () => {
+        console.log('🖱️ Botão BOOST clicado!');
+        
+        // ✅ VERIFICAÇÃO VIP - PODE DAR BOOST?
+        if (window.vipSystem && !window.vipSystem.registerBoost()) {
+            console.log('❌ VIP bloqueou o boost');
+            return;
+        }
+        
+        console.log('⚡ BOOST ativado com sucesso!');
+    });
+
+    // ========== AGUARDA VIP SYSTEM CARREGAR ==========
     setTimeout(() => {
-        card.classList.remove('swipe-left');
-        nextProfile();
-    }, 500);
-});
+        if (window.vipSystem) {
+            window.vipSystem.updateUI();
+            console.log('✅ Sistema VIP integrado!');
+            console.log('📊 Stats:', window.vipSystem.getStats());
+        } else {
+            console.warn('⚠️ VIP System não encontrado - Funcionando sem limites');
+        }
+    }, 200);
 
-// ========== BOTÃO SUPER LIKE (estrela azul) - COM VIP ==========
-btnStar.addEventListener('click', () => {
-    if (currentProfileIndex >= profiles.length) return;
-    
-    // ✅ VERIFICAÇÃO VIP - PODE DAR SUPER LIKE?
-    if (!window.vipSystem.registerSuperLike()) {
-        console.log('❌ Sem Super Likes disponíveis');
-        return; // Bloqueia se não puder dar super like
-    }
-    
-    const profile = profiles[currentProfileIndex];
-    superLikedProfiles.push(profile);
-    console.log('⭐ Você deu SUPER LIKE em:', profile.name);
-    console.log('📊 Total de super likes:', superLikedProfiles.length);
-    
-    const hasMatch = checkForMatch(profile);
-    
-    if (hasMatch) {
-        console.log('🎉 MATCH COM:', profile.name);
-        
-        card.classList.add('swipe-up');
-        showStarAnimation();
-        
-        setTimeout(() => {
-            card.classList.remove('swipe-up');
-            nextProfile();
-            
-            setTimeout(() => {
-                showMatchAnimation(profile);
-            }, 300);
-        }, 600);
+    // ========== MOSTRAR PRIMEIRO PERFIL ==========
+    if (typeof profiles !== 'undefined' && profiles.length > 0) {
+        showProfile();
+        console.log('✅ Primeiro perfil carregado');
     } else {
-        card.classList.add('swipe-up');
-        showStarAnimation();
-        
-        setTimeout(() => {
-            card.classList.remove('swipe-up');
-            nextProfile();
-        }, 600);
+        console.error('❌ Array de perfis não encontrado!');
     }
+
+    console.log('✅ app.js carregado com sucesso!');
 });
 
-// ========== BOTÃO BOOST - COM VIP ==========
-btnBoost.addEventListener('click', () => {
-    // ✅ VERIFICAÇÃO VIP - PODE DAR BOOST?
-    if (!window.vipSystem.registerBoost()) {
-        console.log('❌ Sem Boosts disponíveis');
-        return; // Bloqueia se não puder dar boost
-    }
-    
-    console.log('⚡ Boost ativado com sucesso!');
-});
-
-// ========== INICIALIZAR ==========
-console.log('🚀 app.js iniciando...');
-console.log('📋 Perfis disponíveis:', profiles.length);
-
-// Aguarda VIP System carregar
-setTimeout(() => {
-    if (window.vipSystem) {
-        window.vipSystem.updateUI();
-        console.log('✅ Sistema VIP integrado com sucesso!');
-        console.log('📊 Stats VIP:', window.vipSystem.getStats());
-    }
-}, 100);
-
-// Mostrar o primeiro perfil
-showProfile();
-
-console.log('✅ app.js carregado com sucesso!');
+console.log('📝 app.js script carregado (aguardando DOM)');
