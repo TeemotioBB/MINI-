@@ -1,4 +1,4 @@
-// Elementos do HTML
+// ========== ELEMENTOS DO HTML ==========
 const profileImage = document.getElementById('profile-image');
 const profileName = document.getElementById('profile-name');
 const profileBio = document.getElementById('profile-bio');
@@ -8,12 +8,12 @@ const btnDislike = document.getElementById('btn-dislike');
 const btnStar = document.getElementById('btn-star');
 const btnBoost = document.getElementById('btn-boost');
 
-// Arrays para salvar likes e dislikes
+// ========== ARRAYS PARA SALVAR AÇÕES ==========
 let likedProfiles = [];
 let dislikedProfiles = [];
 let superLikedProfiles = [];
 
-// Pega o card principal
+// ========== CARD PRINCIPAL ==========
 const card = document.querySelector('.glass-card');
 
 // ========== FUNÇÕES DE ANIMAÇÃO ==========
@@ -41,7 +41,6 @@ function showHeartAnimation() {
     heart.className = 'heart-animation';
     document.body.appendChild(heart);
     
-    // Confete verde
     createConfetti('#10b981');
     
     setTimeout(() => heart.remove(), 800);
@@ -54,7 +53,6 @@ function showXAnimation() {
     x.className = 'x-animation';
     document.body.appendChild(x);
     
-    // Confete vermelho
     createConfetti('#ef4444');
     
     setTimeout(() => x.remove(), 800);
@@ -67,7 +65,6 @@ function showStarAnimation() {
     star.className = 'star-animation';
     document.body.appendChild(star);
     
-    // Confete azul EXTRA
     createConfetti('#3b82f6');
     setTimeout(() => createConfetti('#60a5fa'), 200);
     
@@ -75,7 +72,6 @@ function showStarAnimation() {
 }
 
 // ========== FUNÇÃO PARA MOSTRAR PERFIL ==========
-
 function showProfile() {
     if (currentProfileIndex >= profiles.length) {
         profileName.textContent = "Acabaram os perfis! 😢";
@@ -89,24 +85,24 @@ function showProfile() {
     profileName.textContent = `${profile.name}, ${profile.age}`;
     profileBio.innerHTML = profile.bio;
     profileImage.src = profile.photo;
+    
+    console.log('👤 Mostrando perfil:', profile.name);
 }
 
 // ========== FUNÇÃO PARA PRÓXIMO PERFIL ==========
-
 function nextProfile() {
     currentProfileIndex++;
     showProfile();
 }
 
 // ========== BOTÃO LIKE (coração verde) ==========
-
 btnLike.addEventListener('click', () => {
     if (currentProfileIndex >= profiles.length) return;
     
     const profile = profiles[currentProfileIndex];
     likedProfiles.push(profile);
     console.log('❤️ Você deu LIKE em:', profile.name);
-    console.log('Total de likes:', likedProfiles.length);
+    console.log('📊 Total de likes:', likedProfiles.length);
     
     // ✨ VERIFICA SE HÁ MATCH ✨
     const hasMatch = checkForMatch(profile);
@@ -141,7 +137,6 @@ btnLike.addEventListener('click', () => {
 });
 
 // ========== BOTÃO DISLIKE (X vermelho) ==========
-
 btnDislike.addEventListener('click', () => {
     if (currentProfileIndex >= profiles.length) return;
     
@@ -161,14 +156,13 @@ btnDislike.addEventListener('click', () => {
 });
 
 // ========== BOTÃO SUPER LIKE (estrela azul) ==========
-
 btnStar.addEventListener('click', () => {
     if (currentProfileIndex >= profiles.length) return;
     
     const profile = profiles[currentProfileIndex];
     superLikedProfiles.push(profile);
     console.log('⭐ Você deu SUPER LIKE em:', profile.name);
-    console.log('Total de super likes:', superLikedProfiles.length);
+    console.log('📊 Total de super likes:', superLikedProfiles.length);
     
     // ✨ VERIFICA SE HÁ MATCH (Super Like também pode dar match!) ✨
     const hasMatch = checkForMatch(profile);
@@ -200,12 +194,15 @@ btnStar.addEventListener('click', () => {
 });
 
 // ========== BOTÃO BOOST ==========
-
 btnBoost.addEventListener('click', () => {
     alert('⚡ Boost ativado por 1 hora! (função em desenvolvimento)');
 });
 
 // ========== INICIALIZAR ==========
+console.log('🚀 app.js iniciando...');
+console.log('📋 Perfis disponíveis:', profiles.length);
 
 // Mostrar o primeiro perfil quando carregar a página
 showProfile();
+
+console.log('✅ app.js carregado com sucesso!');
