@@ -6,6 +6,12 @@ const rateLimit = require('express-rate-limit');
 const { Pool } = require('pg');
 require('dotenv').config();
 
+// Importa rotas
+const uploadRoutes = require('./routes/upload');
+
+// Importa middleware de autenticação
+const { requireTelegramAuth, optionalTelegramAuth } = require('./middleware/telegramAuth');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -25,16 +31,22 @@ pool.connect((err, client, release) => {
     }
 });
 
+// Exporta pool para usar nas rotas
+global.pool = pool;
+
 // ========== MIDDLEWARES ==========
 app.use(helmet()); // Segurança
-app.use(cors()); // CORS
-app.use(express.json()); // Parse JSON
-app.use(express.urlencoded({ extended: true }));
+app.use(cors({
+    origin: process.env.FRONTEND_URL || '*',
+    credentials: true
+})); 
+app.use(express.json({ limit: '10mb' })); 
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Rate limiting
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 100 // 100 requests por IP
+    windowMs: 15 * 60 * 1000,
+    max: 100
 });
 app.use('/api/', limiter);
 
@@ -44,9 +56,12 @@ app.use((req, res, next) => {
     next();
 });
 
+// ========== ROTAS DE UPLOAD ==========
+app.use('/api/upload', requireTelegramAuth, uploadRoutes);
+
 // ========== ROTAS DE USUÁRIOS ==========
 
-// GET - Buscar perfil por Telegram ID
+// GET - Buscar perfil por Telegram ID (público)
 app.get('/api/users/:telegramId', async (req, res) => {
     try {
         const { telegramId } = req.params;
@@ -67,24 +82,26 @@ app.get('/api/users/:telegramId', async (req, res) => {
     }
 });
 
-// POST - Criar ou atualizar usuário
-app.post('/api/users', async (req, res) => {
+// POST - Criar ou atualizar usuário (requer autenticação)
+app.post('/api/users', requireTelegramAuth, async (req, res) => {
     try {
         const { 
-            telegram_id, name, age, gender, bio, city, 
+            name, age, gender, bio, city, 
             photo_url, photos, pref_gender, pref_age_min, pref_age_max 
         } = req.body;
         
+        const telegram_id = req.telegramUser.telegram_id;
+        
         // Validações
-        if (!telegram_id || !name || !age) {
-            return res.status(400).json({ error: 'Campos obrigatórios: telegram_id, name, age' });
+        if (!name || !age) {
+            return res.status(400).json({ error: 'Campos obrigatórios: name, age' });
         }
         
         if (age < 18 || age > 99) {
             return res.status(400).json({ error: 'Idade deve estar entre 18 e 99' });
         }
         
-        // Upsert (insert ou update)
+        // Upsert
         const result = await pool.query(`
             INSERT INTO users (
                 telegram_id, name, age, gender, bio, city, photo_url, photos,
@@ -116,16 +133,16 @@ app.post('/api/users', async (req, res) => {
     }
 });
 
-// GET - Buscar perfis para swipe
-app.get('/api/users/:telegramId/discover', async (req, res) => {
+// GET - Buscar perfis para swipe (requer autenticação)
+app.get('/api/users/:telegramId/discover', requireTelegramAuth, async (req, res) => {
     try {
-        const { telegramId } = req.params;
         const { limit = 10 } = req.query;
+        const telegram_id = req.telegramUser.telegram_id;
         
         // Busca usuário atual
         const userResult = await pool.query(
             'SELECT * FROM users WHERE telegram_id = $1',
-            [telegramId]
+            [telegram_id]
         );
         
         if (userResult.rows.length === 0) {
@@ -134,7 +151,7 @@ app.get('/api/users/:telegramId/discover', async (req, res) => {
         
         const user = userResult.rows[0];
         
-        // Busca perfis compatíveis (que o usuário ainda não viu)
+        // Busca perfis compatíveis
         const result = await pool.query(`
             SELECT u.* 
             FROM users u
@@ -164,16 +181,17 @@ app.get('/api/users/:telegramId/discover', async (req, res) => {
 
 // ========== ROTAS DE LIKES ==========
 
-// POST - Dar like/dislike
-app.post('/api/likes', async (req, res) => {
+// POST - Dar like/dislike (requer autenticação)
+app.post('/api/likes', requireTelegramAuth, async (req, res) => {
     try {
-        const { from_telegram_id, to_telegram_id, type } = req.body;
+        const { to_telegram_id, type } = req.body;
+        const from_telegram_id = req.telegramUser.telegram_id;
         
         if (!['like', 'superlike', 'dislike'].includes(type)) {
-            return res.status(400).json({ error: 'Tipo inválido. Use: like, superlike ou dislike' });
+            return res.status(400).json({ error: 'Tipo inválido' });
         }
         
-        // Busca IDs dos usuários
+        // Busca IDs
         const fromUser = await pool.query(
             'SELECT id, is_premium, daily_likes, daily_super_likes FROM users WHERE telegram_id = $1',
             [from_telegram_id]
@@ -191,14 +209,12 @@ app.post('/api/likes', async (req, res) => {
         const from = fromUser.rows[0];
         const to = toUser.rows[0];
         
-        // Verifica limites (apenas para FREE)
+        // Verifica limites
         if (!from.is_premium) {
             if (type === 'like' && from.daily_likes >= 10) {
                 return res.status(403).json({ 
                     error: 'Limite de likes atingido',
-                    code: 'LIMIT_REACHED',
-                    limit: 10,
-                    used: from.daily_likes
+                    code: 'LIMIT_REACHED'
                 });
             }
             
@@ -210,16 +226,16 @@ app.post('/api/likes', async (req, res) => {
             }
         }
         
-        // Registra o like
+        // Registra like
         const result = await pool.query(`
             INSERT INTO likes (from_user_id, to_user_id, type)
             VALUES ($1, $2, $3)
             ON CONFLICT (from_user_id, to_user_id) 
-            DO UPDATE SET type = EXCLUDED.type, created_at = CURRENT_TIMESTAMP
+            DO UPDATE SET type = EXCLUDED.type
             RETURNING *
         `, [from.id, to.id, type]);
         
-        // Atualiza contador (apenas para likes, não dislikes)
+        // Atualiza contador
         if (type === 'like' && !from.is_premium) {
             await pool.query(
                 'UPDATE users SET daily_likes = daily_likes + 1 WHERE id = $1',
@@ -227,7 +243,7 @@ app.post('/api/likes', async (req, res) => {
             );
         }
         
-        // Verifica se formou match
+        // Verifica match
         const matchCheck = await pool.query(
             'SELECT check_match($1, $2) as has_match',
             [from.id, to.id]
@@ -246,15 +262,14 @@ app.post('/api/likes', async (req, res) => {
     }
 });
 
-// GET - Buscar likes recebidos
-app.get('/api/likes/received/:telegramId', async (req, res) => {
+// GET - Buscar likes recebidos (requer autenticação)
+app.get('/api/likes/received', requireTelegramAuth, async (req, res) => {
     try {
-        const { telegramId } = req.params;
+        const telegram_id = req.telegramUser.telegram_id;
         
-        // Busca usuário
         const userResult = await pool.query(
             'SELECT id, is_premium FROM users WHERE telegram_id = $1',
-            [telegramId]
+            [telegram_id]
         );
         
         if (userResult.rows.length === 0) {
@@ -263,16 +278,13 @@ app.get('/api/likes/received/:telegramId', async (req, res) => {
         
         const user = userResult.rows[0];
         
-        // Se não é premium, retorna bloqueado
         if (!user.is_premium) {
             return res.status(403).json({ 
                 error: 'Recurso Premium',
-                code: 'PREMIUM_REQUIRED',
-                count: 0
+                code: 'PREMIUM_REQUIRED'
             });
         }
         
-        // Busca likes recebidos
         const result = await pool.query(`
             SELECT u.*, l.type, l.created_at as liked_at
             FROM likes l
@@ -284,21 +296,21 @@ app.get('/api/likes/received/:telegramId', async (req, res) => {
         
         res.json(result.rows);
     } catch (error) {
-        console.error('Erro ao buscar likes recebidos:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
+        console.error('Erro:', error);
+        res.status(500).json({ error: 'Erro interno' });
     }
 });
 
 // ========== ROTAS DE MATCHES ==========
 
-// GET - Buscar matches do usuário
-app.get('/api/matches/:telegramId', async (req, res) => {
+// GET - Matches do usuário (requer autenticação)
+app.get('/api/matches', requireTelegramAuth, async (req, res) => {
     try {
-        const { telegramId } = req.params;
+        const telegram_id = req.telegramUser.telegram_id;
         
         const userResult = await pool.query(
             'SELECT id FROM users WHERE telegram_id = $1',
-            [telegramId]
+            [telegram_id]
         );
         
         if (userResult.rows.length === 0) {
@@ -315,15 +327,15 @@ app.get('/api/matches/:telegramId', async (req, res) => {
         
         res.json(result.rows);
     } catch (error) {
-        console.error('Erro ao buscar matches:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
+        console.error('Erro:', error);
+        res.status(500).json({ error: 'Erro interno' });
     }
 });
 
 // ========== ROTAS DE CHAT ==========
 
-// GET - Buscar mensagens de um match
-app.get('/api/matches/:matchId/messages', async (req, res) => {
+// GET - Mensagens (requer autenticação)
+app.get('/api/matches/:matchId/messages', requireTelegramAuth, async (req, res) => {
     try {
         const { matchId } = req.params;
         const { limit = 50, offset = 0 } = req.query;
@@ -337,27 +349,27 @@ app.get('/api/matches/:matchId/messages', async (req, res) => {
             LIMIT $2 OFFSET $3
         `, [matchId, limit, offset]);
         
-        res.json(result.rows.reverse()); // Mais antigas primeiro
+        res.json(result.rows.reverse());
     } catch (error) {
-        console.error('Erro ao buscar mensagens:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
+        console.error('Erro:', error);
+        res.status(500).json({ error: 'Erro interno' });
     }
 });
 
-// POST - Enviar mensagem
-app.post('/api/matches/:matchId/messages', async (req, res) => {
+// POST - Enviar mensagem (requer autenticação)
+app.post('/api/matches/:matchId/messages', requireTelegramAuth, async (req, res) => {
     try {
         const { matchId } = req.params;
-        const { sender_telegram_id, content } = req.body;
+        const { content } = req.body;
+        const telegram_id = req.telegramUser.telegram_id;
         
-        if (!content || content.trim().length === 0) {
-            return res.status(400).json({ error: 'Mensagem não pode estar vazia' });
+        if (!content || !content.trim()) {
+            return res.status(400).json({ error: 'Mensagem vazia' });
         }
         
-        // Busca sender ID
         const senderResult = await pool.query(
             'SELECT id FROM users WHERE telegram_id = $1',
-            [sender_telegram_id]
+            [telegram_id]
         );
         
         if (senderResult.rows.length === 0) {
@@ -366,14 +378,12 @@ app.post('/api/matches/:matchId/messages', async (req, res) => {
         
         const senderId = senderResult.rows[0].id;
         
-        // Insere mensagem
         const result = await pool.query(`
             INSERT INTO messages (match_id, sender_id, content)
             VALUES ($1, $2, $3)
             RETURNING *
         `, [matchId, senderId, content.trim()]);
         
-        // Atualiza last_message_at no match
         await pool.query(
             'UPDATE matches SET last_message_at = CURRENT_TIMESTAMP WHERE id = $1',
             [matchId]
@@ -381,33 +391,12 @@ app.post('/api/matches/:matchId/messages', async (req, res) => {
         
         res.json(result.rows[0]);
     } catch (error) {
-        console.error('Erro ao enviar mensagem:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
+        console.error('Erro:', error);
+        res.status(500).json({ error: 'Erro interno' });
     }
 });
 
-// ========== ROTAS DE ADMIN/UTILS ==========
-
-// POST - Resetar limites diários (CRON JOB)
-app.post('/api/admin/reset-limits', async (req, res) => {
-    try {
-        const { secret } = req.body;
-        
-        // Protege com secret key
-        if (secret !== process.env.ADMIN_SECRET) {
-            return res.status(401).json({ error: 'Não autorizado' });
-        }
-        
-        await pool.query('SELECT reset_daily_limits()');
-        
-        res.json({ message: 'Limites resetados com sucesso' });
-    } catch (error) {
-        console.error('Erro ao resetar limites:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
-    }
-});
-
-// GET - Health check
+// ========== HEALTH CHECK ==========
 app.get('/health', async (req, res) => {
     try {
         await pool.query('SELECT 1');
@@ -417,18 +406,17 @@ app.get('/health', async (req, res) => {
     }
 });
 
-// ========== TRATAMENTO DE ERROS ==========
+// ========== ERROR HANDLERS ==========
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({ error: 'Algo deu errado!' });
 });
 
-// 404
 app.use((req, res) => {
     res.status(404).json({ error: 'Rota não encontrada' });
 });
 
-// ========== INICIAR SERVIDOR ==========
+// ========== INICIAR ==========
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
