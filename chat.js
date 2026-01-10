@@ -366,3 +366,13 @@ console.log('Chat.js carregado!');
 loadConversationsFromStorage(); // Carrega conversas salvas
 console.log('Conversas:', conversations);
 renderChatList();
+
+// ========== ABRIR CHAT AUTOMATICAMENTE SE VIER DO MATCH ==========
+setTimeout(() => {
+    const openChatId = localStorage.getItem('openChatId');
+    if (openChatId) {
+        console.log('🎯 Abrindo chat automaticamente - ID:', openChatId);
+        localStorage.removeItem('openChatId'); // Remove para não abrir de novo
+        openChat(parseInt(openChatId));
+    }
+}, 200);
