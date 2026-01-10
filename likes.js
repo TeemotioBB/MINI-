@@ -115,36 +115,65 @@ function renderLikes() {
     likesGrid.classList.remove('hidden');
     noLikes.classList.add('hidden');
 
-    likesGrid.innerHTML = likes.map(like => `
-        <div class="like-card relative cursor-pointer group" data-id="${like.id}">
-            <div class="relative overflow-hidden rounded-2xl">
-                <img src="${like.photo}" class="w-full h-56 object-cover transition-transform group-hover:scale-105">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                
-                ${like.verified ? `
-                    <div class="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2 py-1 rounded-full flex items-center gap-1">
-                        <i class="fa-solid fa-circle-check text-blue-500 text-[10px]"></i>
+    // ✅ VERIFICAÇÃO VIP - PODE VER LIKES RECEBIDOS?
+    const canSeeLikes = window.vipSystem && window.vipSystem.canSeeLikes();
+
+    likesGrid.innerHTML = likes.map(like => {
+        // Se é aba de "Recebidas" e NÃO é VIP, mostra bloqueado
+        if (currentTab === 'received' && !canSeeLikes) {
+            return `
+                <div class="like-card relative cursor-pointer group" data-id="${like.id}">
+                    <div class="relative overflow-hidden rounded-2xl">
+                        <img src="${like.photo}" class="w-full h-56 object-cover blur-lg">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-black/40 flex flex-col items-center justify-center">
+                            <i class="fa-solid fa-lock text-white text-3xl mb-2"></i>
+                            <p class="text-white font-bold text-sm">Premium</p>
+                            <p class="text-white/80 text-xs">Assine para ver</p>
+                        </div>
                     </div>
-                ` : ''}
-                
-                ${currentTab === 'received' ? `
-                    <div class="absolute top-3 right-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-2 py-1 rounded-full text-[10px] font-bold uppercase">
-                        Novo
+                </div>
+            `;
+        }
+
+        // Mostra normalmente para VIP ou aba "Enviadas"
+        return `
+            <div class="like-card relative cursor-pointer group" data-id="${like.id}">
+                <div class="relative overflow-hidden rounded-2xl">
+                    <img src="${like.photo}" class="w-full h-56 object-cover transition-transform group-hover:scale-105">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    
+                    ${like.verified ? `
+                        <div class="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2 py-1 rounded-full flex items-center gap-1">
+                            <i class="fa-solid fa-circle-check text-blue-500 text-[10px]"></i>
+                        </div>
+                    ` : ''}
+                    
+                    ${currentTab === 'received' ? `
+                        <div class="absolute top-3 right-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-2 py-1 rounded-full text-[10px] font-bold uppercase">
+                            Novo
+                        </div>
+                    ` : ''}
+                    
+                    <div class="absolute bottom-0 left-0 right-0 p-3">
+                        <h3 class="text-white font-bold text-lg">${like.name}, ${like.age}</h3>
+                        <p class="text-white/80 text-xs mt-1">${like.time}</p>
                     </div>
-                ` : ''}
-                
-                <div class="absolute bottom-0 left-0 right-0 p-3">
-                    <h3 class="text-white font-bold text-lg">${like.name}, ${like.age}</h3>
-                    <p class="text-white/80 text-xs mt-1">${like.time}</p>
                 </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 
     // Adiciona evento de clique nos cards
     document.querySelectorAll('.like-card').forEach(card => {
         card.addEventListener('click', () => {
             const id = parseInt(card.dataset.id);
+            
+            // Se é aba recebidas e não é VIP, mostra modal de upgrade
+            if (currentTab === 'received' && !canSeeLikes) {
+                window.vipSystem.showUpgradeModal('viewLikes');
+                return;
+            }
+            
             openProfileModal(id);
         });
     });
@@ -163,7 +192,6 @@ function openProfileModal(id) {
 
     profileModal.classList.remove('hidden');
     
-    // Animação de entrada
     setTimeout(() => {
         document.querySelector('.modal-content').style.transform = 'scale(1)';
         document.querySelector('.modal-content').style.opacity = '1';
@@ -185,13 +213,18 @@ function closeProfileModal() {
 modalLike.addEventListener('click', () => {
     if (!selectedProfile) return;
 
-    // Animação de sucesso
+    // ✅ VERIFICAÇÃO VIP - PODE DAR LIKE?
+    if (window.vipSystem && !window.vipSystem.registerLike()) {
+        console.log('❌ Limite de likes atingido');
+        closeProfileModal();
+        return;
+    }
+
     modalLike.innerHTML = '<i class="fa-solid fa-check text-xl"></i> Match!';
     modalLike.classList.remove('from-green-400', 'to-emerald-500');
     modalLike.classList.add('from-pink-500', 'to-rose-500');
 
     setTimeout(() => {
-        // Remove do array de likes recebidos
         const index = likesReceived.findIndex(l => l.id === selectedProfile.id);
         if (index > -1) {
             likesReceived.splice(index, 1);
@@ -200,7 +233,6 @@ modalLike.addEventListener('click', () => {
         closeProfileModal();
         renderLikes();
         
-        // Mostra notificação de match
         showMatchNotification(selectedProfile);
     }, 1000);
 });
@@ -209,7 +241,6 @@ modalLike.addEventListener('click', () => {
 modalDislike.addEventListener('click', () => {
     if (!selectedProfile) return;
 
-    // Remove do array
     const index = likesReceived.findIndex(l => l.id === selectedProfile.id);
     if (index > -1) {
         likesReceived.splice(index, 1);
@@ -269,4 +300,10 @@ profileModal.addEventListener('click', (e) => {
 });
 
 // ========== INICIALIZAR ==========
-renderLikes();
+setTimeout(() => {
+    if (window.vipSystem) {
+        window.vipSystem.updateUI();
+        console.log('✅ Sistema VIP integrado na página de likes');
+    }
+    renderLikes();
+}, 100);
