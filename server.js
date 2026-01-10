@@ -55,6 +55,28 @@ app.use((req, res, next) => {
     next();
 });
 
+// ========== SERVIR FRONTEND ========== 👈 ADICIONE AQUI!
+// Serve arquivos estáticos (HTML, CSS, JS, imagens)
+app.use(express.static(__dirname));
+
+// Rota raiz serve o index.html
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Rotas específicas do frontend
+app.get('/perfil.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'perfil.html'));
+});
+
+app.get('/chat.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'chat.html'));
+});
+
+app.get('/likes.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'likes.html'));
+});
+
 // ========== ROTAS DE UPLOAD ==========
 app.use('/api/upload', requireTelegramAuth, uploadRoutes);
 
@@ -421,4 +443,5 @@ app.listen(PORT, () => {
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 
 });
+
 
