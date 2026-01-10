@@ -52,7 +52,7 @@ function showMatchAnimation(profile) {
     const overlay = document.createElement('div');
     overlay.className = 'match-overlay';
     overlay.innerHTML = `
-        <div class="match-content">
+        <div class="match-content" id="match-content-box">
             <div class="match-sparkles">✨</div>
             <h1 class="match-title">É UM MATCH!</h1>
             <p class="match-subtitle">Vocês se curtiram mutuamente! 💕</p>
@@ -92,35 +92,77 @@ function showMatchAnimation(profile) {
     
     // Aguarda o DOM estar pronto antes de adicionar eventos
     setTimeout(() => {
-        // Eventos dos botões
         const btnSendMessage = document.getElementById('match-send-message');
         const btnContinue = document.getElementById('match-continue');
+        const contentBox = document.getElementById('match-content-box');
         
+        console.log('🔘 Botões encontrados:', { btnSendMessage, btnContinue });
+        
+        // Evento no botão "Enviar Mensagem"
         if (btnSendMessage) {
-            btnSendMessage.addEventListener('click', (e) => {
+            btnSendMessage.addEventListener('click', function(e) {
+                console.log('🟢 Clicou em Enviar Mensagem');
+                e.preventDefault();
                 e.stopPropagation();
+                e.stopImmediatePropagation();
+                
                 createMatchConversation(profile);
                 overlay.remove();
                 window.location.href = 'chat.html';
-            });
-        }
-        
-        if (btnContinue) {
-            btnContinue.addEventListener('click', (e) => {
+            }, { capture: true });
+            
+            // Touch para mobile
+            btnSendMessage.addEventListener('touchend', function(e) {
+                console.log('👆 Touch em Enviar Mensagem');
+                e.preventDefault();
                 e.stopPropagation();
+                
                 createMatchConversation(profile);
                 overlay.remove();
+                window.location.href = 'chat.html';
+            }, { capture: true });
+        }
+        
+        // Evento no botão "Continuar Explorando"
+        if (btnContinue) {
+            btnContinue.addEventListener('click', function(e) {
+                console.log('🟢 Clicou em Continuar');
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                createMatchConversation(profile);
+                overlay.remove();
+            }, { capture: true });
+            
+            // Touch para mobile
+            btnContinue.addEventListener('touchend', function(e) {
+                console.log('👆 Touch em Continuar');
+                e.preventDefault();
+                e.stopPropagation();
+                
+                createMatchConversation(profile);
+                overlay.remove();
+            }, { capture: true });
+        }
+        
+        // Bloqueia propagação no content box para não fechar ao clicar dentro
+        if (contentBox) {
+            contentBox.addEventListener('click', function(e) {
+                e.stopPropagation();
             });
         }
         
-        // Fecha ao clicar fora (no overlay, não nos botões)
-        overlay.addEventListener('click', (e) => {
+        // Fecha APENAS ao clicar no fundo (overlay)
+        overlay.addEventListener('click', function(e) {
             if (e.target === overlay) {
+                console.log('🟡 Clicou no overlay (fundo)');
                 createMatchConversation(profile);
                 overlay.remove();
             }
         });
-    }, 100);
+        
+    }, 150);
 }
 
 // ========== CRIAR CONVERSA APÓS MATCH ==========
