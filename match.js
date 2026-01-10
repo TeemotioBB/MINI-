@@ -76,11 +76,11 @@ function showMatchAnimation(profile) {
             <h2 class="match-name">${profile.name}</h2>
             
             <div class="match-buttons">
-                <a href="chat.html" class="match-btn match-btn-primary">
+                <a href="chat.html" class="match-btn match-btn-primary" id="match-send-message-link">
                     <i class="fa-solid fa-comment-dots"></i>
                     Enviar Mensagem
                 </a>
-                <a href="javascript:void(0);" class="match-btn match-btn-secondary" id="match-continue-btn">
+                <a href="index.html" class="match-btn match-btn-secondary" id="match-continue-btn">
                     Continuar Explorando
                 </a>
             </div>
@@ -93,24 +93,15 @@ function showMatchAnimation(profile) {
     // Confete MASSIVO
     createMatchConfetti();
     
-    // Cria a conversa ANTES de qualquer coisa
-    createMatchConversation(profile);
-    console.log('💬 Conversa criada automaticamente');
+    // Cria a conversa ANTES de qualquer coisa e pega o ID
+    const chatId = createMatchConversation(profile);
+    console.log('💬 Conversa criada automaticamente - ID:', chatId);
     
-    // Evento no botão "Continuar" para fechar
+    // Não precisa de mais eventos, os links funcionam sozinhos!
+    // O chat.js vai detectar o openChatId e abrir automaticamente
+    
+    // Fecha ao clicar no fundo
     setTimeout(() => {
-        const btnContinue = document.getElementById('match-continue-btn');
-        if (btnContinue) {
-            btnContinue.onclick = function(e) {
-                e.preventDefault();
-                console.log('🔴 Fechando tela de match');
-                overlay.remove();
-                return false;
-            };
-            console.log('✅ Botão Continuar configurado');
-        }
-        
-        // Fecha ao clicar no fundo
         overlay.onclick = function(e) {
             if (e.target === overlay) {
                 console.log('🔴 Clicou no fundo - fechando');
@@ -124,7 +115,12 @@ function showMatchAnimation(profile) {
 function createMatchConversation(profile) {
     // Verifica se já existe conversa com essa pessoa
     const existingConv = conversations.find(c => c.name === profile.name);
-    if (existingConv) return; // Já existe
+    if (existingConv) {
+        console.log('⚠️ Conversa já existe com:', profile.name);
+        // Salva o ID da conversa para abrir depois
+        localStorage.setItem('openChatId', existingConv.id);
+        return existingConv.id;
+    }
     
     // Cria nova conversa
     const newConversation = {
@@ -150,7 +146,12 @@ function createMatchConversation(profile) {
     // Salva no localStorage
     saveConversations();
     
-    console.log('✅ Nova conversa criada com:', profile.name);
+    // Salva o ID para abrir o chat depois
+    localStorage.setItem('openChatId', newConversation.id);
+    
+    console.log('✅ Nova conversa criada com:', profile.name, '- ID:', newConversation.id);
+    
+    return newConversation.id;
 }
 
 // ========== CONFETE ESPECIAL DE MATCH ==========
