@@ -36,7 +36,6 @@ class VIPSystem {
     // ========== CARREGAR PLANO DO USUÁRIO ==========
     loadUserPlan() {
         const saved = localStorage.getItem('sparkUserPlan');
-        // 👇 SE NÃO TEM PLANO SALVO, COMEÇA COMO FREE
         if (!saved) {
             console.log('🆕 Novo usuário detectado, iniciando como FREE');
             localStorage.setItem('sparkUserPlan', 'FREE');
