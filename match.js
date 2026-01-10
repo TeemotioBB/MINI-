@@ -113,12 +113,15 @@ function showMatchAnimation(profile) {
 
 // ========== CRIAR CONVERSA APÓS MATCH ==========
 function createMatchConversation(profile) {
+    console.log('📝 Criando conversa com:', profile.name);
+    
     // Verifica se já existe conversa com essa pessoa
     const existingConv = conversations.find(c => c.name === profile.name);
     if (existingConv) {
-        console.log('⚠️ Conversa já existe com:', profile.name);
+        console.log('⚠️ Conversa já existe com:', profile.name, '- ID:', existingConv.id);
         // Salva o ID da conversa para abrir depois
-        localStorage.setItem('openChatId', existingConv.id);
+        localStorage.setItem('openChatId', existingConv.id.toString());
+        console.log('💾 ID salvo no localStorage:', localStorage.getItem('openChatId'));
         return existingConv.id;
     }
     
@@ -147,9 +150,11 @@ function createMatchConversation(profile) {
     saveConversations();
     
     // Salva o ID para abrir o chat depois
-    localStorage.setItem('openChatId', newConversation.id);
+    localStorage.setItem('openChatId', newConversation.id.toString());
     
     console.log('✅ Nova conversa criada com:', profile.name, '- ID:', newConversation.id);
+    console.log('💾 ID salvo no localStorage:', localStorage.getItem('openChatId'));
+    console.log('📋 Total de conversas agora:', conversations.length);
     
     return newConversation.id;
 }
