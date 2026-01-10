@@ -6,6 +6,8 @@ const rateLimit = require('express-rate-limit');
 const { Pool } = require('pg');
 require('dotenv').config();
 
+const path = require('path');
+
 const uploadRoutes = require('./upload');
 const { requireTelegramAuth, optionalTelegramAuth } = require('./telegramAuth');
 
@@ -419,3 +421,4 @@ app.listen(PORT, () => {
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 
 });
+
