@@ -36,7 +36,13 @@ class VIPSystem {
     // ========== CARREGAR PLANO DO USUÁRIO ==========
     loadUserPlan() {
         const saved = localStorage.getItem('sparkUserPlan');
-        return saved || 'FREE';
+        // 👇 SE NÃO TEM PLANO SALVO, COMEÇA COMO FREE
+        if (!saved) {
+            console.log('🆕 Novo usuário detectado, iniciando como FREE');
+            localStorage.setItem('sparkUserPlan', 'FREE');
+            return 'FREE';
+        }
+        return saved;
     }
 
     // ========== SALVAR PLANO DO USUÁRIO ==========
@@ -87,7 +93,7 @@ class VIPSystem {
     getWeekStart() {
         const now = new Date();
         const day = now.getDay();
-        const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Segunda-feira
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
         const monday = new Date(now.setDate(diff));
         monday.setHours(0, 0, 0, 0);
         return monday.toISOString();
@@ -129,14 +135,16 @@ class VIPSystem {
     activatePremium() {
         this.saveUserPlan('PREMIUM');
         this.updateUI();
+        this.showToast('🎉 Premium ativado com sucesso!', 'success');
         console.log('🎉 Premium ativado!');
         return true;
     }
 
-    // ========== DESATIVAR PREMIUM (para testes) ==========
+    // ========== DESATIVAR PREMIUM ==========
     deactivatePremium() {
         this.saveUserPlan('FREE');
         this.updateUI();
+        this.showToast('📉 Voltou para o plano FREE', 'info');
         console.log('📉 Premium desativado');
         return true;
     }
@@ -163,9 +171,13 @@ class VIPSystem {
 
     // ========== REGISTRAR LIKE ==========
     registerLike() {
+        console.log('🔍 Verificando permissão para dar like...');
         const check = this.canLike();
         
+        console.log('📊 Status:', check);
+        
         if (!check.allowed) {
+            console.log('❌ Limite de likes atingido!');
             this.showUpgradeModal('likes');
             return false;
         }
@@ -175,7 +187,7 @@ class VIPSystem {
             this.saveDailyLimits();
         }
 
-        console.log('❤️ Like registrado. Restantes:', this.canLike().remaining);
+        console.log('✅ Like permitido! Restantes:', this.canLike().remaining);
         this.updateUI();
         return true;
     }
@@ -203,14 +215,19 @@ class VIPSystem {
 
     // ========== REGISTRAR SUPER LIKE ==========
     registerSuperLike() {
+        console.log('🔍 Verificando permissão para Super Like...');
         const check = this.canSuperLike();
         
+        console.log('📊 Status:', check);
+        
         if (check.isPremiumFeature) {
+            console.log('❌ Super Like é recurso Premium!');
             this.showUpgradeModal('superLikes');
             return false;
         }
 
         if (!check.allowed) {
+            console.log('❌ Limite de Super Likes atingido!');
             this.showLimitReachedModal('Super Likes', check.limit);
             return false;
         }
@@ -218,7 +235,7 @@ class VIPSystem {
         this.dailyLimits.superLikes++;
         this.saveDailyLimits();
 
-        console.log('⭐ Super Like registrado. Restantes:', this.canSuperLike().remaining);
+        console.log('✅ Super Like permitido! Restantes:', this.canSuperLike().remaining);
         this.updateUI();
         return true;
     }
@@ -246,14 +263,19 @@ class VIPSystem {
 
     // ========== REGISTRAR BOOST ==========
     registerBoost() {
+        console.log('🔍 Verificando permissão para Boost...');
         const check = this.canBoost();
         
+        console.log('📊 Status:', check);
+        
         if (check.isPremiumFeature) {
+            console.log('❌ Boost é recurso Premium!');
             this.showUpgradeModal('boost');
             return false;
         }
 
         if (!check.allowed) {
+            console.log('❌ Limite de Boosts atingido!');
             this.showLimitReachedModal('Boosts', check.limit, 'semanais');
             return false;
         }
@@ -261,22 +283,20 @@ class VIPSystem {
         this.weeklyLimits.boosts++;
         this.saveWeeklyLimits();
 
-        console.log('⚡ Boost registrado. Restantes:', this.canBoost().remaining);
+        console.log('✅ Boost permitido! Restantes:', this.canBoost().remaining);
         this.updateUI();
         
-        // Ativa boost por 1 hora
         this.activateBoost();
         return true;
     }
 
     // ========== ATIVAR BOOST ==========
     activateBoost() {
-        const endTime = Date.now() + (60 * 60 * 1000); // 1 hora
+        const endTime = Date.now() + (60 * 60 * 1000);
         localStorage.setItem('sparkBoostActive', endTime);
         
         this.showToast('⚡ Boost ativado por 1 hora!', 'success');
         
-        // Verifica se ainda está ativo
         setTimeout(() => {
             this.checkBoostStatus();
         }, 60 * 60 * 1000);
@@ -350,7 +370,6 @@ class VIPSystem {
 
         document.body.appendChild(modal);
 
-        // Eventos
         document.getElementById('upgrade-now').addEventListener('click', () => {
             modal.remove();
             this.openPremiumModal();
@@ -377,7 +396,7 @@ class VIPSystem {
                     </div>
                     <h2 class="text-2xl font-black text-gray-800 mb-2">Limite Atingido</h2>
                     <p class="text-gray-600 mb-4">Você já usou seus ${limit} ${type} ${period}.</p>
-                    <p class="text-sm text-gray-500 mb-6">Volte amanhã ou assine o Premium para ter acesso ilimitado!</p>
+                    <p class="text-sm text-gray-500 mb-6">Volte amanhã ou assine o Premium!</p>
                     <button id="close-limit" class="w-full bg-gray-200 text-gray-700 font-bold py-3 rounded-2xl">
                         Entendi
                     </button>
@@ -406,7 +425,6 @@ class VIPSystem {
 
     // ========== ATUALIZAR UI ==========
     updateUI() {
-        // Atualiza contador de likes
         const likesCounter = document.getElementById('likes-counter');
         if (likesCounter) {
             const check = this.canLike();
@@ -423,13 +441,11 @@ class VIPSystem {
             }
         }
 
-        // Atualiza badge de plano
         const planBadge = document.getElementById('user-plan');
         if (planBadge) {
             planBadge.textContent = VIP_CONFIG[this.userPlan].name;
         }
 
-        // Atualiza badge verificado
         const verifiedBadge = document.getElementById('verified-badge');
         if (verifiedBadge) {
             verifiedBadge.style.display = this.isPremium() ? 'inline' : 'none';
@@ -470,8 +486,13 @@ class VIPSystem {
     }
 }
 
-// ========== INSTÂNCIA GLOBAL ==========
-window.vipSystem = new VIPSystem();
+// ========== INICIALIZAR APENAS UMA VEZ ==========
+if (!window.vipSystem) {
+    window.vipSystem = new VIPSystem();
+    console.log('✅ vipSystem criado pela primeira vez');
+} else {
+    console.log('ℹ️ vipSystem já existe, não será recriado');
+}
 
 // ========== EXPOR FUNÇÕES ÚTEIS ==========
 window.activatePremium = () => window.vipSystem.activatePremium();
