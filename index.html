@@ -14,26 +14,6 @@
 <body>
 
   <div class="w-full max-w-[370px] p-4">
-    
-    <!-- 💎 CONTADOR DE LIKES VIP -->
-    <div class="mb-3">
-      <div class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-3 text-white">
-        <div class="flex items-center justify-between">
-          <div id="likes-counter">
-            <p class="text-[10px] uppercase font-bold opacity-90">Likes restantes hoje</p>
-            <p class="text-xl font-black">10 de 10</p>
-          </div>
-          <div class="bg-white/20 backdrop-blur-sm rounded-full p-2">
-            <i class="fa-solid fa-heart text-xl"></i>
-          </div>
-        </div>
-        <button id="btn-premium-header" class="w-full bg-white/20 backdrop-blur-sm text-white font-bold py-2 rounded-full mt-2 hover:bg-white/30 transition-all flex items-center justify-center gap-2 text-xs">
-          <i class="fa-solid fa-crown text-sm"></i>
-          Premium: Likes Ilimitados
-        </button>
-      </div>
-    </div>
-    
     <div class="glass-card p-4 relative">
 
       <!-- Header -->
@@ -93,11 +73,11 @@
         <span class="text-[9px] font-bold mt-1 uppercase">Explorar</span>
       </button>
 
-      <a href="likes.html" class="flex flex-col items-center text-gray-400 relative">
+      <button class="flex flex-col items-center text-gray-400 relative">
         <i class="fa-solid fa-star text-xl"></i>
-        <span class="absolute -top-1 -right-2 bg-pink-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">6</span>
+        <span class="absolute -top-1 -right-2 bg-pink-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">33</span>
         <span class="text-[9px] font-bold mt-1 uppercase">Likes</span>
-      </a>
+      </button>
 
       <a href="chat.html" class="flex flex-col items-center text-gray-400">
         <i class="fa-solid fa-comment-dots text-xl"></i>
@@ -113,19 +93,9 @@
 
   <!-- ⚡ ORDEM IMPORTANTE DOS SCRIPTS! -->
   <script src="profiles.js"></script>
-  <script src="config.js"></script>
-  <script src="vip.js"></script> <!-- 👈 NOVO! Sistema VIP -->
+  <script src="config.js"></script> <!-- 👈 Adicione esta linha! -->
   <script src="match.js"></script>
   <script src="app.js"></script>
-  
-  <script>
-    // Evento do botão premium no header
-    document.getElementById('btn-premium-header').addEventListener('click', () => {
-      if (window.vipSystem) {
-        window.vipSystem.openPremiumModal();
-      }
-    });
-  </script>
 </body>
 
 </html>
