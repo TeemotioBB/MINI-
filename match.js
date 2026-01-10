@@ -53,123 +53,71 @@ function showMatchAnimation(profile) {
     // Cria overlay escuro
     const overlay = document.createElement('div');
     overlay.className = 'match-overlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;';
-    
-    const content = document.createElement('div');
-    content.className = 'match-content';
-    content.innerHTML = `
-        <div class="match-sparkles">✨</div>
-        <h1 class="match-title">É UM MATCH!</h1>
-        <p class="match-subtitle">Vocês se curtiram mutuamente! 💕</p>
-        
-        <div class="match-photos">
-            <div class="match-photo-container">
-                <img src="${currentUser.photo}" 
-                     class="match-photo match-photo-left" alt="${currentUser.name}">
+    overlay.innerHTML = `
+        <div class="match-content">
+            <div class="match-sparkles">✨</div>
+            <h1 class="match-title">É UM MATCH!</h1>
+            <p class="match-subtitle">Vocês se curtiram mutuamente! 💕</p>
+            
+            <div class="match-photos">
+                <div class="match-photo-container">
+                    <img src="${currentUser.photo}" 
+                         class="match-photo match-photo-left" alt="${currentUser.name}">
+                </div>
+                <div class="match-heart">
+                    <i class="fa-solid fa-heart"></i>
+                </div>
+                <div class="match-photo-container">
+                    <img src="${profile.photo}" 
+                         class="match-photo match-photo-right" alt="${profile.name}">
+                </div>
             </div>
-            <div class="match-heart">
-                <i class="fa-solid fa-heart"></i>
+            
+            <h2 class="match-name">${profile.name}</h2>
+            
+            <div class="match-buttons">
+                <a href="chat.html" class="match-btn match-btn-primary">
+                    <i class="fa-solid fa-comment-dots"></i>
+                    Enviar Mensagem
+                </a>
+                <a href="javascript:void(0);" class="match-btn match-btn-secondary" id="match-continue-btn">
+                    Continuar Explorando
+                </a>
             </div>
-            <div class="match-photo-container">
-                <img src="${profile.photo}" 
-                     class="match-photo match-photo-right" alt="${profile.name}">
-            </div>
-        </div>
-        
-        <h2 class="match-name">${profile.name}</h2>
-        
-        <div class="match-buttons">
-            <button type="button" class="match-btn match-btn-primary" data-action="message">
-                <i class="fa-solid fa-comment-dots"></i>
-                Enviar Mensagem
-            </button>
-            <button type="button" class="match-btn match-btn-secondary" data-action="continue">
-                Continuar Explorando
-            </button>
         </div>
     `;
     
-    overlay.appendChild(content);
     document.body.appendChild(overlay);
-    
-    console.log('✅ Overlay adicionado ao DOM');
+    console.log('✅ Overlay criado com LINKS');
     
     // Confete MASSIVO
     createMatchConfetti();
     
-    // Função para fechar o match
-    function closeMatch() {
-        console.log('🚪 Fechando tela de match');
-        createMatchConversation(profile);
-        overlay.remove();
-    }
+    // Cria a conversa ANTES de qualquer coisa
+    createMatchConversation(profile);
+    console.log('💬 Conversa criada automaticamente');
     
-    // Função para ir ao chat
-    function goToChat() {
-        console.log('💬 Indo para o chat');
-        createMatchConversation(profile);
-        overlay.remove();
-        window.location.href = 'chat.html';
-    }
-    
-    // Aguarda renderização
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            // Pega TODOS os botões
-            const allButtons = overlay.querySelectorAll('button');
-            console.log('🔍 Botões encontrados:', allButtons.length);
-            
-            allButtons.forEach((btn, index) => {
-                console.log(`Botão ${index}:`, btn.getAttribute('data-action'));
-                
-                // Remove eventos antigos se existirem
-                const newBtn = btn.cloneNode(true);
-                btn.parentNode.replaceChild(newBtn, btn);
-                
-                // Adiciona novo evento
-                newBtn.onclick = function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const action = newBtn.getAttribute('data-action');
-                    console.log('🖱️ CLIQUE DETECTADO! Ação:', action);
-                    
-                    if (action === 'message') {
-                        goToChat();
-                    } else {
-                        closeMatch();
-                    }
-                };
-                
-                // Também adiciona onmousedown como backup
-                newBtn.onmousedown = function(e) {
-                    e.preventDefault();
-                    console.log('🖱️ MOUSEDOWN! Ação:', newBtn.getAttribute('data-action'));
-                };
-                
-                // Touch para mobile
-                newBtn.ontouchstart = function(e) {
-                    console.log('👆 TOUCH START! Ação:', newBtn.getAttribute('data-action'));
-                };
-                
-                newBtn.ontouchend = function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const action = newBtn.getAttribute('data-action');
-                    console.log('👆 TOUCH END! Ação:', action);
-                    
-                    if (action === 'message') {
-                        goToChat();
-                    } else {
-                        closeMatch();
-                    }
-                };
-            });
-            
-            console.log('✅ Eventos configurados');
-        });
-    });
+    // Evento no botão "Continuar" para fechar
+    setTimeout(() => {
+        const btnContinue = document.getElementById('match-continue-btn');
+        if (btnContinue) {
+            btnContinue.onclick = function(e) {
+                e.preventDefault();
+                console.log('🔴 Fechando tela de match');
+                overlay.remove();
+                return false;
+            };
+            console.log('✅ Botão Continuar configurado');
+        }
+        
+        // Fecha ao clicar no fundo
+        overlay.onclick = function(e) {
+            if (e.target === overlay) {
+                console.log('🔴 Clicou no fundo - fechando');
+                overlay.remove();
+            }
+        };
+    }, 100);
 }
 
 // ========== CRIAR CONVERSA APÓS MATCH ==========
