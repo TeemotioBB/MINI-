@@ -244,19 +244,20 @@ body {
 /* ========== ANIMAÇÕES DE MATCH - MOBILE RESPONSIVE ========== */
 
 .match-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
   background: linear-gradient(135deg, rgba(255, 0, 128, 0.95), rgba(255, 77, 77, 0.95));
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 99999;
+  z-index: 99999 !important;
   animation: matchFadeIn 0.3s ease-out;
   padding: 1rem;
   overflow-y: auto;
+  pointer-events: auto !important;
 }
 
 @keyframes matchFadeIn {
@@ -464,23 +465,28 @@ body {
 }
 
 .match-btn {
-  padding: 0.875rem 1.5rem;
-  border-radius: 50px;
-  font-weight: 700;
-  font-size: 15px;
-  border: none;
-  cursor: pointer;
+  padding: 0.875rem 1.5rem !important;
+  border-radius: 50px !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  border: none !important;
+  cursor: pointer !important;
   transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  -webkit-tap-highlight-color: rgba(255, 255, 255, 0.2);
-  touch-action: manipulation;
-  position: relative;
-  z-index: 100000;
-  pointer-events: auto;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  width: 100% !important;
+  touch-action: manipulation !important;
+  position: relative !important;
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.match-btn * {
+  pointer-events: none !important;
 }
 
 @media (min-width: 768px) {
