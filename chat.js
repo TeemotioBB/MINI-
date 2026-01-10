@@ -12,8 +12,9 @@ const chatUserPhoto = document.getElementById('chat-user-photo');
 const inputContainer = document.getElementById('input-container');
 const bottomNav = document.getElementById('bottom-nav');
 
-// ========== DADOS SIMULADOS DE CONVERSAS ==========
-const conversations = [
+// ========== DADOS DE CONVERSAS ==========
+// Conversas padrão (exemplo)
+let conversations = [
     {
         id: 1,
         name: "Amanda",
@@ -73,6 +74,26 @@ const conversations = [
         ]
     }
 ];
+
+// ========== CARREGAR CONVERSAS DO LOCALSTORAGE ==========
+function loadConversationsFromStorage() {
+    try {
+        const saved = localStorage.getItem('sparkConversations');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            // Adiciona novas conversas sem duplicar
+            parsed.forEach(savedConv => {
+                const exists = conversations.find(c => c.id === savedConv.id || c.name === savedConv.name);
+                if (!exists) {
+                    conversations.unshift(savedConv); // Adiciona no início
+                }
+            });
+            console.log('✅ Conversas carregadas do localStorage');
+        }
+    } catch (e) {
+        console.error('Erro ao carregar conversas:', e);
+    }
+}
 
 let currentChat = null;
 
@@ -151,6 +172,17 @@ function renderMessages() {
     if (!currentChat) return;
 
     messagesContainer.innerHTML = currentChat.messages.map(msg => {
+        // Mensagem do sistema (match)
+        if (msg.sender === 'system') {
+            return `
+                <div class="flex justify-center my-4">
+                    <div class="bg-gradient-to-r from-pink-100 to-purple-100 text-gray-700 rounded-2xl px-4 py-2 text-sm text-center max-w-[80%]">
+                        ${msg.text}
+                    </div>
+                </div>
+            `;
+        }
+        
         const isMe = msg.sender === 'me';
         return `
             <div class="flex ${isMe ? 'justify-end' : 'justify-start'}">
@@ -190,11 +222,18 @@ function sendMessage() {
         time: time
     });
 
+    // Atualiza última mensagem
+    currentChat.lastMessage = text;
+    currentChat.time = "Agora";
+
     // Limpa input
     messageInput.value = '';
 
     // Renderiza mensagens
     renderMessages();
+
+    // Salva no localStorage
+    saveConversationsToStorage();
 
     // Força scroll imediato para a última mensagem
     setTimeout(() => {
@@ -224,12 +263,23 @@ function sendMessage() {
         currentChat.time = "Agora";
 
         renderMessages();
+        saveConversationsToStorage();
         
         // Força scroll para a resposta
         setTimeout(() => {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }, 50);
     }, 2000);
+}
+
+// ========== SALVAR CONVERSAS ==========
+function saveConversationsToStorage() {
+    try {
+        localStorage.setItem('sparkConversations', JSON.stringify(conversations));
+        console.log('💾 Conversas salvas no localStorage');
+    } catch (e) {
+        console.error('Erro ao salvar conversas:', e);
+    }
 }
 
 // Auto-scroll quando o teclado aparece
@@ -313,5 +363,6 @@ messageInput.addEventListener('keypress', (e) => {
 
 // ========== INICIALIZAR ==========
 console.log('Chat.js carregado!');
+loadConversationsFromStorage(); // Carrega conversas salvas
 console.log('Conversas:', conversations);
 renderChatList();
