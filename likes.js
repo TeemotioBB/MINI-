@@ -116,7 +116,10 @@ function renderLikes() {
     noLikes.classList.add('hidden');
 
     // ✅ VERIFICAÇÃO VIP - PODE VER LIKES RECEBIDOS?
-    const canSeeLikes = window.vipSystem && window.vipSystem.canSeeLikes();
+    const canSeeLikes = window.vipSystem ? window.vipSystem.canSeeLikes() : false;
+
+    console.log('🔍 Pode ver likes recebidos?', canSeeLikes);
+    console.log('📊 Tab atual:', currentTab);
 
     likesGrid.innerHTML = likes.map(like => {
         // Se é aba de "Recebidas" e NÃO é VIP, mostra bloqueado
@@ -170,10 +173,14 @@ function renderLikes() {
             
             // Se é aba recebidas e não é VIP, mostra modal de upgrade
             if (currentTab === 'received' && !canSeeLikes) {
-                window.vipSystem.showUpgradeModal('viewLikes');
+                console.log('❌ Bloqueando acesso - não é VIP');
+                if (window.vipSystem) {
+                    window.vipSystem.showUpgradeModal('viewLikes');
+                }
                 return;
             }
             
+            console.log('✅ Abrindo perfil ID:', id);
             openProfileModal(id);
         });
     });
@@ -300,10 +307,18 @@ profileModal.addEventListener('click', (e) => {
 });
 
 // ========== INICIALIZAR ==========
+console.log('🚀 likes.js iniciando...');
+
 setTimeout(() => {
     if (window.vipSystem) {
         window.vipSystem.updateUI();
         console.log('✅ Sistema VIP integrado na página de likes');
+        console.log('👑 É Premium?', window.vipSystem.isPremium());
+        console.log('👁️ Pode ver likes?', window.vipSystem.canSeeLikes());
+    } else {
+        console.warn('⚠️ VIP System não encontrado');
     }
     renderLikes();
 }, 100);
+
+console.log('✅ likes.js carregado!');
