@@ -1,7 +1,7 @@
 // ========== CLIENTE API PARA O FRONTEND ==========
 
 // ⚙️ CONFIGURAÇÃO - MUDE AQUI A URL DO SEU BACKEND
-const API_BASE_URL = 'http://localhost:3000/api'; 
+const API_BASE_URL = 'https://mini-production-cf60.up.railway.app/api';
 // Em produção: const API_BASE_URL = 'https://seu-backend.railway.app/api';
 
 // Pega initData do Telegram
@@ -217,4 +217,5 @@ console.log('✅ API Client carregado!');
 console.log('📡 API URL:', API_BASE_URL);
 
 // Exporta para uso global
+
 window.API = API;
