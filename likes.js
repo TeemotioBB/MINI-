@@ -11,21 +11,109 @@ const modalBio = document.getElementById('modal-bio');
 const modalLike = document.getElementById('modal-like');
 const modalDislike = document.getElementById('modal-dislike');
 
-// ========== DADOS SIMULADOS DE LIKES ==========
-// ========== LIKES RECEBIDOS ==========
-// Os likes virão do banco de dados via API
-const likesReceived = [];
-
-// ========== LIKES ENVIADOS ==========
-// Os likes virão do banco de dados via API
-const likesSent = [];
+// ========== DADOS DE LIKES (VÊM DO BACKEND!) ==========
+let likesReceived = [];
+let likesSent = [];
 
 let currentTab = 'received';
 let selectedProfile = null;
 
+// ========== BUSCAR LIKES RECEBIDOS DO BACKEND ==========
+async function loadLikesReceived() {
+    console.log('📥 Carregando likes recebidos do servidor...');
+    
+    try {
+        // Pega telegram_id
+        let telegramId = null;
+        
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
+            telegramId = window.Telegram.WebApp.initDataUnsafe.user.id;
+        } else {
+            telegramId = localStorage.getItem('testTelegramId') || '123456789';
+        }
+        
+        console.log('👤 Buscando likes para:', telegramId);
+        
+        // ✅ BUSCA LIKES RECEBIDOS
+        const response = await fetch(`https://mini-production-cf60.up.railway.app/api/likes/received?telegram_id=${telegramId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+            }
+        });
+        
+        if (response.status === 403) {
+            // Não é premium, não pode ver
+            console.log('⚠️ Usuário não é premium - não pode ver likes');
+            likesReceived = [];
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // ✅ MAPEIA PARA O FORMATO DO FRONTEND
+        likesReceived = data.map(like => ({
+            id: like.id,
+            telegram_id: like.telegram_id,
+            name: like.name,
+            age: like.age,
+            gender: like.gender,
+            photo: like.photo_url || like.photos?.[0] || 'https://via.placeholder.com/500x600?text=Sem+Foto',
+            photos: like.photos || [],
+            bio: like.bio || 'Sem bio',
+            city: like.city || '',
+            verified: like.is_premium || false,
+            time: formatTime(like.liked_at),
+            type: like.type
+        }));
+        
+        console.log('✅ Likes recebidos:', likesReceived.length);
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar likes recebidos:', error);
+        likesReceived = [];
+    }
+}
+
+// ========== BUSCAR LIKES ENVIADOS (OPCIONAL) ==========
+async function loadLikesSent() {
+    console.log('📤 Carregando likes enviados...');
+    
+    // Por enquanto vazio, mas você pode implementar depois
+    // Precisaria criar uma rota no backend: GET /api/likes/sent
+    
+    likesSent = [];
+}
+
+// ========== FORMATAR TEMPO ==========
+function formatTime(timestamp) {
+    if (!timestamp) return 'Agora';
+    
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000); // segundos
+    
+    if (diff < 60) return 'Agora';
+    if (diff < 3600) return `${Math.floor(diff / 60)}min`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+    
+    return date.toLocaleDateString('pt-BR');
+}
+
 // ========== RENDERIZAR GRID DE LIKES ==========
 function renderLikes() {
     const likes = currentTab === 'received' ? likesReceived : likesSent;
+    
+    console.log('🎨 Renderizando likes:', {
+        tab: currentTab,
+        count: likes.length
+    });
     
     if (likes.length === 0) {
         likesGrid.classList.add('hidden');
@@ -36,14 +124,14 @@ function renderLikes() {
     likesGrid.classList.remove('hidden');
     noLikes.classList.add('hidden');
 
-    // âœ… VERIFICAÃ‡ÃƒO VIP - PODE VER LIKES RECEBIDOS?
+    // ✅ VERIFICAÇÃO VIP
     const canSeeLikes = window.vipSystem ? window.vipSystem.canSeeLikes() : false;
 
-    console.log('ðŸ” Pode ver likes recebidos?', canSeeLikes);
-    console.log('ðŸ“Š Tab atual:', currentTab);
+    console.log('💎 Pode ver likes recebidos?', canSeeLikes);
+    console.log('📊 Tab atual:', currentTab);
 
     likesGrid.innerHTML = likes.map(like => {
-        // Se Ã© aba de "Recebidas" e NÃƒO Ã© VIP, mostra bloqueado
+        // Se é aba de "Recebidas" e NÃO é VIP, mostra bloqueado
         if (currentTab === 'received' && !canSeeLikes) {
             return `
                 <div class="like-card relative cursor-pointer group" data-id="${like.id}">
@@ -72,9 +160,9 @@ function renderLikes() {
                         </div>
                     ` : ''}
                     
-                    ${currentTab === 'received' ? `
-                        <div class="absolute top-3 right-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-2 py-1 rounded-full text-[10px] font-bold uppercase">
-                            Novo
+                    ${currentTab === 'received' && like.type === 'superlike' ? `
+                        <div class="absolute top-3 right-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-2 py-1 rounded-full text-[10px] font-bold uppercase flex items-center gap-1">
+                            <i class="fa-solid fa-star text-[10px]"></i> Super
                         </div>
                     ` : ''}
                     
@@ -92,16 +180,16 @@ function renderLikes() {
         card.addEventListener('click', () => {
             const id = parseInt(card.dataset.id);
             
-            // Se Ã© aba recebidas e nÃ£o Ã© VIP, mostra modal de upgrade
+            // Se é aba recebidas e não é VIP, mostra modal de upgrade
             if (currentTab === 'received' && !canSeeLikes) {
-                console.log('âŒ Bloqueando acesso - nÃ£o Ã© VIP');
+                console.log('❌ Bloqueando acesso - não é VIP');
                 if (window.vipSystem) {
                     window.vipSystem.showUpgradeModal('viewLikes');
                 }
                 return;
             }
             
-            console.log('âœ… Abrindo perfil ID:', id);
+            console.log('✅ Abrindo perfil ID:', id);
             openProfileModal(id);
         });
     });
@@ -138,31 +226,58 @@ function closeProfileModal() {
 }
 
 // ========== DAR LIKE NO MODAL ==========
-modalLike.addEventListener('click', () => {
+modalLike.addEventListener('click', async () => {
     if (!selectedProfile) return;
 
-    // âœ… VERIFICAÃ‡ÃƒO VIP - PODE DAR LIKE?
+    // ✅ VERIFICAÇÃO VIP
     if (window.vipSystem && !window.vipSystem.registerLike()) {
-        console.log('âŒ Limite de likes atingido');
+        console.log('❌ Limite de likes atingido');
         closeProfileModal();
         return;
     }
 
-    modalLike.innerHTML = '<i class="fa-solid fa-check text-xl"></i> Match!';
-    modalLike.classList.remove('from-green-400', 'to-emerald-500');
-    modalLike.classList.add('from-pink-500', 'to-rose-500');
+    console.log('❤️ Dando like em:', selectedProfile.name);
 
-    setTimeout(() => {
-        const index = likesReceived.findIndex(l => l.id === selectedProfile.id);
-        if (index > -1) {
-            likesReceived.splice(index, 1);
+    // ✅ ENVIA LIKE PARA O BACKEND
+    try {
+        const response = await fetch('https://mini-production-cf60.up.railway.app/api/likes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+            },
+            body: JSON.stringify({
+                to_telegram_id: selectedProfile.telegram_id,
+                type: 'like'
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Like enviado:', data);
+
+            modalLike.innerHTML = '<i class="fa-solid fa-check text-xl"></i> ' + (data.match ? 'Match!' : 'Like enviado!');
+            modalLike.classList.remove('from-green-400', 'to-emerald-500');
+            modalLike.classList.add(data.match ? 'from-pink-500' : 'from-green-500', 'to-rose-500');
+
+            setTimeout(() => {
+                // Remove da lista
+                const index = likesReceived.findIndex(l => l.id === selectedProfile.id);
+                if (index > -1) {
+                    likesReceived.splice(index, 1);
+                }
+
+                closeProfileModal();
+                renderLikes();
+                
+                if (data.match) {
+                    showMatchNotification(selectedProfile);
+                }
+            }, 1000);
         }
-
-        closeProfileModal();
-        renderLikes();
-        
-        showMatchNotification(selectedProfile);
-    }, 1000);
+    } catch (error) {
+        console.error('❌ Erro ao dar like:', error);
+    }
 });
 
 // ========== REJEITAR NO MODAL ==========
@@ -178,15 +293,15 @@ modalDislike.addEventListener('click', () => {
     renderLikes();
 });
 
-// ========== MOSTRAR NOTIFICAÃ‡ÃƒO DE MATCH ==========
+// ========== MOSTRAR NOTIFICAÇÃO DE MATCH ==========
 function showMatchNotification(profile) {
     const notification = document.createElement('div');
     notification.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-6 py-4 rounded-2xl shadow-2xl z-[200] flex items-center gap-3 animate-bounce';
     notification.innerHTML = `
         <i class="fa-solid fa-heart text-2xl"></i>
         <div>
-            <p class="font-bold">Ã‰ um Match! ðŸ’•</p>
-            <p class="text-xs opacity-90">VocÃª e ${profile.name} deram match!</p>
+            <p class="font-bold">É um Match! 💕</p>
+            <p class="text-xs opacity-90">Você e ${profile.name} deram match!</p>
         </div>
     `;
     
@@ -227,19 +342,35 @@ profileModal.addEventListener('click', (e) => {
     }
 });
 
-// ========== INICIALIZAR ==========
-console.log('ðŸš€ likes.js iniciando...');
+// ========== ATUALIZAR CONTADOR NA TAB ==========
+function updateTabCounter() {
+    if (tabReceived && likesReceived.length > 0) {
+        tabReceived.innerHTML = `Recebidas (${likesReceived.length})`;
+    }
+}
 
-setTimeout(() => {
+// ========== INICIALIZAR ==========
+console.log('🚀 likes.js iniciando...');
+
+setTimeout(async () => {
+    // Carrega likes do backend
+    await loadLikesReceived();
+    await loadLikesSent();
+    
+    // Atualiza contador
+    updateTabCounter();
+    
+    // Renderiza
+    renderLikes();
+    
     if (window.vipSystem) {
         window.vipSystem.updateUI();
-        console.log('âœ… Sistema VIP integrado na pÃ¡gina de likes');
-        console.log('ðŸ‘‘ Ã‰ Premium?', window.vipSystem.isPremium());
-        console.log('ðŸ‘ï¸ Pode ver likes?', window.vipSystem.canSeeLikes());
+        console.log('✅ Sistema VIP integrado na página de likes');
+        console.log('💎 É Premium?', window.vipSystem.isPremium());
+        console.log('👁️ Pode ver likes?', window.vipSystem.canSeeLikes());
     } else {
-        console.warn('âš ï¸ VIP System nÃ£o encontrado');
+        console.warn('⚠️ VIP System não encontrado');
     }
-    renderLikes();
 }, 100);
 
-console.log('âœ… likes.js carregado!');
+console.log('✅ likes.js carregado!');
