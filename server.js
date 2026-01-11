@@ -127,156 +127,6 @@ app.post('/api/users', optionalTelegramAuth, async (req, res) => {
             return res.status(400).json({ error: 'Idade deve estar entre 18 e 99' });
         }
         
-        console.log('🔖 Salvando usuário:', { telegram_id: finalTelegramId, name, age, gender, pref_gender });
-        
-        // Upsert
-        const result = await pool.query(`
-            INSERT INTO users (
-                telegram_id, name, age, gender, bio, city, photo_url, photos,
-                pref_gender, pref_age_min, pref_age_max, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)
-            ON CONFLICT (telegram_id) 
-            DO UPDATE SET
-                name = EXCLUDED.name,
-                age = EXCLUDED.age,
-                gender = EXCLUDED.gender,
-                bio = EXCLUDED.bio,
-                city = EXCLUDED.city,
-                photo_url = EXCLUDED.photo_url,
-                photos = EXCLUDED.photos,
-                pref_gender = EXCLUDED.pref_gender,
-                pref_age_min = EXCLUDED.pref_age_min,
-                pref_age_max = EXCLUDED.pref_age_max,
-                updated_at = CURRENT_TIMESTAMP
-            RETURNING *
-        `, [
-            finalTelegramId, name, age, gender || 'feminino', bio, city, photo_url, 
-            photos, pref_gender || 'masculino', pref_age_min || 18, pref_age_max || 99
-        ]);
-        
-        console.log('✅ Usuário salvo:', result.rows[0].id);
-        res.json(result.rows[0]);
-    } catch (error) {
-        console.error('Erro ao salvar usuário:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
-    }
-});
-
-// ✅ GET - Buscar perfis para swipe (COM ASYNC!)
-app.get('/api/users/:telegramId/discover', optionalTelegramAuth, async (req, res) => {
-    try {
-        const { telegramId } = req.params;
-        const { limit = 10 } = req.query;
-        
-        const finalTelegramId = req.telegramUser?.telegram_id || telegramId;
-        
-        console.log('🔍 Buscando perfis para:', finalTelegramId);
-        
-        // Busca usuário atual
-        const userResult = await pool.query(
-            'SELECT * FROM users WHERE telegram_id = $1',
-            [finalTelegramId]
-        );
-        
-        if (userResult.rows.length === 0) {
-            console.log('⚠️ Usuário não encontrado');
-            return res.json([]);
-        }
-        
-        const user = userResult.rows[0];
-        console.log('👤 Usuário:', user.name, '| Eu sou:', user.gender, '| Quero ver:', user.pref_gender);
-        
-        // 🔥 QUERY CORRIGIDA
-        const query = `
-            SELECT u.* 
-            FROM users u
-            WHERE u.id != $1
-              AND u.is_active = TRUE
-              
-              AND (
-                $2 = 'todos'
-                OR u.gender = $2
-              )
-              
-              AND (
-                u.pref_gender = 'todos'
-                OR u.pref_gender = $3
-                OR $2 = 'todos'
-              )
-              
-              AND u.age BETWEEN COALESCE($4, 18) AND COALESCE($5, 99)
-              
-              AND COALESCE($6, 18) BETWEEN COALESCE(u.pref_age_min, 18) AND COALESCE(u.pref_age_max, 99)
-              
-              AND NOT EXISTS (
-                  SELECT 1 FROM likes WHERE from_user_id = $1 AND to_user_id = u.id
-              )
-            ORDER BY RANDOM()
-            LIMIT $7
-        `;
-        
-        const params = [
-            user.id,
-            user.pref_gender || 'todos',
-            user.gender || 'masculino',
-            user.pref_age_min || 18,
-            user.pref_age_max || 99,
-            user.age || 18,
-            parseInt(limit)
-        ];
-        
-        console.log('🔍 Params:', {
-            'Meu ID': params[0],
-            'Quero ver': params[1],
-            'Eu sou': params[2],
-            'Idade min/max': `${params[3]}-${params[4]}`,
-            'Minha idade': params[5],
-            'Limit': params[6]
-        });
-        
-        const result = await pool.query(query, params);
-        
-        console.log('✅ Perfis encontrados:', result.rows.length);
-        
-        if (result.rows.length > 0) {
-            console.log('📋 Perfis:');
-            result.rows.forEach(p => {
-                console.log(`  - ${p.name}: é ${p.gender}, quer ver ${p.pref_gender}`);
-            });
-        }
-        
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Erro ao buscar perfis:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
-    }
-});
-
-// POST - Criar ou atualizar usuário
-app.post('/api/users', optionalTelegramAuth, async (req, res) => {
-    try {
-        const { 
-            telegram_id,
-            name, age, gender, bio, city, 
-            photo_url, photos, pref_gender, pref_age_min, pref_age_max 
-        } = req.body;
-        
-        // Pega telegram_id do auth ou do body
-        const finalTelegramId = req.telegramUser?.telegram_id || telegram_id;
-        
-        if (!finalTelegramId) {
-            return res.status(400).json({ error: 'telegram_id é obrigatório' });
-        }
-        
-        // Validações
-        if (!name || !age) {
-            return res.status(400).json({ error: 'Campos obrigatórios: name, age' });
-        }
-        
-        if (age < 18 || age > 99) {
-            return res.status(400).json({ error: 'Idade deve estar entre 18 e 99' });
-        }
-        
         console.log('📝 Salvando usuário:', { telegram_id: finalTelegramId, name, age, gender, pref_gender });
         
         // Upsert
@@ -313,7 +163,6 @@ app.post('/api/users', optionalTelegramAuth, async (req, res) => {
 });
 
 // GET - Buscar perfis para swipe (COM COMPATIBILIDADE MÚTUA!)
-// GET - Buscar perfis para swipe (COM COMPATIBILIDADE MÚTUA!)
 app.get('/api/users/:telegramId/discover', optionalTelegramAuth, async (req, res) => {
     try {
         const { telegramId } = req.params;
@@ -337,31 +186,30 @@ app.get('/api/users/:telegramId/discover', optionalTelegramAuth, async (req, res
         const user = userResult.rows[0];
         console.log('👤 Usuário:', user.name, '| Eu sou:', user.gender, '| Quero ver:', user.pref_gender);
         
-        // 🔥 QUERY CORRIGIDA - Mais permissiva
+        // 🔥 QUERY COM COMPATIBILIDADE MÚTUA!
         const query = `
             SELECT u.* 
             FROM users u
             WHERE u.id != $1
               AND u.is_active = TRUE
               
-              -- 1️⃣ O gênero DELES é o que EU quero ver? (OU eles aceitam "todos")
+              -- 1️⃣ O gênero DELES é o que EU quero ver?
               AND (
                 $2 = 'todos'
                 OR u.gender = $2
               )
               
-              -- 2️⃣ ELES querem ver MEU gênero? (OU eu quero ver "todos")
+              -- 2️⃣ ELES querem ver o MEU gênero?
               AND (
                 u.pref_gender = 'todos'
                 OR u.pref_gender = $3
-                OR $2 = 'todos'
               )
               
               -- 3️⃣ A idade DELES está na faixa que EU quero?
-              AND u.age BETWEEN COALESCE($4, 18) AND COALESCE($5, 99)
+              AND u.age BETWEEN $4 AND $5
               
               -- 4️⃣ A MINHA idade está na faixa que ELES querem?
-              AND COALESCE($6, 18) BETWEEN COALESCE(u.pref_age_min, 18) AND COALESCE(u.pref_age_max, 99)
+              AND $6 BETWEEN u.pref_age_min AND u.pref_age_max
               
               -- 5️⃣ Não mostrar quem já dei like/dislike/superlike
               AND NOT EXISTS (
@@ -372,13 +220,13 @@ app.get('/api/users/:telegramId/discover', optionalTelegramAuth, async (req, res
         `;
         
         const params = [
-            user.id,                      // $1 - Meu ID
-            user.pref_gender || 'todos',  // $2 - Gênero que EU quero ver
-            user.gender || 'masculino',   // $3 - MEU gênero
-            user.pref_age_min || 18,      // $4 - Idade mínima que EU quero
-            user.pref_age_max || 99,      // $5 - Idade máxima que EU quero
-            user.age || 18,               // $6 - MINHA idade
-            parseInt(limit)               // $7 - Limite de resultados
+            user.id,              // $1 - Meu ID
+            user.pref_gender,     // $2 - Gênero que EU quero ver
+            user.gender,          // $3 - MEU gênero
+            user.pref_age_min || 18,  // $4 - Idade mínima que EU quero
+            user.pref_age_max || 99,  // $5 - Idade máxima que EU quero
+            user.age,             // $6 - MINHA idade
+            parseInt(limit)       // $7 - Limite de resultados
         ];
         
         console.log('🔍 Params:', {
@@ -389,27 +237,6 @@ app.get('/api/users/:telegramId/discover', optionalTelegramAuth, async (req, res
             'Minha idade': params[5],
             'Limit': params[6]
         });
-        
-        const result = await pool.query(query, params);
-        
-        console.log('✅ Perfis compatíveis encontrados:', result.rows.length);
-        
-        if (result.rows.length > 0) {
-            console.log('📋 Perfis:');
-            result.rows.forEach(profile => {
-                console.log(`  - ${profile.name}: é ${profile.gender}, quer ver ${profile.pref_gender}`);
-            });
-        } else {
-            console.log('❌ Nenhum perfil compatível encontrado');
-            console.log('💡 Dica: Verifique se há usuários cadastrados com preferências compatíveis');
-        }
-        
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Erro ao buscar perfis:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
-    }
-});
         
         const result = await pool.query(query, params);
         
@@ -783,6 +610,9 @@ app.post('/api/matches/:matchId/messages', optionalTelegramAuth, async (req, res
 
 
 // ========== ADICIONE ESTA ROTA NO SEU server.js ==========
+// Cole esta rota ANTES dos "ERROR HANDLERS" (antes da linha app.use((err, req, res, next) => {)
+
+// GET - Contar likes recebidos (para usuários não-premium verem quantos likes têm)
 app.get('/api/likes/count', optionalTelegramAuth, async (req, res) => {
     try {
         const telegram_id = req.telegramUser?.telegram_id || req.query.telegram_id;
@@ -1275,6 +1105,4 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
-
-
 
