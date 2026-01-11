@@ -583,6 +583,82 @@ app.get('/api/debug/users', async (req, res) => {
     }
 });
 
+// ========== DEBUG - Resetar likes e matches ==========
+app.get('/api/debug/reset-likes', async (req, res) => {
+    try {
+        console.log('🔄 Resetando likes e matches...');
+        
+        // Deleta todos os likes
+        const likesResult = await pool.query('DELETE FROM likes');
+        console.log('🗑️ Likes deletados:', likesResult.rowCount);
+        
+        // Deleta todos os matches
+        const matchesResult = await pool.query('DELETE FROM matches');
+        console.log('🗑️ Matches deletados:', matchesResult.rowCount);
+        
+        // Reseta contadores
+        const usersResult = await pool.query('UPDATE users SET daily_likes = 0, daily_super_likes = 0');
+        console.log('🔄 Contadores resetados:', usersResult.rowCount);
+        
+        res.json({
+            success: true,
+            message: 'Likes e matches resetados com sucesso!',
+            deleted: {
+                likes: likesResult.rowCount,
+                matches: matchesResult.rowCount,
+                users_updated: usersResult.rowCount
+            }
+        });
+    } catch (error) {
+        console.error('❌ Erro ao resetar:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ========== DEBUG - Resetar likes de um usuário específico ==========
+app.get('/api/debug/reset-likes/:telegramId', async (req, res) => {
+    try {
+        const { telegramId } = req.params;
+        
+        console.log('🔄 Resetando likes do usuário:', telegramId);
+        
+        // Busca o user_id
+        const userResult = await pool.query('SELECT id FROM users WHERE telegram_id = $1', [telegramId]);
+        
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+        
+        const userId = userResult.rows[0].id;
+        
+        // Deleta likes desse usuário
+        const likesResult = await pool.query('DELETE FROM likes WHERE from_user_id = $1', [userId]);
+        console.log('🗑️ Likes deletados:', likesResult.rowCount);
+        
+        // Deleta matches desse usuário
+        const matchesResult = await pool.query(
+            'DELETE FROM matches WHERE user1_id = $1 OR user2_id = $1',
+            [userId]
+        );
+        console.log('🗑️ Matches deletados:', matchesResult.rowCount);
+        
+        // Reseta contador
+        await pool.query('UPDATE users SET daily_likes = 0, daily_super_likes = 0 WHERE id = $1', [userId]);
+        
+        res.json({
+            success: true,
+            message: `Likes do usuário ${telegramId} resetados!`,
+            deleted: {
+                likes: likesResult.rowCount,
+                matches: matchesResult.rowCount
+            }
+        });
+    } catch (error) {
+        console.error('❌ Erro ao resetar:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ========== ERROR HANDLERS ==========
 app.use((err, req, res, next) => {
     console.error(err.stack);
