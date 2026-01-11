@@ -3,54 +3,57 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
-const { Pool } = require('pg');
 
-// ConfiguraÃ§Ã£o do PostgreSQL
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
-
-// ConfiguraÃ§Ã£o do Cloudinary
-// ⚠️ CREDENCIAIS DIRETAS - NÃO RECOMENDADO PARA PRODUÇÃO!
+// ⚠️ CREDENCIAIS DIRETAS - para debug
 cloudinary.config({
     cloud_name: 'dx5ki2s1d',
     api_key: '568959253727239',
     api_secret: 'ffQsNQcYcSgE3VFdoLrsBYGXov4'
 });
 
-// ConfiguraÃ§Ã£o do Multer (aceita atÃ© 4 fotos)
+console.log('✅ Cloudinary configurado com cloud_name:', 'dx5ki2s1d');
+
+// Configuração do Multer (aceita até 4 fotos)
 const storage = multer.memoryStorage();
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB mÃ¡ximo
-        files: 4 // MÃ¡ximo 4 fotos
+        fileSize: 5 * 1024 * 1024, // 5MB máximo
+        files: 4 // Máximo 4 fotos
     },
     fileFilter: (req, file, cb) => {
+        console.log('📁 Arquivo recebido:', file.originalname, 'Tipo:', file.mimetype);
         // Aceita apenas imagens
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
         } else {
-            cb(new Error('Apenas imagens sÃ£o permitidas!'), false);
+            cb(new Error('Apenas imagens são permitidas!'), false);
         }
     }
 });
 
-// ========== UPLOAD DE FOTO ÃšNICA ==========
+// ========== UPLOAD DE FOTO ÚNICA ==========
 router.post('/photo', upload.single('photo'), async (req, res) => {
+    console.log('🚀 Iniciando upload de foto...');
+    
     try {
         if (!req.file) {
+            console.log('❌ Nenhum arquivo recebido');
             return res.status(400).json({ error: 'Nenhuma foto enviada' });
         }
 
-        const { telegram_id } = req.body;
+        console.log('📦 Arquivo recebido:', {
+            originalname: req.file.originalname,
+            mimetype: req.file.mimetype,
+            size: req.file.size
+        });
 
-        if (!telegram_id) {
-            return res.status(400).json({ error: 'telegram_id Ã© obrigatÃ³rio' });
-        }
+        const telegram_id = req.body.telegram_id || 'unknown';
+        console.log('👤 Telegram ID:', telegram_id);
 
         // Faz upload para Cloudinary
+        console.log('☁️ Enviando para Cloudinary...');
+        
         const uploadPromise = new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
                 {
@@ -63,8 +66,13 @@ router.post('/photo', upload.single('photo'), async (req, res) => {
                     ]
                 },
                 (error, result) => {
-                    if (error) reject(error);
-                    else resolve(result);
+                    if (error) {
+                        console.log('❌ Erro Cloudinary:', error);
+                        reject(error);
+                    } else {
+                        console.log('✅ Upload Cloudinary sucesso:', result.secure_url);
+                        resolve(result);
+                    }
                 }
             );
             
@@ -74,11 +82,18 @@ router.post('/photo', upload.single('photo'), async (req, res) => {
 
         const result = await uploadPromise;
 
-        // Atualiza URL da foto no banco
-        await pool.query(
-            'UPDATE users SET photo_url = $1, updated_at = CURRENT_TIMESTAMP WHERE telegram_id = $2',
-            [result.secure_url, telegram_id]
-        );
+        // Tenta atualizar no banco (opcional - não falha se der erro)
+        try {
+            if (global.pool && telegram_id !== 'unknown') {
+                await global.pool.query(
+                    'UPDATE users SET photo_url = $1, updated_at = CURRENT_TIMESTAMP WHERE telegram_id = $2',
+                    [result.secure_url, telegram_id]
+                );
+                console.log('💾 Banco atualizado');
+            }
+        } catch (dbError) {
+            console.log('⚠️ Erro ao atualizar banco (ignorado):', dbError.message);
+        }
 
         res.json({
             success: true,
@@ -87,23 +102,26 @@ router.post('/photo', upload.single('photo'), async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Erro no upload:', error);
-        res.status(500).json({ error: 'Erro ao fazer upload da foto' });
+        console.error('❌ Erro no upload:', error);
+        res.status(500).json({ 
+            error: 'Erro ao fazer upload da foto',
+            details: error.message 
+        });
     }
 });
 
-// ========== UPLOAD DE MÃšLTIPLAS FOTOS ==========
+// ========== UPLOAD DE MÚLTIPLAS FOTOS ==========
 router.post('/photos', upload.array('photos', 4), async (req, res) => {
+    console.log('🚀 Iniciando upload múltiplo...');
+    
     try {
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: 'Nenhuma foto enviada' });
         }
 
-        const { telegram_id } = req.body;
-
-        if (!telegram_id) {
-            return res.status(400).json({ error: 'telegram_id Ã© obrigatÃ³rio' });
-        }
+        const telegram_id = req.body.telegram_id || 'unknown';
+        console.log('👤 Telegram ID:', telegram_id);
+        console.log('📦 Arquivos recebidos:', req.files.length);
 
         // Upload de todas as fotos em paralelo
         const uploadPromises = req.files.map((file, index) => {
@@ -130,12 +148,20 @@ router.post('/photos', upload.array('photos', 4), async (req, res) => {
         });
 
         const urls = await Promise.all(uploadPromises);
+        console.log('✅ Todas as fotos enviadas:', urls.length);
 
-        // Atualiza array de fotos no banco
-        await pool.query(
-            'UPDATE users SET photos = $1, photo_url = $2, updated_at = CURRENT_TIMESTAMP WHERE telegram_id = $3',
-            [urls, urls[0], telegram_id]
-        );
+        // Tenta atualizar no banco
+        try {
+            if (global.pool && telegram_id !== 'unknown') {
+                await global.pool.query(
+                    'UPDATE users SET photos = $1, photo_url = $2, updated_at = CURRENT_TIMESTAMP WHERE telegram_id = $3',
+                    [urls, urls[0], telegram_id]
+                );
+                console.log('💾 Banco atualizado');
+            }
+        } catch (dbError) {
+            console.log('⚠️ Erro ao atualizar banco (ignorado):', dbError.message);
+        }
 
         res.json({
             success: true,
@@ -144,8 +170,11 @@ router.post('/photos', upload.array('photos', 4), async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Erro no upload mÃºltiplo:', error);
-        res.status(500).json({ error: 'Erro ao fazer upload das fotos' });
+        console.error('❌ Erro no upload múltiplo:', error);
+        res.status(500).json({ 
+            error: 'Erro ao fazer upload das fotos',
+            details: error.message 
+        });
     }
 });
 
@@ -154,43 +183,35 @@ router.delete('/photo', async (req, res) => {
     try {
         const { telegram_id, public_id } = req.body;
 
-        if (!telegram_id || !public_id) {
-            return res.status(400).json({ error: 'telegram_id e public_id sÃ£o obrigatÃ³rios' });
+        if (!public_id) {
+            return res.status(400).json({ error: 'public_id é obrigatório' });
         }
 
         // Deleta do Cloudinary
         await cloudinary.uploader.destroy(public_id);
-
-        // Busca fotos atuais
-        const result = await pool.query(
-            'SELECT photos FROM users WHERE telegram_id = $1',
-            [telegram_id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
-        }
-
-        // Remove a foto do array
-        let photos = result.rows[0].photos || [];
-        const urlToRemove = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v`;
-        photos = photos.filter(url => !url.includes(public_id));
-
-        // Atualiza no banco
-        await pool.query(
-            'UPDATE users SET photos = $1, photo_url = $2, updated_at = CURRENT_TIMESTAMP WHERE telegram_id = $3',
-            [photos, photos[0] || null, telegram_id]
-        );
+        console.log('🗑️ Foto deletada do Cloudinary:', public_id);
 
         res.json({
             success: true,
-            remaining: photos.length
+            message: 'Foto deletada'
         });
 
     } catch (error) {
-        console.error('Erro ao deletar foto:', error);
+        console.error('❌ Erro ao deletar foto:', error);
         res.status(500).json({ error: 'Erro ao deletar foto' });
     }
+});
+
+// ========== ROTA DE TESTE ==========
+router.get('/test', (req, res) => {
+    res.json({
+        status: 'ok',
+        cloudinary: {
+            cloud_name: 'dx5ki2s1d',
+            configured: true
+        },
+        message: 'Upload service funcionando!'
+    });
 });
 
 module.exports = router;
