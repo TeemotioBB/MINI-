@@ -327,31 +327,48 @@ modalLike.addEventListener('click', async () => {
             const data = await response.json();
             console.log('✅ Like enviado:', data);
 
+            // ✅ CORREÇÃO: Remove da lista ANTES de mostrar match
+            const index = likesReceived.findIndex(l => l.id === selectedProfile.id);
+            if (index > -1) {
+                likesReceived.splice(index, 1);
+                console.log('🗑️ Perfil removido da lista de likes');
+            }
+
             if (data.match) {
+                console.log('🎉 MATCH DETECTADO!');
                 modalLike.innerHTML = '<i class="fa-solid fa-heart text-xl"></i> Match! 🎉';
                 modalLike.classList.remove('from-green-400', 'to-emerald-500');
                 modalLike.classList.add('from-pink-500', 'to-rose-500');
+
+                // ✅ AGUARDA 1 SEGUNDO ANTES DE FECHAR E MOSTRAR MATCH
+                setTimeout(() => {
+                    closeProfileModal();
+                    renderLikes(); // Atualiza a lista
+                    updateTabCounter();
+                    
+                    // ✅ MOSTRA ANIMAÇÃO DE MATCH
+                    if (typeof showMatchAnimation !== 'undefined' && data.match_id) {
+                        setTimeout(() => {
+                            showMatchAnimation(selectedProfile, data.match_id);
+                        }, 300);
+                    } else {
+                        // Se não tiver a função, mostra notificação e redireciona
+                        showMatchNotification(selectedProfile, data.match_id);
+                    }
+                }, 1000);
             } else {
+                console.log('💚 Like enviado sem match');
                 modalLike.innerHTML = '<i class="fa-solid fa-check text-xl"></i> Like enviado!';
                 modalLike.classList.remove('from-green-400', 'to-emerald-500');
                 modalLike.classList.add('from-green-500', 'to-green-600');
+
+                // ✅ FECHA E ATUALIZA LISTA
+                setTimeout(() => {
+                    closeProfileModal();
+                    renderLikes();
+                    updateTabCounter();
+                }, 1000);
             }
-
-            setTimeout(() => {
-                // Remove da lista
-                const index = likesReceived.findIndex(l => l.id === selectedProfile.id);
-                if (index > -1) {
-                    likesReceived.splice(index, 1);
-                }
-
-                closeProfileModal();
-                renderLikes();
-                updateTabCounter();
-                
-                if (data.match) {
-                    showMatchNotification(selectedProfile, data.match_id);
-                }
-            }, 1000);
         } else {
             const error = await response.json();
             console.error('❌ Erro ao dar like:', error);
@@ -371,6 +388,45 @@ modalLike.addEventListener('click', async () => {
             modalLike.disabled = false;
         }, 2000);
     }
+});
+
+// ========== REJEITAR NO MODAL (TAMBÉM CORRIGIDO) ==========
+modalDislike.addEventListener('click', async () => {
+    if (!selectedProfile) return;
+
+    console.log('❌ Rejeitando:', selectedProfile.name);
+
+    // Envia dislike para o backend
+    try {
+        const myTelegramId = getMyTelegramId();
+        
+        await fetch(`${API_BASE_URL}/likes`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+            },
+            body: JSON.stringify({
+                from_telegram_id: myTelegramId,
+                to_telegram_id: selectedProfile.telegram_id,
+                type: 'dislike'
+            })
+        });
+    } catch (error) {
+        console.error('⚠️ Erro ao enviar dislike (ignorado):', error);
+    }
+
+    // ✅ Remove da lista IMEDIATAMENTE
+    const index = likesReceived.findIndex(l => l.id === selectedProfile.id);
+    if (index > -1) {
+        likesReceived.splice(index, 1);
+        console.log('🗑️ Perfil removido da lista de likes');
+    }
+
+    // Fecha e atualiza
+    closeProfileModal();
+    renderLikes();
+    updateTabCounter();
 });
 
 // ========== REJEITAR NO MODAL ==========
