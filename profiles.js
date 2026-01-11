@@ -1,10 +1,9 @@
-// ========== PERFIS PARA O APP ==========
-// Os perfis serão carregados do banco de dados via API
+// ========== PERFIS PARA O APP (VERSÃO CORRIGIDA) ==========
 
 let profiles = [];
 let currentProfileIndex = 0;
 
-// ========== BUSCAR PERFIS DO BACKEND ==========
+// ========== BUSCAR PERFIS DO BACKEND (COM FILTRO DE JÁ VISTOS) ==========
 async function loadProfiles() {
     console.log('🔄 Carregando perfis do servidor...');
     
@@ -21,7 +20,7 @@ async function loadProfiles() {
             console.log('🧪 Usando ID de teste:', telegramId);
         }
         
-        // Busca perfis da API
+        // ✅ BUSCA PERFIS EXCLUINDO OS QUE JÁ FORAM VISTOS
         const response = await fetch(`https://mini-production-cf60.up.railway.app/api/users/${telegramId}/discover?limit=20`, {
             method: 'GET',
             headers: {
@@ -37,24 +36,29 @@ async function loadProfiles() {
         const data = await response.json();
         
         if (Array.isArray(data) && data.length > 0) {
-            // Mapeia os dados do banco para o formato do app
-            profiles = data.map(user => ({
-                id: user.id,
-                telegram_id: user.telegram_id,
-                name: user.name,
-                age: user.age,
-                gender: user.gender,
-                photo: user.photo_url || user.photos?.[0] || 'https://via.placeholder.com/500x600?text=Sem+Foto',
-                photos: user.photos || [],
-                bio: user.bio || '',
-                city: user.city || '',
-                verified: user.is_premium || false
-            }));
+            // ✅ FILTRA OS PERFIS QUE JÁ FORAM VISTOS (SALVOS NO LOCALSTORAGE)
+            const seenProfiles = getSeenProfiles();
+            
+            profiles = data
+                .filter(user => !seenProfiles.includes(user.telegram_id))
+                .map(user => ({
+                    id: user.id,
+                    telegram_id: user.telegram_id,
+                    name: user.name,
+                    age: user.age,
+                    gender: user.gender,
+                    photo: user.photo_url || user.photos?.[0] || 'https://via.placeholder.com/500x600?text=Sem+Foto',
+                    photos: user.photos || [],
+                    bio: user.bio || '',
+                    city: user.city || '',
+                    verified: user.is_premium || false
+                }));
             
             console.log('✅ Perfis carregados:', profiles.length);
-            console.log('👥 Perfis:', profiles.map(p => p.name));
+            console.log('🚫 Perfis já vistos filtrados:', seenProfiles.length);
+            console.log('👥 Perfis disponíveis:', profiles.map(p => p.name));
         } else {
-            console.log('📭 Nenhum perfil disponível no momento');
+            console.log('🔭 Nenhum perfil disponível no momento');
             profiles = [];
         }
         
@@ -74,6 +78,41 @@ async function loadProfiles() {
     return profiles;
 }
 
+// ========== GERENCIAR PERFIS JÁ VISTOS ==========
+
+// Pegar lista de perfis já vistos
+function getSeenProfiles() {
+    const saved = localStorage.getItem('sparkSeenProfiles');
+    if (!saved) return [];
+    
+    try {
+        return JSON.parse(saved);
+    } catch (e) {
+        return [];
+    }
+}
+
+// ✅ MARCAR PERFIL COMO VISTO (CHAME ISSO QUANDO DER LIKE/DISLIKE)
+function markProfileAsSeen(telegramId) {
+    const seen = getSeenProfiles();
+    
+    if (!seen.includes(telegramId)) {
+        seen.push(telegramId);
+        localStorage.setItem('sparkSeenProfiles', JSON.stringify(seen));
+        console.log('✅ Perfil marcado como visto:', telegramId);
+    }
+}
+
+// Limpar perfis vistos (útil para testar)
+function clearSeenProfiles() {
+    localStorage.removeItem('sparkSeenProfiles');
+    console.log('🧹 Perfis vistos limpos!');
+}
+
+// ✅ EXPOR FUNÇÕES GLOBALMENTE
+window.markProfileAsSeen = markProfileAsSeen;
+window.clearSeenProfiles = clearSeenProfiles;
+
 // ========== CARREGAR MAIS PERFIS ==========
 async function loadMoreProfiles() {
     console.log('🔄 Carregando mais perfis...');
@@ -88,9 +127,8 @@ async function loadMoreProfiles() {
 }
 
 // ========== INICIALIZAÇÃO ==========
-// Carrega perfis quando a página abre
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('📝 profiles.js iniciando...');
+    console.log('🚀 profiles.js iniciando...');
     
     // Pequeno delay para garantir que o Telegram WebApp inicializou
     setTimeout(() => {
@@ -99,3 +137,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 console.log('✅ profiles.js carregado!');
+console.log('💡 Para limpar perfis vistos no console: clearSeenProfiles()');
