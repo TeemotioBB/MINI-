@@ -88,6 +88,14 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => star.remove(), 1000);
     }
 
+    // ========== FUNÇÃO PARA MOSTRAR LOADING ==========
+    function showLoading() {
+        if (profileName) profileName.textContent = 'Carregando...';
+        if (profileBio) profileBio.textContent = 'Buscando perfis perto de você';
+        if (profileImage) profileImage.src = 'https://via.placeholder.com/500x600/f3f4f6/9ca3af?text=Carregando...';
+        if (verifiedBadge) verifiedBadge.style.display = 'none';
+    }
+
     // ========== FUNÇÃO PARA MOSTRAR TELA DE SEM PERFIS ==========
     function showNoProfiles() {
         console.log('📭 Mostrando tela de sem perfis');
@@ -119,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const profile = profiles[currentProfileIndex];
         
         profileName.textContent = `${profile.name}, ${profile.age}`;
-        profileBio.innerHTML = profile.bio;
+        profileBio.innerHTML = profile.bio || '';
         profileImage.src = profile.photo;
         
         // Mostra/esconde badge de verificado
@@ -154,6 +162,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const profile = profiles[currentProfileIndex];
         likedProfiles.push(profile);
         console.log('❤️ LIKE dado em:', profile.name);
+        
+        // Envia like para o backend (não bloqueia a UI)
+        sendLikeToBackend(profile.telegram_id, 'like');
         
         // Verifica se há match
         const hasMatch = typeof checkForMatch !== 'undefined' && checkForMatch(profile);
@@ -196,6 +207,9 @@ document.addEventListener('DOMContentLoaded', function() {
         dislikedProfiles.push(profile);
         console.log('❌ DISLIKE dado em:', profile.name);
         
+        // Envia dislike para o backend
+        sendLikeToBackend(profile.telegram_id, 'dislike');
+        
         card.classList.add('swipe-left');
         showXAnimation();
         
@@ -220,6 +234,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const profile = profiles[currentProfileIndex];
         superLikedProfiles.push(profile);
         console.log('⭐ SUPER LIKE dado em:', profile.name);
+        
+        // Envia superlike para o backend
+        sendLikeToBackend(profile.telegram_id, 'superlike');
         
         const hasMatch = typeof checkForMatch !== 'undefined' && checkForMatch(profile);
         
@@ -264,6 +281,35 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('⚡ BOOST ativado com sucesso!');
     });
 
+    // ========== ENVIAR LIKE PARA O BACKEND ==========
+    async function sendLikeToBackend(toTelegramId, type) {
+        try {
+            const response = await fetch('https://mini-production-cf60.up.railway.app/api/likes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+                },
+                body: JSON.stringify({
+                    to_telegram_id: toTelegramId,
+                    type: type
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Like enviado para o servidor:', data);
+                
+                // Se deu match no servidor, mostra animação
+                if (data.match) {
+                    console.log('🎉 Match confirmado pelo servidor!');
+                }
+            }
+        } catch (error) {
+            console.log('⚠️ Erro ao enviar like (não impede uso):', error);
+        }
+    }
+
     // ========== AGUARDA VIP SYSTEM CARREGAR ==========
     setTimeout(() => {
         if (window.vipSystem) {
@@ -275,14 +321,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 200);
 
-    // ========== MOSTRAR PRIMEIRO PERFIL ==========
-    if (typeof profiles !== 'undefined' && profiles.length > 0) {
-        showProfile();
-        console.log('✅ Primeiro perfil carregado');
-    } else {
-        console.log('📭 Nenhum perfil disponível');
-        showNoProfiles();
-    }
+    // ========== ESCUTA QUANDO OS PERFIS CARREGAREM ==========
+    window.addEventListener('profilesLoaded', (event) => {
+        console.log('📬 Evento profilesLoaded recebido:', event.detail);
+        
+        if (event.detail.count > 0) {
+            showProfile();
+            console.log('✅ Primeiro perfil carregado');
+        } else {
+            showNoProfiles();
+            console.log('📭 Nenhum perfil disponível');
+        }
+    });
+
+    // ========== MOSTRA LOADING INICIAL ==========
+    showLoading();
 
     console.log('✅ app.js carregado com sucesso!');
 });
