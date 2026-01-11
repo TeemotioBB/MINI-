@@ -712,7 +712,7 @@ app.get('/api/debug/reset-my-test-users', async (req, res) => {
             
             // Busca o user_id
             const userResult = await pool.query(
-                'SELECT id, name FROM users WHERE telegram_id = $1',
+                'SELECT id, name, daily_likes, daily_super_likes FROM users WHERE telegram_id = $1',
                 [telegramId]
             );
             
@@ -728,8 +728,11 @@ app.get('/api/debug/reset-my-test-users', async (req, res) => {
             
             const userId = userResult.rows[0].id;
             const userName = userResult.rows[0].name;
+            const oldLikes = userResult.rows[0].daily_likes;
+            const oldSuperLikes = userResult.rows[0].daily_super_likes;
             
             console.log('👤 Encontrado:', userName, '(ID:', userId, ')');
+            console.log('📊 Limites ANTES:', { daily_likes: oldLikes, daily_super_likes: oldSuperLikes });
             
             // 1. Deleta TODOS os likes (enviados e recebidos)
             const likesResult = await pool.query(
@@ -763,7 +766,10 @@ app.get('/api/debug/reset-my-test-users', async (req, res) => {
             `, [userId]);
             
             console.log('🧹 Perfil limpo:', cleanResult.rows[0].name);
-            console.log('🔄 Limites resetados: daily_likes =', cleanResult.rows[0].daily_likes, '| daily_super_likes =', cleanResult.rows[0].daily_super_likes);
+            console.log('🔄 Limites DEPOIS:', {
+                daily_likes: cleanResult.rows[0].daily_likes,
+                daily_super_likes: cleanResult.rows[0].daily_super_likes
+            });
             result.profiles_cleaned++;
             
             result.users_reset.push({
@@ -772,8 +778,10 @@ app.get('/api/debug/reset-my-test-users', async (req, res) => {
                 status: 'reset_success',
                 old_name: userName,
                 new_name: 'Usuário Teste',
-                daily_likes: 0,
-                daily_super_likes: 0
+                old_daily_likes: oldLikes,
+                old_daily_super_likes: oldSuperLikes,
+                daily_likes: cleanResult.rows[0].daily_likes,
+                daily_super_likes: cleanResult.rows[0].daily_super_likes
             });
             
             console.log('✅ Usuário resetado com sucesso!');
@@ -788,7 +796,7 @@ app.get('/api/debug/reset-my-test-users', async (req, res) => {
         console.error('❌ Erro ao resetar:', error);
         res.status(500).json({ error: error.message });
     }
-});
+});;
 
 // ========== DEBUG - RESETAR LIMITE DE LIKES DE NÃO-VIP ==========
 app.get('/api/debug/reset-like-limits', async (req, res) => {
@@ -957,3 +965,4 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
+
