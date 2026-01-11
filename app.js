@@ -6,11 +6,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const profileImage = document.getElementById('profile-image');
     const profileName = document.getElementById('profile-name');
     const profileBio = document.getElementById('profile-bio');
+    const verifiedBadge = document.getElementById('verified-badge');
 
     const btnLike = document.getElementById('btn-like');
     const btnDislike = document.getElementById('btn-dislike');
     const btnStar = document.getElementById('btn-star');
     const btnBoost = document.getElementById('btn-boost');
+
+    // Áreas de exibição
+    const profileCardArea = document.getElementById('profile-card-area');
+    const noProfilesArea = document.getElementById('no-profiles-area');
 
     // Verifica se os elementos existem
     if (!btnLike || !btnDislike || !btnStar || !btnBoost) {
@@ -83,13 +88,32 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => star.remove(), 1000);
     }
 
+    // ========== FUNÇÃO PARA MOSTRAR TELA DE SEM PERFIS ==========
+    function showNoProfiles() {
+        console.log('📭 Mostrando tela de sem perfis');
+        
+        if (profileCardArea) {
+            profileCardArea.classList.add('hidden');
+        }
+        if (noProfilesArea) {
+            noProfilesArea.classList.remove('hidden');
+        }
+    }
+
     // ========== FUNÇÃO PARA MOSTRAR PERFIL ==========
     function showProfile() {
-        if (currentProfileIndex >= profiles.length) {
-            profileName.textContent = "Acabaram os perfis! 😢";
-            profileBio.textContent = "Volte mais tarde para ver mais pessoas";
-            profileImage.src = "https://via.placeholder.com/500x380?text=Sem+mais+perfis";
+        // Verifica se não tem perfis ou acabaram
+        if (!profiles || profiles.length === 0 || currentProfileIndex >= profiles.length) {
+            showNoProfiles();
             return;
+        }
+
+        // Garante que a área do card está visível
+        if (profileCardArea) {
+            profileCardArea.classList.remove('hidden');
+        }
+        if (noProfilesArea) {
+            noProfilesArea.classList.add('hidden');
         }
 
         const profile = profiles[currentProfileIndex];
@@ -97,6 +121,11 @@ document.addEventListener('DOMContentLoaded', function() {
         profileName.textContent = `${profile.name}, ${profile.age}`;
         profileBio.innerHTML = profile.bio;
         profileImage.src = profile.photo;
+        
+        // Mostra/esconde badge de verificado
+        if (verifiedBadge) {
+            verifiedBadge.style.display = profile.verified ? 'flex' : 'none';
+        }
         
         console.log('👤 Mostrando perfil:', profile.name);
     }
@@ -111,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
     btnLike.addEventListener('click', () => {
         console.log('🖱️ Botão LIKE clicado!');
         
-        if (currentProfileIndex >= profiles.length) {
+        if (!profiles || currentProfileIndex >= profiles.length) {
             console.log('⚠️ Sem mais perfis');
             return;
         }
@@ -161,7 +190,7 @@ document.addEventListener('DOMContentLoaded', function() {
     btnDislike.addEventListener('click', () => {
         console.log('🖱️ Botão DISLIKE clicado!');
         
-        if (currentProfileIndex >= profiles.length) return;
+        if (!profiles || currentProfileIndex >= profiles.length) return;
         
         const profile = profiles[currentProfileIndex];
         dislikedProfiles.push(profile);
@@ -180,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
     btnStar.addEventListener('click', () => {
         console.log('🖱️ Botão SUPER LIKE clicado!');
         
-        if (currentProfileIndex >= profiles.length) return;
+        if (!profiles || currentProfileIndex >= profiles.length) return;
         
         // ✅ VERIFICAÇÃO VIP - PODE DAR SUPER LIKE?
         if (window.vipSystem && !window.vipSystem.registerSuperLike()) {
@@ -251,7 +280,8 @@ document.addEventListener('DOMContentLoaded', function() {
         showProfile();
         console.log('✅ Primeiro perfil carregado');
     } else {
-        console.error('❌ Array de perfis não encontrado!');
+        console.log('📭 Nenhum perfil disponível');
+        showNoProfiles();
     }
 
     console.log('✅ app.js carregado com sucesso!');
