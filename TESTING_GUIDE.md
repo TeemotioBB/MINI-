@@ -134,6 +134,18 @@ GET https://mini-production-cf60.up.railway.app/api/debug/reset-my-test-users
 ```
 Reseta completamente os dois usuários de teste configurados (IDs: 8542013089 e 1293602874).
 
+#### Resetar Limites de Likes (Não-VIP)
+```
+GET https://mini-production-cf60.up.railway.app/api/debug/reset-like-limits
+```
+Reseta os limites de likes diários (`daily_likes` e `daily_super_likes`) para TODOS os usuários não-VIP. Útil para testes quando os usuários atingem o limite de 10 likes diários.
+
+#### Resetar Limites dos Usuários de Teste
+```
+GET https://mini-production-cf60.up.railway.app/api/debug/reset-test-users-limits
+```
+Reseta apenas os limites de likes dos dois usuários de teste (IDs: 8542013089 e 1293602874), sem deletar likes ou matches. Ideal para continuar testando após atingir o limite diário.
+
 #### Deletar Usuários de Teste Completamente
 ```
 GET https://mini-production-cf60.up.railway.app/api/debug/delete-my-test-users
