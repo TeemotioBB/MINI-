@@ -209,6 +209,7 @@ function handleMatchSendMessage(profile, overlay, matchId) {
         }
     } catch (e) {
         console.error('❌ Erro ao salvar conversas:', e);
+        overlay.remove(); // Remove overlay antes de mostrar erro
         alert('Erro ao salvar conversa. Tente novamente.');
         return;
     }
@@ -292,6 +293,7 @@ function handleMatchContinue(profile, overlay, matchId) {
         });
     } catch (e) {
         console.error('❌ Erro ao salvar:', e);
+        overlay.remove(); // Remove overlay antes de mostrar erro
         showToast('⚠️ Erro ao salvar match', 'error');
         return;
     }

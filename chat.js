@@ -544,7 +544,10 @@ getMyUserId().then(async () => {
         // Aguarda um pouco antes de tentar abrir (permite UI renderizar)
         setTimeout(() => {
             const chatId = parseInt(openChatId);
-            tryOpenChatById(chatId);
+            // Chama a função async e trata qualquer erro não capturado
+            tryOpenChatById(chatId).catch(err => {
+                console.error('❌ Erro não capturado ao abrir chat:', err);
+            });
         }, 500);
     }
 });
