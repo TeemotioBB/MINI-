@@ -113,7 +113,11 @@ async function loadLikesReceived() {
         
         const data = await response.json();
         
-        // 🔥 BUSCA MATCHES ATIVOS PARA FILTRAR (safeguard adicional)
+        // 🔥 SAFEGUARD: Filtro adicional no frontend
+        // O backend já filtra, mas este safeguard protege contra:
+        // - Race conditions (match criado entre a query e a resposta)
+        // - Problemas de cache/sincronização
+        // - Inconsistências temporárias de dados
         const myMatches = await getMyMatches();
         const matchedTelegramIds = new Set();
         
@@ -126,13 +130,13 @@ async function loadLikesReceived() {
             }
         });
         
-        console.log('🚫 Filtrando telegram_ids com match:', Array.from(matchedTelegramIds));
+        console.log('🚫 Filtrando telegram_ids com match (safeguard):', Array.from(matchedTelegramIds));
         
-        // 🔥 FILTRA LIKES DE USUÁRIOS QUE JÁ TEM MATCH ATIVO
+        // FILTRA LIKES DE USUÁRIOS QUE JÁ TEM MATCH ATIVO
         const filteredData = data.filter(like => {
             const hasMatch = matchedTelegramIds.has(like.telegram_id);
             if (hasMatch) {
-                console.log('🗑️ Removendo da lista:', like.name, '- já tem match ativo');
+                console.log('🗑️ [SAFEGUARD] Removendo da lista:', like.name, '- já tem match ativo');
             }
             return !hasMatch;
         });

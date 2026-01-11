@@ -506,7 +506,8 @@ getMyUserId().then(async () => {
         // 🔥 REMOVE O FLAG ANTES DE TENTAR ABRIR (evita loops)
         localStorage.removeItem('openChatId');
         
-        setTimeout(async () => {
+        // 🔥 Usa uma função regular e trata os erros do async
+        setTimeout(() => {
             const chatId = parseInt(openChatId);
             console.log('🔍 Procurando conversa com ID:', chatId);
             
@@ -515,20 +516,27 @@ getMyUserId().then(async () => {
             
             if (chatExists) {
                 console.log('✅ Conversa encontrada, abrindo...');
-                await openChat(chatId);
+                openChat(chatId).catch(err => {
+                    console.error('❌ Erro ao abrir chat:', err);
+                });
             } else {
                 console.warn('⚠️ Conversa não encontrada, recarregando do backend...');
                 // Tenta recarregar uma vez
-                await loadAllConversations();
-                const chatNow = conversations.find(c => c.id === chatId);
-                
-                if (chatNow) {
-                    console.log('✅ Conversa encontrada após recarregar, abrindo...');
-                    await openChat(chatId);
-                } else {
-                    console.error('❌ Conversa ainda não encontrada. ID:', chatId);
-                    console.log('📋 IDs disponíveis:', conversations.map(c => c.id));
-                }
+                loadAllConversations().then(() => {
+                    const chatNow = conversations.find(c => c.id === chatId);
+                    
+                    if (chatNow) {
+                        console.log('✅ Conversa encontrada após recarregar, abrindo...');
+                        openChat(chatId).catch(err => {
+                            console.error('❌ Erro ao abrir chat após recarregar:', err);
+                        });
+                    } else {
+                        console.error('❌ Conversa ainda não encontrada. ID:', chatId);
+                        console.log('📋 IDs disponíveis:', conversations.map(c => c.id));
+                    }
+                }).catch(err => {
+                    console.error('❌ Erro ao recarregar conversas:', err);
+                });
             }
         }, 500);
     }

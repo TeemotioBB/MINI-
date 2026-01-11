@@ -460,8 +460,8 @@ app.get('/api/likes/received', optionalTelegramAuth, async (req, res) => {
               AND l.type IN ('like', 'superlike')
               AND NOT EXISTS (
                   SELECT 1 FROM matches m
-                  WHERE (m.user1_id = $1 AND m.user2_id = u.id)
-                     OR (m.user2_id = $1 AND m.user1_id = u.id)
+                  WHERE ((m.user1_id = $1 AND m.user2_id = u.id)
+                     OR (m.user2_id = $1 AND m.user1_id = u.id))
                      AND m.is_active = TRUE
               )
             ORDER BY l.created_at DESC
@@ -652,8 +652,8 @@ app.get('/api/likes/count', optionalTelegramAuth, async (req, res) => {
               AND l.type IN ('like', 'superlike')
               AND NOT EXISTS (
                   SELECT 1 FROM matches m
-                  WHERE (m.user1_id = $1 AND m.user2_id = l.from_user_id)
-                     OR (m.user2_id = $1 AND m.user1_id = l.from_user_id)
+                  WHERE ((m.user1_id = $1 AND m.user2_id = l.from_user_id)
+                     OR (m.user2_id = $1 AND m.user1_id = l.from_user_id))
                      AND m.is_active = TRUE
               )
         `, [userId]);
