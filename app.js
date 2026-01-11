@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ========== FUNÇÃO PARA MOSTRAR TELA DE SEM PERFIS ==========
     function showNoProfiles() {
-        console.log('📭 Mostrando tela de sem perfis');
+        console.log('🔭 Mostrando tela de sem perfis');
         
         if (profileCardArea) {
             profileCardArea.classList.add('hidden');
@@ -164,6 +164,12 @@ document.addEventListener('DOMContentLoaded', function() {
         likedProfiles.push(profile);
         console.log('❤️ LIKE dado em:', profile.name, '| Telegram ID:', profile.telegram_id);
         
+        // ✅ MARCA PERFIL COMO VISTO!
+        if (typeof markProfileAsSeen === 'function') {
+            markProfileAsSeen(profile.telegram_id);
+            console.log('👁️ Perfil marcado como visto');
+        }
+        
         // ✅ ENVIA LIKE E AGUARDA RESPOSTA DO BACKEND
         console.log('📤 Enviando like para o servidor...');
         const response = await sendLikeToBackend(profile.telegram_id, 'like');
@@ -210,6 +216,12 @@ document.addEventListener('DOMContentLoaded', function() {
         dislikedProfiles.push(profile);
         console.log('❌ DISLIKE dado em:', profile.name, '| Telegram ID:', profile.telegram_id);
         
+        // ✅ MARCA PERFIL COMO VISTO!
+        if (typeof markProfileAsSeen === 'function') {
+            markProfileAsSeen(profile.telegram_id);
+            console.log('👁️ Perfil marcado como visto');
+        }
+        
         // Envia dislike para o backend
         console.log('📤 Enviando dislike para o servidor...');
         await sendLikeToBackend(profile.telegram_id, 'dislike');
@@ -238,6 +250,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const profile = profiles[currentProfileIndex];
         superLikedProfiles.push(profile);
         console.log('⭐ SUPER LIKE dado em:', profile.name, '| Telegram ID:', profile.telegram_id);
+        
+        // ✅ MARCA PERFIL COMO VISTO!
+        if (typeof markProfileAsSeen === 'function') {
+            markProfileAsSeen(profile.telegram_id);
+            console.log('👁️ Perfil marcado como visto');
+        }
         
         // Envia superlike para o backend e aguarda resposta
         console.log('📤 Enviando super like para o servidor...');
@@ -348,7 +366,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('✅ Primeiro perfil carregado');
         } else {
             showNoProfiles();
-            console.log('📭 Nenhum perfil disponível');
+            console.log('🔭 Nenhum perfil disponível');
         }
     });
 
@@ -358,4 +376,4 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ app.js carregado com sucesso!');
 });
 
-console.log('📝 app.js script carregado (aguardando DOM)');
+console.log('📄 app.js script carregado (aguardando DOM)');
