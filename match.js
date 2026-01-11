@@ -47,10 +47,10 @@ function showMatchAnimation(profile, matchId) {
             <h2 class="match-name">${profile.name}</h2>
             
             <div class="match-buttons">
-                <button id="match-send-message" class="match-btn match-btn-primary">
+                <a href="chat.html" id="match-send-message" class="match-btn match-btn-primary">
                     <i class="fa-solid fa-paper-plane"></i>
                     Enviar Mensagem
-                </button>
+                </a>
                 <button id="match-continue" class="match-btn match-btn-secondary">
                     Continuar Explorando
                 </button>
@@ -63,27 +63,30 @@ function showMatchAnimation(profile, matchId) {
     // Confete de match
     createMatchConfetti();
     
-    // CRITICAL: Previne cliques acidentais
+    // ✅ CORREÇÃO CRÍTICA: Aguarda o DOM renderizar antes de adicionar eventos
     setTimeout(() => {
         const sendBtn = document.getElementById('match-send-message');
         const continueBtn = document.getElementById('match-continue');
         
         if (sendBtn) {
-            sendBtn.addEventListener('click', (e) => {
+            // ✅ REMOVE event listener e usa onclick direto no link
+            sendBtn.onclick = (e) => {
                 e.preventDefault();
-                e.stopPropagation();
-                console.log('📨 Botão Enviar Mensagem clicado!');
+                console.log('🔨 Botão Enviar Mensagem clicado!');
                 handleMatchSendMessage(profile, matchOverlay, matchId);
-            });
+            };
+        } else {
+            console.error('❌ Botão "Enviar Mensagem" não encontrado!');
         }
         
         if (continueBtn) {
-            continueBtn.addEventListener('click', (e) => {
+            continueBtn.onclick = (e) => {
                 e.preventDefault();
-                e.stopPropagation();
                 console.log('➡️ Continuar explorando clicado!');
                 handleMatchContinue(profile, matchOverlay, matchId);
-            });
+            };
+        } else {
+            console.error('❌ Botão "Continuar" não encontrado!');
         }
     }, 100);
 }
@@ -170,7 +173,7 @@ function handleMatchSendMessage(profile, overlay, matchId) {
     try {
         localStorage.setItem('sparkConversations', JSON.stringify(conversations));
         console.log('💾 Conversas salvas:', conversations.length);
-        console.log('📝 Nova conversa:', newConversation);
+        console.log('🔍 Nova conversa:', newConversation);
     } catch (e) {
         console.error('❌ Erro ao salvar conversas:', e);
     }
@@ -182,11 +185,9 @@ function handleMatchSendMessage(profile, overlay, matchId) {
     // Remove overlay
     overlay.remove();
     
-    // Pequeno delay para garantir que salvou
-    setTimeout(() => {
-        console.log('🚀 Redirecionando para chat.html...');
-        window.location.href = 'chat.html';
-    }, 300);
+    // ✅ REDIRECT DIRETO SEM DELAY
+    console.log('🚀 Redirecionando para chat.html...');
+    window.location.href = 'chat.html';
 }
 
 // 🔥 HANDLER: Continuar explorando após match
