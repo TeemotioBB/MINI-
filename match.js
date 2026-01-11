@@ -1,28 +1,29 @@
 // ========== SISTEMA DE MATCH CORRIGIDO ==========
 
-// Função para verificar se há match
+// Função para verificar se há match (AGORA USA RESPOSTA DO BACKEND!)
 function checkForMatch(profile) {
     console.log('🔍 Verificando match para:', profile.name);
-    console.log('📋 Likes recebidos configurados:', LIKES_RECEBIDOS_CONFIG);
-    
-    // Verifica se esse perfil está na lista de quem deu like em você
-    const hasMatch = LIKES_RECEBIDOS_CONFIG.some(like => like.userId === profile.id);
-    
-    console.log(hasMatch ? '✅ MATCH ENCONTRADO!' : '❌ Sem match');
-    return hasMatch;
+    // NOTA: Agora o match é verificado pelo backend, não mais por LIKES_RECEBIDOS_CONFIG
+    // Esta função é mantida apenas por compatibilidade
+    return false;
 }
 
-// 🔥 CORREÇÃO: Função agora recebe matchId como segundo parâmetro
+// 🔥 FUNÇÃO PRINCIPAL: Mostra animação de match
 function showMatchAnimation(profile, matchId) {
     console.log('🎉 Iniciando animação de match com:', profile.name);
     console.log('🆔 Match ID recebido do servidor:', matchId);
+    
+    if (!matchId) {
+        console.error('❌ ERRO: matchId não foi recebido do servidor!');
+        return;
+    }
     
     // Busca dados do usuário
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
     const userPhoto = userData.photos && userData.photos[0] 
         ? userData.photos[0] 
-        : USER_CONFIG.photo;
-    const userName = userData.name || USER_CONFIG.name;
+        : (typeof USER_CONFIG !== 'undefined' ? USER_CONFIG.photo : 'https://via.placeholder.com/100?text=Você');
+    const userName = userData.name || (typeof USER_CONFIG !== 'undefined' ? USER_CONFIG.name : 'Você');
 
     // Cria overlay de match
     const matchOverlay = document.createElement('div');
@@ -35,11 +36,11 @@ function showMatchAnimation(profile, matchId) {
             
             <div class="match-photos">
                 <div class="match-photo-container">
-                    <img src="${userPhoto}" class="match-photo match-photo-left" alt="Você">
+                    <img src="${userPhoto}" class="match-photo match-photo-left" alt="Você" onerror="this.src='https://via.placeholder.com/100?text=Você'">
                 </div>
                 <div class="match-heart">💕</div>
                 <div class="match-photo-container">
-                    <img src="${profile.photo}" class="match-photo match-photo-right" alt="${profile.name}">
+                    <img src="${profile.photo}" class="match-photo match-photo-right" alt="${profile.name}" onerror="this.src='https://via.placeholder.com/100?text=${profile.name}'">
                 </div>
             </div>
             
@@ -72,7 +73,6 @@ function showMatchAnimation(profile, matchId) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('📨 Botão Enviar Mensagem clicado!');
-                // 🔥 PASSA O MATCH_ID!
                 handleMatchSendMessage(profile, matchOverlay, matchId);
             });
         }
@@ -82,7 +82,6 @@ function showMatchAnimation(profile, matchId) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('➡️ Continuar explorando clicado!');
-                // 🔥 PASSA O MATCH_ID!
                 handleMatchContinue(profile, matchOverlay, matchId);
             });
         }
@@ -106,19 +105,20 @@ function createMatchConfetti() {
     }
 }
 
-// 🔥 CORREÇÃO: Handler agora recebe matchId como terceiro parâmetro
+// 🔥 HANDLER: Enviar mensagem após match
 function handleMatchSendMessage(profile, overlay, matchId) {
     console.log('💬 Criando conversa com:', profile.name);
     console.log('🆔 Usando Match ID do servidor:', matchId);
     
-    // Cria a conversa
+    // Cria a conversa com dados do perfil
     const timestamp = Date.now();
     const newConversation = {
-        id: matchId, // 🔥 USA O MATCH_ID DO SERVIDOR, NÃO PROFILE.ID!
-        matchId: matchId, // 🔥 Mantém referência ao match_id
+        id: matchId, // 🔥 USA O MATCH_ID DO SERVIDOR!
+        matchId: matchId,
         matchTimestamp: timestamp,
         name: profile.name,
         photo: profile.photo,
+        otherTelegramId: profile.telegram_id,
         lastMessage: `Vocês deram match! 💕`,
         time: "Agora",
         unread: 0,
@@ -155,7 +155,9 @@ function handleMatchSendMessage(profile, overlay, matchId) {
             ...newConversation,
             messages: [
                 ...conversations[existingIndex].messages,
-                ...newConversation.messages
+                ...newConversation.messages.filter(m => 
+                    !conversations[existingIndex].messages.some(em => em.text === m.text)
+                )
             ]
         };
     } else {
@@ -175,7 +177,7 @@ function handleMatchSendMessage(profile, overlay, matchId) {
     
     // 🔥 MARCA PARA ABRIR O CHAT COM O MATCH_ID!
     localStorage.setItem('openChatId', matchId.toString());
-    console.log('🔖 Marcado para abrir chat com Match ID:', matchId);
+    console.log('📌 Marcado para abrir chat com Match ID:', matchId);
     
     // Remove overlay
     overlay.remove();
@@ -187,7 +189,7 @@ function handleMatchSendMessage(profile, overlay, matchId) {
     }, 300);
 }
 
-// 🔥 CORREÇÃO: Handler agora recebe matchId como terceiro parâmetro
+// 🔥 HANDLER: Continuar explorando após match
 function handleMatchContinue(profile, overlay, matchId) {
     console.log('✨ Criando conversa em segundo plano para:', profile.name);
     console.log('🆔 Usando Match ID do servidor:', matchId);
@@ -195,11 +197,12 @@ function handleMatchContinue(profile, overlay, matchId) {
     // Cria a conversa em segundo plano
     const timestamp = Date.now();
     const newConversation = {
-        id: matchId, // 🔥 USA O MATCH_ID DO SERVIDOR, NÃO PROFILE.ID!
-        matchId: matchId, // 🔥 Mantém referência ao match_id
+        id: matchId, // 🔥 USA O MATCH_ID DO SERVIDOR!
+        matchId: matchId,
         matchTimestamp: timestamp,
         name: profile.name,
         photo: profile.photo,
+        otherTelegramId: profile.telegram_id,
         lastMessage: `Vocês deram match! 💕`,
         time: "Agora",
         unread: 1,
@@ -233,7 +236,9 @@ function handleMatchContinue(profile, overlay, matchId) {
             ...newConversation,
             messages: [
                 ...conversations[existingIndex].messages,
-                ...newConversation.messages
+                ...newConversation.messages.filter(m => 
+                    !conversations[existingIndex].messages.some(em => em.text === m.text)
+                )
             ]
         };
     } else {
