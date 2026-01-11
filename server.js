@@ -736,6 +736,14 @@ app.get('/api/debug/reset-my-test-users', async (req, res) => {
                 'DELETE FROM likes WHERE from_user_id = $1 OR to_user_id = $1',
                 [userId]
             );
+            console.log('🗑️ Likes deletados:', likesResult.rowCount);
+            result.likes_deleted += likesResult.rowCount;
+            
+            // 2. Deleta TODOS os matches
+            const matchesResult = await pool.query(
+                'DELETE FROM matches WHERE user1_id = $1 OR user2_id = $1',
+                [userId]
+            );
             console.log('🗑️ Matches deletados:', matchesResult.rowCount);
             result.matches_deleted += matchesResult.rowCount;
             
@@ -948,12 +956,4 @@ app.use((req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
-}); Likes deletados:', likesResult.rowCount);
-            result.likes_deleted += likesResult.rowCount;
-            
-            // 2. Deleta TODOS os matches
-            const matchesResult = await pool.query(
-                'DELETE FROM matches WHERE user1_id = $1 OR user2_id = $1',
-                [userId]
-            );
-            console.log('🗑️
+});
