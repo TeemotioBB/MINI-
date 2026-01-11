@@ -12,25 +12,31 @@ const chatUserPhoto = document.getElementById('chat-user-photo');
 const inputContainer = document.getElementById('input-container');
 const bottomNav = document.getElementById('bottom-nav');
 
+// ========== CONFIGURAÇÃO DA API ==========
+const API_BASE_URL = 'https://mini-production-cf60.up.railway.app/api';
+
 // ========== DADOS DE CONVERSAS ==========
 let conversations = [];
 let currentChat = null;
 let myUserId = null; // ID do usuário atual (user_id do banco, não telegram_id)
+let myTelegramId = null; // Telegram ID do usuário atual
+
+// ========== PEGAR MEU TELEGRAM ID ==========
+function getMyTelegramId() {
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
+        return window.Telegram.WebApp.initDataUnsafe.user.id;
+    }
+    return localStorage.getItem('testTelegramId') || '123456789';
+}
 
 // ========== BUSCAR MEU USER_ID DO BANCO ==========
 async function getMyUserId() {
     try {
-        let telegramId = null;
+        myTelegramId = getMyTelegramId();
         
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
-            telegramId = window.Telegram.WebApp.initDataUnsafe.user.id;
-        } else {
-            telegramId = localStorage.getItem('testTelegramId') || '123456789';
-        }
+        console.log('🔍 Buscando user_id para telegram_id:', myTelegramId);
         
-        console.log('🔍 Buscando user_id para telegram_id:', telegramId);
-        
-        const response = await fetch(`https://mini-production-cf60.up.railway.app/api/users/${telegramId}`, {
+        const response = await fetch(`${API_BASE_URL}/users/${myTelegramId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -93,17 +99,13 @@ async function loadConversationsFromServer() {
     console.log('📥 Carregando matches do backend...');
     
     try {
-        let telegramId = null;
-        
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
-            telegramId = window.Telegram.WebApp.initDataUnsafe.user.id;
-        } else {
-            telegramId = localStorage.getItem('testTelegramId') || '123456789';
+        if (!myTelegramId) {
+            myTelegramId = getMyTelegramId();
         }
         
-        console.log('👤 Buscando matches para telegram_id:', telegramId);
+        console.log('👤 Buscando matches para telegram_id:', myTelegramId);
         
-        const response = await fetch(`https://mini-production-cf60.up.railway.app/api/matches?telegram_id=${telegramId}`, {
+        const response = await fetch(`${API_BASE_URL}/matches?telegram_id=${myTelegramId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -139,7 +141,7 @@ async function loadConversationsFromServer() {
             
             console.log('📌 Match processado:', {
                 match_id: match.match_id,
-                eu: match.user1_id === myUserId ? match.user1_name : match.user2_name,
+                eu: isUser1 ? match.user1_name : match.user2_name,
                 outro: otherUser.name,
                 photo: otherUser.photo
             });
@@ -147,12 +149,15 @@ async function loadConversationsFromServer() {
             return {
                 id: match.match_id,
                 matchId: match.match_id,
+                otherUserId: otherUser.id,
+                otherTelegramId: otherUser.telegram_id,
                 name: otherUser.name,
                 photo: otherUser.photo || 'https://via.placeholder.com/100?text=Sem+Foto',
                 lastMessage: `Vocês deram match! 💕`,
                 time: formatTime(match.matched_at),
                 unread: 0,
                 online: true,
+                matchTimestamp: new Date(match.matched_at).getTime(),
                 messages: [
                     {
                         sender: 'system',
@@ -175,6 +180,47 @@ async function loadConversationsFromServer() {
     }
 }
 
+// ========== CARREGAR MENSAGENS DO BACKEND ==========
+async function loadMessagesFromServer(matchId) {
+    console.log('📥 Carregando mensagens do match:', matchId);
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/matches/${matchId}/messages?limit=50`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+            }
+        });
+
+        if (!response.ok) {
+            console.error('❌ Erro ao carregar mensagens:', response.status);
+            return [];
+        }
+        
+        const data = await response.json();
+        console.log('📦 Mensagens recebidas:', data.length);
+        
+        // Converte mensagens do backend para o formato do frontend
+        const messages = data.map(msg => ({
+            sender: msg.sender_id === myUserId ? 'me' : 'other',
+            text: msg.content,
+            time: new Date(msg.created_at).toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            }),
+            id: msg.id,
+            fromServer: true
+        }));
+        
+        return messages;
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar mensagens:', error);
+        return [];
+    }
+}
+
 // ========== 🔥 MESCLAR CONVERSAS (LOCALSTORAGE + BACKEND) ==========
 async function loadAllConversations() {
     console.log('🔄 Carregando TODAS as conversas (localStorage + backend)...');
@@ -190,20 +236,31 @@ async function loadAllConversations() {
     // 3. Mescla sem duplicar usando Map
     const conversationMap = new Map();
     
-    // Adiciona conversas do localStorage primeiro (têm mensagens e histórico)
-    localConversations.forEach(conv => {
+    // Adiciona conversas do backend primeiro (são a fonte de verdade)
+    backendConversations.forEach(conv => {
         conversationMap.set(conv.id, conv);
     });
     
-    // Adiciona conversas do backend (se não existir ainda)
-    backendConversations.forEach(conv => {
-        if (!conversationMap.has(conv.id)) {
-            conversationMap.set(conv.id, conv);
-        } else {
-            // Se já existe, atualiza a foto/nome caso esteja diferente
+    // Mescla conversas do localStorage (mantém mensagens locais)
+    localConversations.forEach(conv => {
+        if (conversationMap.has(conv.id)) {
+            // Se já existe no backend, mescla as mensagens
             const existing = conversationMap.get(conv.id);
-            existing.photo = conv.photo;
-            existing.name = conv.name;
+            
+            // Mantém mensagens locais que não estão no servidor
+            if (conv.messages && conv.messages.length > 0) {
+                const localOnlyMessages = conv.messages.filter(m => !m.fromServer);
+                existing.messages = [...existing.messages, ...localOnlyMessages];
+            }
+            
+            // Atualiza lastMessage e time do localStorage se mais recente
+            if (conv.matchTimestamp > (existing.matchTimestamp || 0)) {
+                existing.lastMessage = conv.lastMessage;
+                existing.time = conv.time;
+            }
+        } else {
+            // Conversa só existe no localStorage (caso raro)
+            conversationMap.set(conv.id, conv);
         }
     });
     
@@ -218,7 +275,7 @@ async function loadAllConversations() {
     });
     
     console.log('✅ Total de conversas mescladas:', conversations.length);
-    console.log('📋 Conversas:', conversations.map(c => c.name));
+    console.log('📋 Conversas:', conversations.map(c => ({ id: c.id, name: c.name })));
     
     // Salva a versão mesclada no localStorage
     saveConversationsToStorage();
@@ -241,11 +298,11 @@ function renderChatList() {
     noChats.classList.add('hidden');
     
     chatList.innerHTML = conversations.map(conv => {
-        console.log('📌 Renderizando:', conv.name);
+        console.log('📌 Renderizando:', conv.name, '| ID:', conv.id);
         return `
         <div class="chat-item flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-50 cursor-pointer transition-all" data-chat-id="${conv.id}">
             <div class="relative">
-                <img src="${conv.photo}" class="w-14 h-14 rounded-full object-cover border-2 border-white shadow">
+                <img src="${conv.photo}" class="w-14 h-14 rounded-full object-cover border-2 border-white shadow" onerror="this.src='https://via.placeholder.com/100?text=Foto'">
                 ${conv.online ? '<div class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>' : ''}
             </div>
             <div class="flex-1 min-w-0">
@@ -277,7 +334,7 @@ function renderChatList() {
 }
 
 // ========== ABRIR CONVERSA ==========
-function openChat(chatId) {
+async function openChat(chatId) {
     console.log('💬 Abrindo chat ID:', chatId);
     
     currentChat = conversations.find(c => c.id === chatId);
@@ -289,7 +346,7 @@ function openChat(chatId) {
     }
 
     console.log('✅ Conversa encontrada:', currentChat.name);
-    console.log('📝 Mensagens:', currentChat.messages?.length || 0);
+    console.log('📝 Mensagens locais:', currentChat.messages?.length || 0);
 
     // Atualiza informações do header
     chatUserName.textContent = currentChat.name;
@@ -298,6 +355,27 @@ function openChat(chatId) {
     // Marca mensagens como lidas
     currentChat.unread = 0;
     saveConversationsToStorage();
+
+    // 🔥 CARREGA MENSAGENS DO SERVIDOR
+    const serverMessages = await loadMessagesFromServer(chatId);
+    
+    if (serverMessages.length > 0) {
+        // Mescla mensagens do servidor com as locais
+        const localMessages = currentChat.messages?.filter(m => m.sender === 'system') || [];
+        currentChat.messages = [...localMessages, ...serverMessages];
+        console.log('📥 Mensagens do servidor carregadas:', serverMessages.length);
+    }
+
+    // Garante que messages existe
+    if (!currentChat.messages || currentChat.messages.length === 0) {
+        currentChat.messages = [
+            {
+                sender: 'system',
+                text: `🎉 Parabéns! Você e ${currentChat.name} deram match! Que tal começar uma conversa?`,
+                time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+            }
+        ];
+    }
 
     // Renderiza as mensagens
     renderMessages();
@@ -364,12 +442,13 @@ function renderMessages() {
     console.log('✅ Mensagens renderizadas!');
 }
 
-// ========== ENVIAR MENSAGEM ==========
-function sendMessage() {
+// ========== 🔥 ENVIAR MENSAGEM (CORRIGIDO - ENVIA PARA O BACKEND!) ==========
+async function sendMessage() {
     const text = messageInput.value.trim();
     if (!text || !currentChat) return;
 
     console.log('📤 Enviando mensagem:', text);
+    console.log('📌 Match ID:', currentChat.id);
 
     const now = new Date();
     const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -379,12 +458,15 @@ function sendMessage() {
         currentChat.messages = [];
     }
 
-    // Adiciona mensagem do usuário
-    currentChat.messages.push({
+    // Adiciona mensagem do usuário localmente (otimistic update)
+    const newMessage = {
         sender: 'me',
         text: text,
-        time: time
-    });
+        time: time,
+        pending: true
+    };
+    
+    currentChat.messages.push(newMessage);
 
     // Atualiza última mensagem
     currentChat.lastMessage = text;
@@ -396,16 +478,50 @@ function sendMessage() {
     // Renderiza mensagens
     renderMessages();
 
-    // Salva no localStorage
-    saveConversationsToStorage();
-
     // Força scroll imediato
     setTimeout(() => scrollToBottom(), 50);
 
+    // 🔥 ENVIA PARA O BACKEND!
+    try {
+        const response = await fetch(`${API_BASE_URL}/matches/${currentChat.id}/messages`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+            },
+            body: JSON.stringify({
+                content: text,
+                telegram_id: myTelegramId
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Mensagem salva no servidor! ID:', data.id);
+            
+            // Marca como enviada
+            newMessage.pending = false;
+            newMessage.id = data.id;
+            newMessage.fromServer = true;
+        } else {
+            console.error('❌ Erro ao enviar mensagem para o servidor');
+            // Marca como erro (poderia mostrar indicador visual)
+            newMessage.error = true;
+        }
+    } catch (error) {
+        console.error('❌ Erro ao enviar mensagem:', error);
+        newMessage.error = true;
+    }
+
+    // Salva no localStorage
+    saveConversationsToStorage();
+
     console.log('✅ Mensagem enviada!');
 
-    // Simula resposta automática após 2 segundos
+    // Simula resposta automática após 2 segundos (REMOVER EM PRODUÇÃO!)
     setTimeout(() => {
+        if (!currentChat) return;
+        
         const responses = [
             "Que legal! 😊",
             "Verdade! Adorei isso",
@@ -532,14 +648,28 @@ getMyUserId().then(async () => {
             console.log('🚀 Tentando abrir chat automaticamente:', chatId);
             
             // Verifica se a conversa existe
-            const conversation = conversations.find(c => c.id === chatId);
+            let conversation = conversations.find(c => c.id === chatId);
+            
             if (conversation) {
                 console.log('✅ Conversa encontrada, abrindo:', conversation.name);
                 openChat(chatId);
             } else {
-                console.error('❌ Conversa não encontrada com ID:', chatId);
+                console.warn('⚠️ Conversa não encontrada com ID:', chatId);
                 console.log('💡 IDs disponíveis:', conversations.map(c => c.id));
-                console.log('💡 Todas as conversas:', conversations);
+                
+                // 🔥 TENTA RECARREGAR DO BACKEND
+                console.log('🔄 Tentando recarregar conversas do backend...');
+                loadAllConversations().then(() => {
+                    conversation = conversations.find(c => c.id === chatId);
+                    if (conversation) {
+                        console.log('✅ Conversa encontrada após reload:', conversation.name);
+                        openChat(chatId);
+                    } else {
+                        console.error('❌ Conversa definitivamente não encontrada');
+                        // Mostra a lista de conversas mesmo assim
+                        renderChatList();
+                    }
+                });
             }
         }, 500);
     } else {
