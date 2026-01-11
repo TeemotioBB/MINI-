@@ -15,26 +15,168 @@ const bottomNav = document.getElementById('bottom-nav');
 // ========== DADOS DE CONVERSAS ==========
 let conversations = [];
 let currentChat = null;
+let myUserId = null; // ID do usuário atual (user_id do banco, não telegram_id)
 
-// ========== CARREGAR CONVERSAS DO LOCALSTORAGE ==========
+// ========== BUSCAR MEU USER_ID DO BANCO ==========
+async function getMyUserId() {
+    try {
+        let telegramId = null;
+        
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
+            telegramId = window.Telegram.WebApp.initDataUnsafe.user.id;
+        } else {
+            telegramId = localStorage.getItem('testTelegramId') || '123456789';
+        }
+        
+        console.log('🔍 Buscando user_id para telegram_id:', telegramId);
+        
+        const response = await fetch(`https://mini-production-cf60.up.railway.app/api/users/${telegramId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            myUserId = data.id;
+            console.log('✅ Meu user_id:', myUserId, '| Nome:', data.name);
+            return myUserId;
+        } else {
+            console.error('❌ Erro ao buscar user_id');
+            return null;
+        }
+    } catch (error) {
+        console.error('❌ Erro:', error);
+        return null;
+    }
+}
+
+// ========== CARREGAR MATCHES DO BACKEND ==========
+async function loadConversationsFromServer() {
+    console.log('📥 Carregando matches do backend...');
+    
+    try {
+        let telegramId = null;
+        
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
+            telegramId = window.Telegram.WebApp.initDataUnsafe.user.id;
+        } else {
+            telegramId = localStorage.getItem('testTelegramId') || '123456789';
+        }
+        
+        console.log('👤 Buscando matches para telegram_id:', telegramId);
+        
+        const response = await fetch(`https://mini-production-cf60.up.railway.app/api/matches?telegram_id=${telegramId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+            }
+        });
+
+        if (!response.ok) {
+            console.error('❌ Erro ao carregar matches:', response.status);
+            conversations = [];
+            return;
+        }
+        
+        const data = await response.json();
+        console.log('📦 Dados recebidos do servidor:', data.length, 'matches');
+        
+        if (!myUserId) {
+            await getMyUserId();
+        }
+        
+        // Mapeia os matches para o formato do frontend
+        conversations = data.map(match => {
+            // Determina qual usuário é o "outro" (não sou eu)
+            const isUser1 = match.user1_id === myUserId;
+            
+            const otherUser = {
+                id: isUser1 ? match.user2_id : match.user1_id,
+                telegram_id: isUser1 ? match.user2_telegram_id : match.user1_telegram_id,
+                name: isUser1 ? match.user2_name : match.user1_name,
+                age: isUser1 ? match.user2_age : match.user1_age,
+                photo: isUser1 ? (match.user2_photo || match.user2_photos?.[0]) : (match.user1_photo || match.user1_photos?.[0]),
+                photos: isUser1 ? match.user2_photos : match.user1_photos
+            };
+            
+            console.log('📌 Match processado:', {
+                match_id: match.match_id,
+                eu: match.user1_id === myUserId ? match.user1_name : match.user2_name,
+                outro: otherUser.name,
+                photo: otherUser.photo
+            });
+            
+            return {
+                id: match.match_id,
+                matchId: match.match_id,
+                name: otherUser.name,
+                photo: otherUser.photo || 'https://via.placeholder.com/100?text=Sem+Foto',
+                lastMessage: `Vocês deram match! 💕`,
+                time: formatTime(match.matched_at),
+                unread: 0,
+                online: true,
+                messages: [
+                    {
+                        sender: 'system',
+                        text: `🎉 Parabéns! Você e ${otherUser.name} deram match! Que tal começar uma conversa?`,
+                        time: new Date(match.matched_at).toLocaleTimeString('pt-BR', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        })
+                    }
+                ]
+            };
+        });
+
+        console.log('✅ Conversas carregadas do servidor:', conversations.length);
+        
+        // Salva no localStorage como backup
+        saveConversationsToStorage();
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar conversas:', error);
+        
+        // Em caso de erro, tenta carregar do localStorage como fallback
+        console.log('⚠️ Tentando carregar do localStorage como fallback...');
+        loadConversationsFromStorage();
+    }
+}
+
+// ========== FORMATAR TEMPO ==========
+function formatTime(timestamp) {
+    if (!timestamp) return 'Agora';
+    
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000); // segundos
+    
+    if (diff < 60) return 'Agora';
+    if (diff < 3600) return `${Math.floor(diff / 60)}min`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+    
+    return date.toLocaleDateString('pt-BR');
+}
+
+// ========== CARREGAR CONVERSAS DO LOCALSTORAGE (FALLBACK) ==========
 function loadConversationsFromStorage() {
-    console.log('📦 Carregando conversas do localStorage...');
+    console.log('📦 Carregando conversas do localStorage (fallback)...');
     try {
         const saved = localStorage.getItem('sparkConversations');
         if (saved) {
             const parsed = JSON.parse(saved);
-            console.log('✅ Conversas encontradas:', parsed.length);
-            
-            // Substitui completamente o array de conversas
+            console.log('✅ Conversas encontradas no localStorage:', parsed.length);
             conversations = parsed;
-            
-            console.log('📝 Conversas carregadas com sucesso!');
         } else {
-            console.log('ℹ️ Nenhuma conversa salva ainda');
+            console.log('ℹ️ Nenhuma conversa salva no localStorage');
             conversations = [];
         }
     } catch (e) {
-        console.error('❌ Erro ao carregar conversas:', e);
+        console.error('❌ Erro ao carregar do localStorage:', e);
         conversations = [];
     }
 }
@@ -233,7 +375,7 @@ function sendMessage() {
 function saveConversationsToStorage() {
     try {
         localStorage.setItem('sparkConversations', JSON.stringify(conversations));
-        console.log('💾 Conversas salvas:', conversations.length);
+        console.log('💾 Conversas salvas no localStorage:', conversations.length);
     } catch (e) {
         console.error('❌ Erro ao salvar conversas:', e);
     }
@@ -301,29 +443,34 @@ messageInput.addEventListener('keypress', (e) => {
 // ========== INICIALIZAÇÃO ==========
 console.log('🚀 chat.js iniciando...');
 
-// Carrega conversas
-loadConversationsFromStorage();
-
-// Renderiza lista
-renderChatList();
-
-// ========== ABRE CHAT AUTOMATICAMENTE SE VIER DO MATCH ==========
-const openChatId = localStorage.getItem('openChatId');
-
-if (openChatId) {
-    console.log('🎯 Detectado pedido para abrir chat:', openChatId);
+// Busca meu user_id primeiro
+getMyUserId().then(() => {
+    console.log('👤 User ID carregado, agora carregando conversas...');
     
-    // Remove IMEDIATAMENTE para evitar loops
-    localStorage.removeItem('openChatId');
-    
-    // Aguarda um pouco para garantir que tudo carregou
-    setTimeout(() => {
-        const chatId = parseInt(openChatId);
-        console.log('🚀 Abrindo chat automaticamente:', chatId);
-        openChat(chatId);
-    }, 500);
-} else {
-    console.log('ℹ️ Nenhum chat para abrir automaticamente');
-}
+    // Carrega conversas do servidor
+    loadConversationsFromServer().then(() => {
+        // Renderiza lista
+        renderChatList();
+        
+        // ========== ABRE CHAT AUTOMATICAMENTE SE VIER DO MATCH ==========
+        const openChatId = localStorage.getItem('openChatId');
+
+        if (openChatId) {
+            console.log('🎯 Detectado pedido para abrir chat:', openChatId);
+            
+            // Remove IMEDIATAMENTE para evitar loops
+            localStorage.removeItem('openChatId');
+            
+            // Aguarda um pouco para garantir que tudo carregou
+            setTimeout(() => {
+                const chatId = parseInt(openChatId);
+                console.log('🚀 Abrindo chat automaticamente:', chatId);
+                openChat(chatId);
+            }, 500);
+        } else {
+            console.log('ℹ️ Nenhum chat para abrir automaticamente');
+        }
+    });
+});
 
 console.log('✅ chat.js carregado com sucesso!');
