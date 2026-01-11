@@ -12,92 +12,13 @@ const modalLike = document.getElementById('modal-like');
 const modalDislike = document.getElementById('modal-dislike');
 
 // ========== DADOS SIMULADOS DE LIKES ==========
-const likesReceived = [
-    {
-        id: 101,
-        name: "Carla",
-        age: 25,
-        photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=500",
-        bio: "Apaixonada por fotografia 📸 | Adoro café ☕",
-        verified: true,
-        time: "2min atrás"
-    },
-    {
-        id: 102,
-        name: "Marina",
-        age: 23,
-        photo: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=500",
-        bio: "Dançarina profissional 💃 | Yoga lover",
-        verified: true,
-        time: "15min atrás"
-    },
-    {
-        id: 103,
-        name: "Beatriz",
-        age: 27,
-        photo: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&q=80&w=500",
-        bio: "Médica veterinária 🐾 | Amo animais",
-        verified: false,
-        time: "1h atrás"
-    },
-    {
-        id: 104,
-        name: "Sofia",
-        age: 24,
-        photo: "https://images.unsplash.com/photo-1488716820095-cbe80883c496?auto=format&fit=crop&q=80&w=500",
-        bio: "Estudante de arquitetura 🏛️",
-        verified: true,
-        time: "2h atrás"
-    },
-    {
-        id: 105,
-        name: "Isabela",
-        age: 26,
-        photo: "https://images.unsplash.com/photo-1499952127939-9bbf5af6c51c?auto=format&fit=crop&q=80&w=500",
-        bio: "Chef de cozinha 👩‍🍳 | Foodie",
-        verified: true,
-        time: "3h atrás"
-    },
-    {
-        id: 106,
-        name: "Larissa",
-        age: 22,
-        photo: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=500",
-        bio: "Influencer digital ✨ | Moda e estilo",
-        verified: true,
-        time: "5h atrás"
-    }
-];
+// ========== LIKES RECEBIDOS ==========
+// Os likes virão do banco de dados via API
+const likesReceived = [];
 
-const likesSent = [
-    {
-        id: 201,
-        name: "Amanda",
-        age: 24,
-        photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=500",
-        bio: "Amante de café e livros ☕📚",
-        verified: false,
-        time: "1 dia atrás"
-    },
-    {
-        id: 202,
-        name: "Júlia",
-        age: 22,
-        photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=500",
-        bio: "Viciada em séries e pizza 🍕",
-        verified: true,
-        time: "1 dia atrás"
-    },
-    {
-        id: 203,
-        name: "Camila",
-        age: 25,
-        photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=500",
-        bio: "Fitness lover 💪 | Nutricionista",
-        verified: true,
-        time: "2 dias atrás"
-    }
-];
+// ========== LIKES ENVIADOS ==========
+// Os likes virão do banco de dados via API
+const likesSent = [];
 
 let currentTab = 'received';
 let selectedProfile = null;
@@ -115,14 +36,14 @@ function renderLikes() {
     likesGrid.classList.remove('hidden');
     noLikes.classList.add('hidden');
 
-    // ✅ VERIFICAÇÃO VIP - PODE VER LIKES RECEBIDOS?
+    // âœ… VERIFICAÃ‡ÃƒO VIP - PODE VER LIKES RECEBIDOS?
     const canSeeLikes = window.vipSystem ? window.vipSystem.canSeeLikes() : false;
 
-    console.log('🔍 Pode ver likes recebidos?', canSeeLikes);
-    console.log('📊 Tab atual:', currentTab);
+    console.log('ðŸ” Pode ver likes recebidos?', canSeeLikes);
+    console.log('ðŸ“Š Tab atual:', currentTab);
 
     likesGrid.innerHTML = likes.map(like => {
-        // Se é aba de "Recebidas" e NÃO é VIP, mostra bloqueado
+        // Se Ã© aba de "Recebidas" e NÃƒO Ã© VIP, mostra bloqueado
         if (currentTab === 'received' && !canSeeLikes) {
             return `
                 <div class="like-card relative cursor-pointer group" data-id="${like.id}">
@@ -171,16 +92,16 @@ function renderLikes() {
         card.addEventListener('click', () => {
             const id = parseInt(card.dataset.id);
             
-            // Se é aba recebidas e não é VIP, mostra modal de upgrade
+            // Se Ã© aba recebidas e nÃ£o Ã© VIP, mostra modal de upgrade
             if (currentTab === 'received' && !canSeeLikes) {
-                console.log('❌ Bloqueando acesso - não é VIP');
+                console.log('âŒ Bloqueando acesso - nÃ£o Ã© VIP');
                 if (window.vipSystem) {
                     window.vipSystem.showUpgradeModal('viewLikes');
                 }
                 return;
             }
             
-            console.log('✅ Abrindo perfil ID:', id);
+            console.log('âœ… Abrindo perfil ID:', id);
             openProfileModal(id);
         });
     });
@@ -220,9 +141,9 @@ function closeProfileModal() {
 modalLike.addEventListener('click', () => {
     if (!selectedProfile) return;
 
-    // ✅ VERIFICAÇÃO VIP - PODE DAR LIKE?
+    // âœ… VERIFICAÃ‡ÃƒO VIP - PODE DAR LIKE?
     if (window.vipSystem && !window.vipSystem.registerLike()) {
-        console.log('❌ Limite de likes atingido');
+        console.log('âŒ Limite de likes atingido');
         closeProfileModal();
         return;
     }
@@ -257,15 +178,15 @@ modalDislike.addEventListener('click', () => {
     renderLikes();
 });
 
-// ========== MOSTRAR NOTIFICAÇÃO DE MATCH ==========
+// ========== MOSTRAR NOTIFICAÃ‡ÃƒO DE MATCH ==========
 function showMatchNotification(profile) {
     const notification = document.createElement('div');
     notification.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-6 py-4 rounded-2xl shadow-2xl z-[200] flex items-center gap-3 animate-bounce';
     notification.innerHTML = `
         <i class="fa-solid fa-heart text-2xl"></i>
         <div>
-            <p class="font-bold">É um Match! 💕</p>
-            <p class="text-xs opacity-90">Você e ${profile.name} deram match!</p>
+            <p class="font-bold">Ã‰ um Match! ðŸ’•</p>
+            <p class="text-xs opacity-90">VocÃª e ${profile.name} deram match!</p>
         </div>
     `;
     
@@ -307,18 +228,18 @@ profileModal.addEventListener('click', (e) => {
 });
 
 // ========== INICIALIZAR ==========
-console.log('🚀 likes.js iniciando...');
+console.log('ðŸš€ likes.js iniciando...');
 
 setTimeout(() => {
     if (window.vipSystem) {
         window.vipSystem.updateUI();
-        console.log('✅ Sistema VIP integrado na página de likes');
-        console.log('👑 É Premium?', window.vipSystem.isPremium());
-        console.log('👁️ Pode ver likes?', window.vipSystem.canSeeLikes());
+        console.log('âœ… Sistema VIP integrado na pÃ¡gina de likes');
+        console.log('ðŸ‘‘ Ã‰ Premium?', window.vipSystem.isPremium());
+        console.log('ðŸ‘ï¸ Pode ver likes?', window.vipSystem.canSeeLikes());
     } else {
-        console.warn('⚠️ VIP System não encontrado');
+        console.warn('âš ï¸ VIP System nÃ£o encontrado');
     }
     renderLikes();
 }, 100);
 
-console.log('✅ likes.js carregado!');
+console.log('âœ… likes.js carregado!');
