@@ -38,6 +38,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // ========== CARD PRINCIPAL ==========
     const card = document.querySelector('.glass-card');
 
+    // ========== 🔥 PEGA O TELEGRAM_ID DO USUÁRIO ATUAL ==========
+    function getMyTelegramId() {
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
+            return window.Telegram.WebApp.initDataUnsafe.user.id;
+        } else {
+            return localStorage.getItem('testTelegramId') || '123456789';
+        }
+    }
+
     // ========== FUNÇÕES DE ANIMAÇÃO ==========
     function createConfetti(color) {
         for (let i = 0; i < 30; i++) {
@@ -305,10 +314,14 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('⚡ BOOST ativado com sucesso!');
     });
 
-    // ========== ENVIAR LIKE PARA O BACKEND (ASYNC) ==========
+    // ========== 🔥 ENVIAR LIKE PARA O BACKEND (CORRIGIDO!) ==========
     async function sendLikeToBackend(toTelegramId, type) {
         try {
+            // 🔥 PEGA O MEU TELEGRAM_ID
+            const myTelegramId = getMyTelegramId();
+            
             console.log('🔄 Chamando API:', {
+                from: myTelegramId,  // ✅ ADICIONADO!
                 to: toTelegramId,
                 type: type
             });
@@ -320,6 +333,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
                 },
                 body: JSON.stringify({
+                    from_telegram_id: myTelegramId,  // ✅ ADICIONADO!
                     to_telegram_id: toTelegramId,
                     type: type
                 })
