@@ -608,6 +608,59 @@ app.post('/api/matches/:matchId/messages', optionalTelegramAuth, async (req, res
     }
 });
 
+
+// ========== ADICIONE ESTA ROTA NO SEU server.js ==========
+// Cole esta rota ANTES dos "ERROR HANDLERS" (antes da linha app.use((err, req, res, next) => {)
+
+// GET - Contar likes recebidos (para usuários não-premium verem quantos likes têm)
+app.get('/api/likes/count', optionalTelegramAuth, async (req, res) => {
+    try {
+        const telegram_id = req.telegramUser?.telegram_id || req.query.telegram_id;
+        
+        if (!telegram_id) {
+            return res.status(400).json({ error: 'telegram_id é obrigatório' });
+        }
+        
+        console.log('📊 Contando likes para:', telegram_id);
+        
+        const userResult = await pool.query(
+            'SELECT id FROM users WHERE telegram_id = $1',
+            [telegram_id]
+        );
+        
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+        
+        const userId = userResult.rows[0].id;
+        
+        // Conta likes recebidos (like e superlike, não dislike)
+        const countResult = await pool.query(`
+            SELECT 
+                COUNT(*) FILTER (WHERE type = 'like') as likes,
+                COUNT(*) FILTER (WHERE type = 'superlike') as superlikes,
+                COUNT(*) as total
+            FROM likes 
+            WHERE to_user_id = $1 
+              AND type IN ('like', 'superlike')
+        `, [userId]);
+        
+        const counts = countResult.rows[0];
+        
+        console.log('✅ Contagem de likes:', counts);
+        
+        res.json({
+            count: parseInt(counts.total) || 0,
+            likes: parseInt(counts.likes) || 0,
+            superlikes: parseInt(counts.superlikes) || 0
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao contar likes:', error);
+        res.status(500).json({ error: 'Erro interno' });
+    }
+});
+
 // ========== HEALTH CHECK ==========
 app.get('/health', async (req, res) => {
     try {
@@ -1052,3 +1105,4 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
+
