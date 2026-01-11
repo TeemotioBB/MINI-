@@ -163,6 +163,7 @@ app.post('/api/users', optionalTelegramAuth, async (req, res) => {
 });
 
 // GET - Buscar perfis para swipe (COM COMPATIBILIDADE MÚTUA!)
+// GET - Buscar perfis para swipe (COM COMPATIBILIDADE MÚTUA!)
 app.get('/api/users/:telegramId/discover', optionalTelegramAuth, async (req, res) => {
     try {
         const { telegramId } = req.params;
@@ -1124,4 +1125,5 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
+
 
