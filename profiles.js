@@ -20,8 +20,11 @@ async function loadProfiles() {
             console.log('🧪 Usando ID de teste:', telegramId);
         }
         
-        // ✅ BUSCA PERFIS EXCLUINDO OS QUE JÁ FORAM VISTOS
-        const response = await fetch(`https://mini-production-cf60.up.railway.app/api/users/${telegramId}/discover?limit=20`, {
+        // ✅ CORRIGIDO - Usando template literals corretamente (backticks)
+        const url = `https://mini-production-cf60.up.railway.app/api/users/${telegramId}/discover?limit=20`;
+        console.log('🌐 URL da requisição:', url);
+        
+        const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
