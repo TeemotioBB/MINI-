@@ -211,9 +211,9 @@ app.get('/api/users/:telegramId/discover', optionalTelegramAuth, async (req, res
               -- 4️⃣ A MINHA idade está na faixa que ELES querem?
               AND $6 BETWEEN u.pref_age_min AND u.pref_age_max
               
-              -- 5️⃣ Não mostrar quem já dei like/dislike
-              AND u.id NOT IN (
-                  SELECT to_user_id FROM likes WHERE from_user_id = $1
+              -- 5️⃣ Não mostrar quem já dei like/dislike/superlike (qualquer interação)
+              AND NOT EXISTS (
+                  SELECT 1 FROM likes WHERE from_user_id = $1 AND to_user_id = u.id
               )
             ORDER BY RANDOM()
             LIMIT $7
@@ -319,11 +319,16 @@ app.post('/api/likes', optionalTelegramAuth, async (req, res) => {
             INSERT INTO likes (from_user_id, to_user_id, type)
             VALUES ($1, $2, $3)
             ON CONFLICT (from_user_id, to_user_id) 
-            DO UPDATE SET type = EXCLUDED.type
+            DO UPDATE SET type = EXCLUDED.type, created_at = CURRENT_TIMESTAMP
             RETURNING *
         `, [from.id, to.id, type]);
         
-        console.log('✅ Like registrado no banco!');
+        console.log('✅ Like registrado no banco!', {
+            like_id: result.rows[0].id,
+            from_user_id: from.id,
+            to_user_id: to.id,
+            type: type
+        });
         
         // Atualiza contador (apenas para usuários não premium)
         if (type === 'like' && !from.is_premium) {
@@ -335,6 +340,9 @@ app.post('/api/likes', optionalTelegramAuth, async (req, res) => {
         
         // 🔥 VERIFICA MATCH MANUALMENTE (mais confiável que a função SQL)
         console.log('🔍 Verificando se há match...');
+        console.log('   Checando se ambos deram like:');
+        console.log('   - User A (from):', from.id, 'deu', type, 'para User B (to):', to.id);
+        console.log('   - Verificando se User B (to):', to.id, 'já deu like/superlike para User A (from):', from.id);
         
         const matchCheck = await pool.query(`
             SELECT COUNT(*) as mutual_likes
@@ -353,6 +361,16 @@ app.post('/api/likes', optionalTelegramAuth, async (req, res) => {
         const hasMatch = parseInt(matchCheck.rows[0].mutual_likes) > 0;
         
         console.log('💕 Tem match?', hasMatch);
+        
+        // Debug adicional: verificar likes individuais
+        const debugLikes = await pool.query(`
+            SELECT from_user_id, to_user_id, type 
+            FROM likes 
+            WHERE (from_user_id = $1 AND to_user_id = $2)
+               OR (from_user_id = $2 AND to_user_id = $1)
+        `, [from.id, to.id]);
+        
+        console.log('🔍 Likes entre os dois usuários:', debugLikes.rows);
         
         // Se tem match, cria na tabela matches
         if (hasMatch) {
