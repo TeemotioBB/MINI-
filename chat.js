@@ -489,6 +489,41 @@ if (messageInput) {
     });
 }
 
+// ========== FUNÇÃO AUXILIAR PARA ABRIR CHAT AUTOMATICAMENTE ==========
+async function tryOpenChatById(chatId) {
+    console.log('🔍 Procurando conversa com ID:', chatId);
+    
+    // Verifica se a conversa existe antes de abrir
+    let chatExists = conversations.find(c => c.id === chatId);
+    
+    if (chatExists) {
+        console.log('✅ Conversa encontrada, abrindo...');
+        try {
+            await openChat(chatId);
+        } catch (err) {
+            console.error('❌ Erro ao abrir chat:', err);
+        }
+        return;
+    }
+    
+    // Se não encontrou, tenta recarregar do backend
+    console.warn('⚠️ Conversa não encontrada, recarregando do backend...');
+    try {
+        await loadAllConversations();
+        chatExists = conversations.find(c => c.id === chatId);
+        
+        if (chatExists) {
+            console.log('✅ Conversa encontrada após recarregar, abrindo...');
+            await openChat(chatId);
+        } else {
+            console.error('❌ Conversa ainda não encontrada. ID:', chatId);
+            console.log('📋 IDs disponíveis:', conversations.map(c => c.id));
+        }
+    } catch (err) {
+        console.error('❌ Erro ao recarregar conversas:', err);
+    }
+}
+
 // ========== INICIALIZAÇÃO ==========
 console.log('🚀 chat.js iniciando...');
 
@@ -506,38 +541,10 @@ getMyUserId().then(async () => {
         // 🔥 REMOVE O FLAG ANTES DE TENTAR ABRIR (evita loops)
         localStorage.removeItem('openChatId');
         
-        // 🔥 Usa uma função regular e trata os erros do async
+        // Aguarda um pouco antes de tentar abrir (permite UI renderizar)
         setTimeout(() => {
             const chatId = parseInt(openChatId);
-            console.log('🔍 Procurando conversa com ID:', chatId);
-            
-            // Verifica se a conversa existe antes de abrir
-            const chatExists = conversations.find(c => c.id === chatId);
-            
-            if (chatExists) {
-                console.log('✅ Conversa encontrada, abrindo...');
-                openChat(chatId).catch(err => {
-                    console.error('❌ Erro ao abrir chat:', err);
-                });
-            } else {
-                console.warn('⚠️ Conversa não encontrada, recarregando do backend...');
-                // Tenta recarregar uma vez
-                loadAllConversations().then(() => {
-                    const chatNow = conversations.find(c => c.id === chatId);
-                    
-                    if (chatNow) {
-                        console.log('✅ Conversa encontrada após recarregar, abrindo...');
-                        openChat(chatId).catch(err => {
-                            console.error('❌ Erro ao abrir chat após recarregar:', err);
-                        });
-                    } else {
-                        console.error('❌ Conversa ainda não encontrada. ID:', chatId);
-                        console.log('📋 IDs disponíveis:', conversations.map(c => c.id));
-                    }
-                }).catch(err => {
-                    console.error('❌ Erro ao recarregar conversas:', err);
-                });
-            }
+            tryOpenChatById(chatId);
         }, 500);
     }
 });
