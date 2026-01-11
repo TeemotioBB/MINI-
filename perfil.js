@@ -59,7 +59,8 @@ document.addEventListener('DOMContentLoaded', function() {
         name: "",
         age: null,
         gender: "feminino",
-        photos: [],
+        photos: [], // ✅ Agora serão URLs do Cloudinary
+        photoPublicIds: [], // ✅ IDs públicos para deletar depois
         bio: "",
         instagram: "",
         city: "",
@@ -199,14 +200,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Seleciona foto da galeria do dispositivo
-    function selectPhoto(index) {
+    // ✅ FUNÇÃO CORRIGIDA - FAZ UPLOAD REAL PARA CLOUDINARY
+    async function selectPhoto(index) {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
         input.style.display = 'none';
         
-        input.addEventListener('change', (e) => {
+        input.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
             
@@ -220,21 +221,56 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                userData.photos[index] = event.target.result;
+            // ✅ MOSTRA LOADING
+            showToast('📤 Fazendo upload...', 'info');
+            
+            try {
+                // ✅ FAZ UPLOAD PARA CLOUDINARY
+                const telegramId = getTelegramId();
+                const result = await uploadPhotoToCloudinary(file, telegramId);
+                
+                console.log('✅ Upload concluído:', result);
+                
+                // ✅ SALVA URL DO CLOUDINARY (não base64!)
+                userData.photos[index] = result.url;
+                userData.photoPublicIds[index] = result.public_id;
+                
                 renderPhotosManager();
-                showToast('📸 Foto adicionada!');
-                console.log(`Foto ${index + 1} adicionada:`, file.name);
-            };
-            reader.readAsDataURL(file);
+                showToast('✅ Foto enviada com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('❌ Erro no upload:', error);
+                showToast('❌ Erro ao enviar foto: ' + error.message, 'error');
+            }
         });
         
         input.click();
     }
 
-    // Remove foto
-    function removePhoto(index) {
+    // ✅ FUNÇÃO NOVA - FAZ UPLOAD PARA CLOUDINARY
+    async function uploadPhotoToCloudinary(file, telegramId) {
+        const formData = new FormData();
+        formData.append('photo', file);
+        formData.append('telegram_id', telegramId);
+        
+        const response = await fetch(`${API_URL}/upload/photo`, {
+            method: 'POST',
+            headers: {
+                'X-Telegram-Init-Data': getTelegramInitData()
+            },
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro no upload');
+        }
+        
+        return await response.json();
+    }
+
+    // ✅ REMOVE FOTO - Agora deleta do Cloudinary também
+    async function removePhoto(index) {
         if (index === 0 && userData.photos.length > 1) {
             showToast('⚠️ A primeira foto é a principal. Mova as outras antes de remover.', 'warning');
             return;
@@ -245,9 +281,44 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // ✅ Deleta do Cloudinary
+        if (userData.photoPublicIds[index]) {
+            try {
+                await deletePhotoFromCloudinary(userData.photoPublicIds[index]);
+                console.log('🗑️ Foto deletada do Cloudinary');
+            } catch (error) {
+                console.warn('⚠️ Erro ao deletar do Cloudinary:', error);
+            }
+        }
+        
         userData.photos.splice(index, 1);
+        userData.photoPublicIds.splice(index, 1);
         renderPhotosManager();
         showToast('🗑️ Foto removida');
+    }
+
+    // ✅ FUNÇÃO NOVA - DELETA DO CLOUDINARY
+    async function deletePhotoFromCloudinary(publicId) {
+        const telegramId = getTelegramId();
+        
+        const response = await fetch(`${API_URL}/upload/photo`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': getTelegramInitData()
+            },
+            body: JSON.stringify({
+                public_id: publicId,
+                telegram_id: telegramId
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao deletar');
+        }
+        
+        return await response.json();
     }
 
     // Salva fotos
@@ -360,8 +431,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     gender: userData.gender || 'feminino',
                     bio: userData.bio || '',
                     city: userData.city || '',
-                    photo_url: userData.photos[0] || null,
-                    photos: userData.photos,
+                    photo_url: userData.photos[0] || null, // ✅ URL do Cloudinary
+                    photos: userData.photos, // ✅ Array de URLs do Cloudinary
                     pref_gender: userData.pref_gender || 'masculino',
                     pref_age_min: userData.pref_age_min || 18,
                     pref_age_max: userData.pref_age_max || 99
