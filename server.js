@@ -34,7 +34,9 @@ pool.connect((err, client, release) => {
 global.pool = pool;
 
 // ========== MIDDLEWARES ==========
-app.use(helmet()); // Segurança
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
 app.use(cors({
     origin: process.env.FRONTEND_URL || '*',
     credentials: true
@@ -443,5 +445,6 @@ app.listen(PORT, () => {
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 
 });
+
 
 
