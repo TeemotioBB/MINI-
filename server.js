@@ -928,6 +928,75 @@ app.get('/api/debug/check-limits/:telegramId', async (req, res) => {
     }
 });
 
+// ========== DEBUG - RESETAR LIKES DOS USUÁRIOS DE TESTE ==========
+app.get('/api/debug/reset-test-users-likes', async (req, res) => {
+    try {
+        const testUserIds = [8542013089, 1293602874];
+        
+        console.log('🔄 Resetando likes entre usuários de teste...');
+        
+        let result = {
+            success: true,
+            likes_deleted: 0
+        };
+        
+        // Busca os IDs internos
+        const users = await pool.query(
+            'SELECT id FROM users WHERE telegram_id = ANY($1)',
+            [testUserIds]
+        );
+        
+        if (users.rows.length < 2) {
+            return res.status(404).json({ error: 'Usuários de teste não encontrados' });
+        }
+        
+        const userIds = users.rows.map(u => u.id);
+        
+        // Deleta likes ENTRE esses usuários
+        const deleteLikes = await pool.query(`
+            DELETE FROM likes 
+            WHERE (from_user_id = ANY($1) AND to_user_id = ANY($1))
+        `, [userIds]);
+        
+        result.likes_deleted = deleteLikes.rowCount;
+        
+        console.log('✅ Likes deletados:', result.likes_deleted);
+        
+        res.json(result);
+    } catch (error) {
+        console.error('❌ Erro:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ========== ERROR HANDLERS ==========
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ error: 'Algo deu errado!' });
+});
+
+// ❌ NÃO ADICIONE DEPOIS DAQUI
+app.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
+});
+```
+
+---
+
+## 🎯 **Posição visual:**
+```
+server.js
+├── ... outras rotas ...
+├── app.get('/api/debug/check-limits/:telegramId')  ← Última rota de debug
+│
+├── ✅ ADICIONE A NOVA ROTA AQUI
+│   app.get('/api/debug/reset-test-users-likes')
+│
+├── app.use((err, req, res, next) => { ... })  ← Error handlers
+├── app.use((req, res) => { ... })
+│
+└── app.listen(PORT, () => { ... })  ← Inicio do servidor
+
 // ========== ERROR HANDLERS ==========
 app.use((err, req, res, next) => {
     console.error(err.stack);
@@ -943,3 +1012,4 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
+
