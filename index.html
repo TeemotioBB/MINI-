@@ -128,7 +128,7 @@
     <script src="app.js"></script>
 
 
-  <!-- ADICIONE ISSO NO FINAL DO index.html, ANTES DE FECHAR </body> -->
+ <!-- ADICIONE ISSO NO FINAL DO index.html, ANTES DE FECHAR </body> -->
 
 <!-- ========== BOTÃO SECRETO DE DEBUG - SÓ PARA USUÁRIOS DE TESTE ========== -->
 <script>
@@ -189,32 +189,47 @@ if (isTestUser()) {
     });
     
     // Função de limpar
-    debugBtn.addEventListener('click', () => {
-        console.log('🧹 Limpando perfis vistos...');
+    debugBtn.addEventListener('click', async () => {
+        console.log('🧹 Limpando TUDO (perfis vistos + limites)...');
         
-        // Limpa perfis vistos
+        // 1. Limpa perfis vistos do FRONTEND
         localStorage.removeItem('sparkSeenProfiles');
+        console.log('✅ Perfis vistos limpos do localStorage');
         
-        // Limpa limites VIP (opcional - descomente se quiser resetar também)
-        // localStorage.removeItem('sparkDailyLimits');
-        // localStorage.removeItem('sparkWeeklyLimits');
+        // 2. Limpa limites VIP do FRONTEND
+        localStorage.removeItem('sparkDailyLimits');
+        localStorage.removeItem('sparkWeeklyLimits');
+        console.log('✅ Limites VIP limpos do localStorage');
+        
+        // 3. RESETA LIMITES NO BACKEND
+        try {
+            const response = await fetch('https://mini-production-cf60.up.railway.app/api/debug/reset-limits-only');
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Limites resetados no backend:', data);
+            }
+        } catch (error) {
+            console.warn('⚠️ Erro ao resetar backend (continuando mesmo assim):', error);
+        }
         
         // Animação de sucesso
         debugBtn.innerHTML = '✅';
         debugBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
         
-        // Mensagem de sucesso
+        // 4. Mensagem de sucesso
         const toast = document.createElement('div');
         toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-lg z-[9999] text-sm font-bold';
-        toast.textContent = '✅ Perfis vistos limpos! Recarregando...';
+        toast.textContent = '✅ TUDO limpo! Perfis + Limites resetados!';
         document.body.appendChild(toast);
         
         console.log('✅ Perfis vistos limpos!');
+        console.log('✅ Limites resetados!');
+        console.log('🔄 Recarregando em 1.5 segundos...');
         
-        // Recarrega após 1 segundo
+        // Recarrega após 1.5 segundos
         setTimeout(() => {
             location.reload();
-        }, 1000);
+        }, 1500);
     });
     
     // Adiciona ao body
@@ -224,22 +239,34 @@ if (isTestUser()) {
 
 <!-- ========== ATALHO DE TECLADO ALTERNATIVO ========== -->
 <script>
-// Atalho: Ctrl+Shift+R = Limpar perfis vistos
-document.addEventListener('keydown', (e) => {
+// Atalho: Ctrl+Shift+R = Limpar perfis vistos + limites
+document.addEventListener('keydown', async (e) => {
     if (e.ctrlKey && e.shiftKey && e.key === 'R') {
         e.preventDefault();
         
         if (isTestUser()) {
-            console.log('🔑 Atalho ativado! Limpando perfis vistos...');
+            console.log('🔑 Atalho ativado! Limpando TUDO...');
+            
+            // Limpa localStorage
             localStorage.removeItem('sparkSeenProfiles');
+            localStorage.removeItem('sparkDailyLimits');
+            localStorage.removeItem('sparkWeeklyLimits');
+            
+            // Reseta backend
+            try {
+                await fetch('https://mini-production-cf60.up.railway.app/api/debug/reset-limits-only');
+                console.log('✅ Backend resetado!');
+            } catch (error) {
+                console.warn('⚠️ Erro no backend:', error);
+            }
             
             // Toast
             const toast = document.createElement('div');
             toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-purple-500 text-white px-6 py-3 rounded-full shadow-lg z-[9999] text-sm font-bold';
-            toast.textContent = '⌨️ Atalho: Perfis limpos! Recarregando...';
+            toast.textContent = '⌨️ Atalho: TUDO limpo! Recarregando...';
             document.body.appendChild(toast);
             
-            setTimeout(() => location.reload(), 1000);
+            setTimeout(() => location.reload(), 1500);
         } else {
             console.log('⚠️ Atalho disponível apenas para usuários de teste');
         }
@@ -252,14 +279,25 @@ document.addEventListener('keydown', (e) => {
 // Adiciona funções globais de debug
 if (isTestUser()) {
     // Função para limpar tudo
-    window.clearAllDebugData = function() {
+    window.clearAllDebugData = async function() {
         console.log('🧹 Limpando TODOS os dados de debug...');
         
+        // Limpa localStorage
         localStorage.removeItem('sparkSeenProfiles');
         localStorage.removeItem('sparkDailyLimits');
         localStorage.removeItem('sparkWeeklyLimits');
         localStorage.removeItem('sparkUserPlan');
         localStorage.removeItem('sparkConversations');
+        
+        // Reseta backend
+        try {
+            const response = await fetch('https://mini-production-cf60.up.railway.app/api/debug/reset-limits-only');
+            if (response.ok) {
+                console.log('✅ Backend resetado!');
+            }
+        } catch (error) {
+            console.warn('⚠️ Erro ao resetar backend:', error);
+        }
         
         console.log('✅ Tudo limpo!');
         console.log('🔄 Recarregando em 2 segundos...');
@@ -299,4 +337,5 @@ if (isTestUser()) {
 </body>
 
 </html>
+
 
