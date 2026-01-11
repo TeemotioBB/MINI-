@@ -1,6 +1,6 @@
 // Aguarda o DOM carregar completamente
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ Iniciando perfil.js completo...');
+    console.log('âœ… Iniciando perfil.js completo...');
 
     // ========== ELEMENTOS DO HTML ==========
     const userName = document.getElementById('user-name');
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const verifiedBadge = document.getElementById('verified-badge');
     const userPhotosGrid = document.getElementById('user-photos-grid');
 
-    // Botões principais
+    // BotÃµes principais
     const btnManagePhotos = document.getElementById('btn-manage-photos');
     const btnEditProfile = document.getElementById('btn-edit-profile');
     const btnPrivacy = document.getElementById('btn-privacy');
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalPremium = document.getElementById('modal-premium');
     const modalHelp = document.getElementById('modal-help');
 
-    // Inputs do modal de edição
+    // Inputs do modal de ediÃ§Ã£o
     const inputName = document.getElementById('input-name');
     const inputAge = document.getElementById('input-age');
     const inputBio = document.getElementById('input-bio');
@@ -42,13 +42,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const photosManagerGrid = document.getElementById('photos-manager-grid');
     const btnSavePhotos = document.getElementById('btn-save-photos');
 
-    // Botões de fechar modais
+    // BotÃµes de fechar modais
     const btnCloseEdit = document.getElementById('btn-close-edit');
     const btnSave = document.getElementById('btn-save');
     const btnSubscribe = document.getElementById('btn-subscribe');
     const btnBoostOnly = document.getElementById('btn-boost-only');
 
-    // ========== DADOS DO USUÁRIO ==========
+    // ========== DADOS DO USUÃRIO ==========
     let userData = {
         name: "",
         age: null,
@@ -73,9 +73,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // ========== FUNÇÕES PRINCIPAIS ==========
+    // ========== FUNÃ‡Ã•ES PRINCIPAIS ==========
 
-    // Verifica se o perfil está completo
+    // Verifica se o perfil estÃ¡ completo
     function isProfileComplete() {
         return userData.name && 
                userData.age && 
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
                userData.photos.length > 0;
     }
 
-    // Renderiza fotos do usuário no grid principal
+    // Renderiza fotos do usuÃ¡rio no grid principal
     function renderUserPhotos() {
         if (!userPhotosGrid) return;
         
@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function() {
         input.accept = 'image/*';
         input.style.display = 'none';
         
-        input.addEventListener('change', (e) => {
+        input.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
             
@@ -194,40 +194,93 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                userData.photos[index] = event.target.result;
-                renderPhotosManager();
-                showToast('📸 Foto adicionada!');
-                console.log(`Foto ${index + 1} adicionada:`, file.name);
-            };
-            reader.readAsDataURL(file);
+            // Mostra loading
+            showToast('📤 Enviando foto...', 'info');
+            
+            try {
+                // Pega o telegram_id do usuário
+                const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'test_user';
+                
+                // Faz upload via API
+                const photoUrl = await uploadPhotoToCloudinary(file, telegramId);
+                
+                if (photoUrl) {
+                    userData.photos[index] = photoUrl;
+                    renderPhotosManager();
+                    showToast('📸 Foto enviada com sucesso!', 'success');
+                    console.log(`Foto ${index + 1} enviada para Cloudinary:`, photoUrl);
+                }
+            } catch (error) {
+                console.error('Erro no upload:', error);
+                showToast('❌ Erro ao enviar foto. Tente novamente.', 'error');
+            }
         });
         
         input.click();
+    }
+    
+    // ========== UPLOAD PARA CLOUDINARY VIA API ==========
+    async function uploadPhotoToCloudinary(file, telegramId) {
+        const API_BASE_URL = 'https://mini-production-cf60.up.railway.app/api';
+        
+        const formData = new FormData();
+        formData.append('photo', file);
+        formData.append('telegram_id', telegramId);
+        
+        // Pega initData do Telegram para autenticação
+        const initData = window.Telegram?.WebApp?.initData || '';
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/upload/photo`, {
+                method: 'POST',
+                headers: {
+                    'X-Telegram-Init-Data': initData
+                },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro no upload');
+            }
+            
+            const result = await response.json();
+            console.log('✅ Upload Cloudinary sucesso:', result);
+            return result.url;
+        } catch (error) {
+            console.error('❌ Erro no upload Cloudinary:', error);
+            
+            // Fallback: salva como base64 local se API falhar
+            console.log('⚠️ Usando fallback local (base64)');
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (event) => resolve(event.target.result);
+                reader.readAsDataURL(file);
+            });
+        }
     }
 
     // Remove foto
     function removePhoto(index) {
         if (index === 0 && userData.photos.length > 1) {
-            showToast('⚠️ A primeira foto é a principal. Mova as outras antes de remover.', 'warning');
+            showToast('âš ï¸ A primeira foto Ã© a principal. Mova as outras antes de remover.', 'warning');
             return;
         }
         
         if (userData.photos.length === 1) {
-            showToast('⚠️ Você precisa ter pelo menos 1 foto', 'warning');
+            showToast('âš ï¸ VocÃª precisa ter pelo menos 1 foto', 'warning');
             return;
         }
         
         userData.photos.splice(index, 1);
         renderPhotosManager();
-        showToast('🗑️ Foto removida');
+        showToast('ðŸ—‘ï¸ Foto removida');
     }
 
     // Salva fotos
     function savePhotos() {
         if (userData.photos.length === 0) {
-            showToast('❌ Adicione pelo menos 1 foto', 'error');
+            showToast('âŒ Adicione pelo menos 1 foto', 'error');
             return;
         }
         
@@ -236,11 +289,11 @@ document.addEventListener('DOMContentLoaded', function() {
         renderUserPhotos();
         loadUserProfile();
         closeModal(modalPhotos);
-        showToast('✅ Fotos salvas com sucesso!');
-        console.log('📸 Fotos salvas:', userData.photos);
+        showToast('âœ… Fotos salvas com sucesso!');
+        console.log('ðŸ“¸ Fotos salvas:', userData.photos);
     }
 
-    // Carrega dados do usuário
+    // Carrega dados do usuÃ¡rio
     function loadUserProfile() {
         if (userName) userName.textContent = userData.name || "Seu Nome";
         if (userAge) userAge.textContent = userData.age ? `, ${userData.age}` : "";
@@ -261,14 +314,14 @@ document.addEventListener('DOMContentLoaded', function() {
         renderUserPhotos();
     }
 
-    // Abre modal genérico
+    // Abre modal genÃ©rico
     function openModal(modal) {
         if (!modal) return;
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     }
 
-    // Fecha modal genérico
+    // Fecha modal genÃ©rico
     function closeModal(modal) {
         if (!modal) return;
         modal.classList.add('hidden');
@@ -282,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Mostra toast (notificação temporária)
+    // Mostra toast (notificaÃ§Ã£o temporÃ¡ria)
     function showToast(message, type = 'success') {
         const colors = {
             success: 'bg-green-500',
@@ -323,12 +376,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function saveProfile() {
         if (!inputName || !inputName.value.trim()) {
-            showToast('❌ Nome não pode estar vazio', 'error');
+            showToast('âŒ Nome nÃ£o pode estar vazio', 'error');
             return;
         }
         
         if (!inputAge || inputAge.value < 18 || inputAge.value > 99) {
-            showToast('❌ Idade deve estar entre 18 e 99', 'error');
+            showToast('âŒ Idade deve estar entre 18 e 99', 'error');
             return;
         }
         
@@ -342,9 +395,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         loadUserProfile();
         closeModal(modalEdit);
-        showToast('✅ Perfil atualizado com sucesso!');
+        showToast('âœ… Perfil atualizado com sucesso!');
         
-        console.log('📝 Dados salvos:', userData);
+        console.log('ðŸ“ Dados salvos:', userData);
     }
 
     // ========== TROCAR FOTO ==========
@@ -354,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function openPhotoManager(e) {
         if (e) e.preventDefault();
-        console.log('📸 Abrindo gerenciador de fotos!');
+        console.log('ðŸ“¸ Abrindo gerenciador de fotos!');
         renderPhotosManager();
         openModal(modalPhotos);
     }
@@ -395,11 +448,11 @@ document.addEventListener('DOMContentLoaded', function() {
             privateProfile: togglePrivate ? togglePrivate.checked : false
         };
         
-        console.log('🔒 Privacidade salva:', userData.privacy);
-        showToast('🔒 Configurações de privacidade salvas!');
+        console.log('ðŸ”’ Privacidade salva:', userData.privacy);
+        showToast('ðŸ”’ ConfiguraÃ§Ãµes de privacidade salvas!');
     }
 
-    // ========== NOTIFICAÇÕES ==========
+    // ========== NOTIFICAÃ‡Ã•ES ==========
 
     function loadNotificationSettings() {
         const notifLikes = document.getElementById('notif-likes');
@@ -430,8 +483,8 @@ document.addEventListener('DOMContentLoaded', function() {
             promo: notifPromo ? notifPromo.checked : false
         };
         
-        console.log('🔔 Notificações salvas:', userData.notifications);
-        showToast('🔔 Preferências de notificação salvas!');
+        console.log('ðŸ”” NotificaÃ§Ãµes salvas:', userData.notifications);
+        showToast('ðŸ”” PreferÃªncias de notificaÃ§Ã£o salvas!');
     }
 
     // ========== EVENT LISTENERS ==========
@@ -479,13 +532,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (btnSubscribe) {
         btnSubscribe.addEventListener('click', () => {
-            if (confirm('💎 Confirmar assinatura Spark Premium por R$ 29,90/mês?')) {
-                showToast('🎉 Processando pagamento...', 'info');
+            if (confirm('ðŸ’Ž Confirmar assinatura Spark Premium por R$ 29,90/mÃªs?')) {
+                showToast('ðŸŽ‰ Processando pagamento...', 'info');
                 setTimeout(() => {
                     userData.plan = 'Spark Premium';
                     loadUserProfile();
                     closeModal(modalPremium);
-                    showToast('👑 Bem-vindo ao Spark Premium!', 'success');
+                    showToast('ðŸ‘‘ Bem-vindo ao Spark Premium!', 'success');
                 }, 2000);
             }
         });
@@ -493,8 +546,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (btnBoostOnly) {
         btnBoostOnly.addEventListener('click', () => {
-            if (confirm('⚡ Comprar 1 Boost de 1 hora por R$ 4,90?')) {
-                showToast('⚡ Boost ativado por 1 hora!', 'success');
+            if (confirm('âš¡ Comprar 1 Boost de 1 hora por R$ 4,90?')) {
+                showToast('âš¡ Boost ativado por 1 hora!', 'success');
                 closeModal(modalPremium);
             }
         });
@@ -504,8 +557,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (btnLogout) {
         btnLogout.addEventListener('click', () => {
-            if (confirm('🚪 Tem certeza que deseja sair da conta?')) {
-                showToast('👋 Saindo...', 'info');
+            if (confirm('ðŸšª Tem certeza que deseja sair da conta?')) {
+                showToast('ðŸ‘‹ Saindo...', 'info');
                 setTimeout(() => {
                     window.location.href = 'index.html';
                 }, 1000);
@@ -529,23 +582,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // ========== INICIALIZAÇÃO ==========
+    // ========== INICIALIZAÃ‡ÃƒO ==========
     
     const savedData = localStorage.getItem('userData');
     if (savedData) {
         try {
             const parsedData = JSON.parse(savedData);
             userData = { ...userData, ...parsedData };
-            console.log('✅ Dados carregados do localStorage:', userData);
+            console.log('âœ… Dados carregados do localStorage:', userData);
         } catch (e) {
-            console.error('❌ Erro ao carregar dados:', e);
+            console.error('âŒ Erro ao carregar dados:', e);
         }
     }
     
     loadUserProfile();
-    console.log('🎉 perfil.js carregado com sucesso!');
+    console.log('ðŸŽ‰ perfil.js carregado com sucesso!');
 
-    // ========== CSS PARA TOGGLES E ANIMAÇÕES ==========
+    // ========== CSS PARA TOGGLES E ANIMAÃ‡Ã•ES ==========
     const style = document.createElement('style');
     style.textContent = `
         @keyframes slide-up {
