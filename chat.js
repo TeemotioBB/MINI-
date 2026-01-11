@@ -53,6 +53,41 @@ async function getMyUserId() {
     }
 }
 
+// ========== CARREGAR CONVERSAS DO LOCALSTORAGE ==========
+function loadConversationsFromStorage() {
+    console.log('📦 Carregando conversas do localStorage...');
+    try {
+        const saved = localStorage.getItem('sparkConversations');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            console.log('✅ Conversas encontradas no localStorage:', parsed.length);
+            return parsed;
+        } else {
+            console.log('ℹ️ Nenhuma conversa salva no localStorage');
+            return [];
+        }
+    } catch (e) {
+        console.error('❌ Erro ao carregar do localStorage:', e);
+        return [];
+    }
+}
+
+// ========== FORMATAR TEMPO ==========
+function formatTime(timestamp) {
+    if (!timestamp) return 'Agora';
+    
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000); // segundos
+    
+    if (diff < 60) return 'Agora';
+    if (diff < 3600) return `${Math.floor(diff / 60)}min`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+    
+    return date.toLocaleDateString('pt-BR');
+}
+
 // ========== CARREGAR MATCHES DO BACKEND ==========
 async function loadConversationsFromServer() {
     console.log('📥 Carregando matches do backend...');
@@ -78,8 +113,7 @@ async function loadConversationsFromServer() {
 
         if (!response.ok) {
             console.error('❌ Erro ao carregar matches:', response.status);
-            conversations = [];
-            return;
+            return [];
         }
         
         const data = await response.json();
@@ -90,7 +124,7 @@ async function loadConversationsFromServer() {
         }
         
         // Mapeia os matches para o formato do frontend
-        conversations = data.map(match => {
+        const backendConversations = data.map(match => {
             // Determina qual usuário é o "outro" (não sou eu)
             const isUser1 = match.user1_id === myUserId;
             
@@ -132,53 +166,64 @@ async function loadConversationsFromServer() {
             };
         });
 
-        console.log('✅ Conversas carregadas do servidor:', conversations.length);
-        
-        // Salva no localStorage como backup
-        saveConversationsToStorage();
+        console.log('✅ Conversas do backend:', backendConversations.length);
+        return backendConversations;
         
     } catch (error) {
         console.error('❌ Erro ao carregar conversas:', error);
-        
-        // Em caso de erro, tenta carregar do localStorage como fallback
-        console.log('⚠️ Tentando carregar do localStorage como fallback...');
-        loadConversationsFromStorage();
+        return [];
     }
 }
 
-// ========== FORMATAR TEMPO ==========
-function formatTime(timestamp) {
-    if (!timestamp) return 'Agora';
+// ========== 🔥 MESCLAR CONVERSAS (LOCALSTORAGE + BACKEND) ==========
+async function loadAllConversations() {
+    console.log('🔄 Carregando TODAS as conversas (localStorage + backend)...');
     
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diff = Math.floor((now - date) / 1000); // segundos
+    // 1. Carrega do localStorage (conversas criadas pelo match.js)
+    const localConversations = loadConversationsFromStorage();
+    console.log('📱 Conversas do localStorage:', localConversations.length);
     
-    if (diff < 60) return 'Agora';
-    if (diff < 3600) return `${Math.floor(diff / 60)}min`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+    // 2. Carrega do backend (matches do banco)
+    const backendConversations = await loadConversationsFromServer();
+    console.log('☁️ Conversas do backend:', backendConversations.length);
     
-    return date.toLocaleDateString('pt-BR');
-}
-
-// ========== CARREGAR CONVERSAS DO LOCALSTORAGE (FALLBACK) ==========
-function loadConversationsFromStorage() {
-    console.log('📦 Carregando conversas do localStorage (fallback)...');
-    try {
-        const saved = localStorage.getItem('sparkConversations');
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            console.log('✅ Conversas encontradas no localStorage:', parsed.length);
-            conversations = parsed;
+    // 3. Mescla sem duplicar usando Map
+    const conversationMap = new Map();
+    
+    // Adiciona conversas do localStorage primeiro (têm mensagens e histórico)
+    localConversations.forEach(conv => {
+        conversationMap.set(conv.id, conv);
+    });
+    
+    // Adiciona conversas do backend (se não existir ainda)
+    backendConversations.forEach(conv => {
+        if (!conversationMap.has(conv.id)) {
+            conversationMap.set(conv.id, conv);
         } else {
-            console.log('ℹ️ Nenhuma conversa salva no localStorage');
-            conversations = [];
+            // Se já existe, atualiza a foto/nome caso esteja diferente
+            const existing = conversationMap.get(conv.id);
+            existing.photo = conv.photo;
+            existing.name = conv.name;
         }
-    } catch (e) {
-        console.error('❌ Erro ao carregar do localStorage:', e);
-        conversations = [];
-    }
+    });
+    
+    // Converte Map de volta para array
+    conversations = Array.from(conversationMap.values());
+    
+    // Ordena por timestamp (mais recente primeiro)
+    conversations.sort((a, b) => {
+        const timeA = a.matchTimestamp || 0;
+        const timeB = b.matchTimestamp || 0;
+        return timeB - timeA;
+    });
+    
+    console.log('✅ Total de conversas mescladas:', conversations.length);
+    console.log('📋 Conversas:', conversations.map(c => c.name));
+    
+    // Salva a versão mesclada no localStorage
+    saveConversationsToStorage();
+    
+    return conversations;
 }
 
 // ========== RENDERIZAR LISTA DE CONVERSAS ==========
@@ -239,10 +284,12 @@ function openChat(chatId) {
     
     if (!currentChat) {
         console.error('❌ Conversa não encontrada:', chatId);
+        console.log('📋 Conversas disponíveis:', conversations.map(c => ({ id: c.id, name: c.name })));
         return;
     }
 
     console.log('✅ Conversa encontrada:', currentChat.name);
+    console.log('📝 Mensagens:', currentChat.messages?.length || 0);
 
     // Atualiza informações do header
     chatUserName.textContent = currentChat.name;
@@ -273,7 +320,18 @@ function renderMessages() {
     if (!currentChat) return;
 
     console.log('💬 Renderizando mensagens para:', currentChat.name);
-    console.log('📝 Total de mensagens:', currentChat.messages.length);
+    console.log('📝 Total de mensagens:', currentChat.messages?.length || 0);
+
+    // Garante que messages existe
+    if (!currentChat.messages || currentChat.messages.length === 0) {
+        currentChat.messages = [
+            {
+                sender: 'system',
+                text: `🎉 Parabéns! Você e ${currentChat.name} deram match! Que tal começar uma conversa?`,
+                time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+            }
+        ];
+    }
 
     messagesContainer.innerHTML = currentChat.messages.map(msg => {
         // Mensagem do sistema (match)
@@ -315,6 +373,11 @@ function sendMessage() {
 
     const now = new Date();
     const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+    // Garante que messages existe
+    if (!currentChat.messages) {
+        currentChat.messages = [];
+    }
 
     // Adiciona mensagem do usuário
     currentChat.messages.push({
@@ -443,34 +506,45 @@ messageInput.addEventListener('keypress', (e) => {
 // ========== INICIALIZAÇÃO ==========
 console.log('🚀 chat.js iniciando...');
 
-// Busca meu user_id primeiro
-getMyUserId().then(() => {
+// Busca meu user_id primeiro, depois carrega conversas
+getMyUserId().then(async () => {
     console.log('👤 User ID carregado, agora carregando conversas...');
     
-    // Carrega conversas do servidor
-    loadConversationsFromServer().then(() => {
-        // Renderiza lista
-        renderChatList();
-        
-        // ========== ABRE CHAT AUTOMATICAMENTE SE VIER DO MATCH ==========
-        const openChatId = localStorage.getItem('openChatId');
+    // 🔥 CARREGA TODAS AS CONVERSAS (LOCALSTORAGE + BACKEND)
+    await loadAllConversations();
+    
+    // Renderiza lista
+    renderChatList();
+    
+    // ========== ABRE CHAT AUTOMATICAMENTE SE VIER DO MATCH ==========
+    const openChatId = localStorage.getItem('openChatId');
 
-        if (openChatId) {
-            console.log('🎯 Detectado pedido para abrir chat:', openChatId);
+    if (openChatId) {
+        console.log('🎯 Detectado pedido para abrir chat:', openChatId);
+        console.log('📋 Conversas disponíveis:', conversations.map(c => ({ id: c.id, name: c.name })));
+        
+        // Remove IMEDIATAMENTE para evitar loops
+        localStorage.removeItem('openChatId');
+        
+        // Aguarda um pouco para garantir que tudo carregou
+        setTimeout(() => {
+            const chatId = parseInt(openChatId);
+            console.log('🚀 Tentando abrir chat automaticamente:', chatId);
             
-            // Remove IMEDIATAMENTE para evitar loops
-            localStorage.removeItem('openChatId');
-            
-            // Aguarda um pouco para garantir que tudo carregou
-            setTimeout(() => {
-                const chatId = parseInt(openChatId);
-                console.log('🚀 Abrindo chat automaticamente:', chatId);
+            // Verifica se a conversa existe
+            const conversation = conversations.find(c => c.id === chatId);
+            if (conversation) {
+                console.log('✅ Conversa encontrada, abrindo:', conversation.name);
                 openChat(chatId);
-            }, 500);
-        } else {
-            console.log('ℹ️ Nenhum chat para abrir automaticamente');
-        }
-    });
+            } else {
+                console.error('❌ Conversa não encontrada com ID:', chatId);
+                console.log('💡 IDs disponíveis:', conversations.map(c => c.id));
+                console.log('💡 Todas as conversas:', conversations);
+            }
+        }, 500);
+    } else {
+        console.log('ℹ️ Nenhum chat para abrir automaticamente');
+    }
 });
 
 console.log('✅ chat.js carregado com sucesso!');
