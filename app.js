@@ -135,17 +135,18 @@ document.addEventListener('DOMContentLoaded', function() {
             verifiedBadge.style.display = profile.verified ? 'flex' : 'none';
         }
         
-        console.log('👤 Mostrando perfil:', profile.name);
+        console.log('👤 Mostrando perfil:', profile.name, '| Index:', currentProfileIndex, '/', profiles.length);
     }
 
     // ========== FUNÇÃO PARA PRÓXIMO PERFIL ==========
     function nextProfile() {
         currentProfileIndex++;
+        console.log('➡️ Avançando para próximo perfil. Novo index:', currentProfileIndex, '/', profiles.length);
         showProfile();
     }
 
-    // ========== BOTÃO LIKE (coração verde) - COM VIP ==========
-    btnLike.addEventListener('click', () => {
+    // ========== BOTÃO LIKE (coração verde) - COM VIP E MATCH REAL ==========
+    btnLike.addEventListener('click', async () => {
         console.log('🖱️ Botão LIKE clicado!');
         
         if (!profiles || currentProfileIndex >= profiles.length) {
@@ -161,16 +162,18 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const profile = profiles[currentProfileIndex];
         likedProfiles.push(profile);
-        console.log('❤️ LIKE dado em:', profile.name);
+        console.log('❤️ LIKE dado em:', profile.name, '| Telegram ID:', profile.telegram_id);
         
-        // Envia like para o backend (não bloqueia a UI)
-        sendLikeToBackend(profile.telegram_id, 'like');
+        // ✅ ENVIA LIKE E AGUARDA RESPOSTA DO BACKEND
+        console.log('📤 Enviando like para o servidor...');
+        const response = await sendLikeToBackend(profile.telegram_id, 'like');
+        console.log('📥 Resposta do servidor:', response);
         
-        // Verifica se há match
-        const hasMatch = typeof checkForMatch !== 'undefined' && checkForMatch(profile);
+        // ✅ VERIFICA SE DEU MATCH (RESPOSTA DO SERVIDOR)
+        const hasMatch = response && response.match === true;
         
         if (hasMatch) {
-            console.log('🎉 MATCH COM:', profile.name);
+            console.log('🎉 MATCH COM:', profile.name, '| Match ID:', response.match_id);
             
             card.classList.add('swipe-right');
             showHeartAnimation();
@@ -186,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 300);
             }, 500);
         } else {
-            console.log('💚 Like normal, sem match');
+            console.log('💚 Like enviado, sem match (ainda)');
             card.classList.add('swipe-right');
             showHeartAnimation();
             
@@ -198,17 +201,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ========== BOTÃO DISLIKE (X vermelho) ==========
-    btnDislike.addEventListener('click', () => {
+    btnDislike.addEventListener('click', async () => {
         console.log('🖱️ Botão DISLIKE clicado!');
         
         if (!profiles || currentProfileIndex >= profiles.length) return;
         
         const profile = profiles[currentProfileIndex];
         dislikedProfiles.push(profile);
-        console.log('❌ DISLIKE dado em:', profile.name);
+        console.log('❌ DISLIKE dado em:', profile.name, '| Telegram ID:', profile.telegram_id);
         
         // Envia dislike para o backend
-        sendLikeToBackend(profile.telegram_id, 'dislike');
+        console.log('📤 Enviando dislike para o servidor...');
+        await sendLikeToBackend(profile.telegram_id, 'dislike');
         
         card.classList.add('swipe-left');
         showXAnimation();
@@ -219,8 +223,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 500);
     });
 
-    // ========== BOTÃO SUPER LIKE (estrela azul) - COM VIP ==========
-    btnStar.addEventListener('click', () => {
+    // ========== BOTÃO SUPER LIKE (estrela azul) - COM VIP E MATCH REAL ==========
+    btnStar.addEventListener('click', async () => {
         console.log('🖱️ Botão SUPER LIKE clicado!');
         
         if (!profiles || currentProfileIndex >= profiles.length) return;
@@ -233,15 +237,17 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const profile = profiles[currentProfileIndex];
         superLikedProfiles.push(profile);
-        console.log('⭐ SUPER LIKE dado em:', profile.name);
+        console.log('⭐ SUPER LIKE dado em:', profile.name, '| Telegram ID:', profile.telegram_id);
         
-        // Envia superlike para o backend
-        sendLikeToBackend(profile.telegram_id, 'superlike');
+        // Envia superlike para o backend e aguarda resposta
+        console.log('📤 Enviando super like para o servidor...');
+        const response = await sendLikeToBackend(profile.telegram_id, 'superlike');
+        console.log('📥 Resposta do servidor:', response);
         
-        const hasMatch = typeof checkForMatch !== 'undefined' && checkForMatch(profile);
+        const hasMatch = response && response.match === true;
         
         if (hasMatch) {
-            console.log('🎉 MATCH COM:', profile.name);
+            console.log('🎉 MATCH COM:', profile.name, '| Match ID:', response.match_id);
             
             card.classList.add('swipe-up');
             showStarAnimation();
@@ -257,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 300);
             }, 600);
         } else {
-            console.log('⭐ Super Like normal, sem match');
+            console.log('⭐ Super Like enviado, sem match (ainda)');
             card.classList.add('swipe-up');
             showStarAnimation();
             
@@ -281,9 +287,14 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('⚡ BOOST ativado com sucesso!');
     });
 
-    // ========== ENVIAR LIKE PARA O BACKEND ==========
+    // ========== ENVIAR LIKE PARA O BACKEND (ASYNC) ==========
     async function sendLikeToBackend(toTelegramId, type) {
         try {
+            console.log('🔄 Chamando API:', {
+                to: toTelegramId,
+                type: type
+            });
+            
             const response = await fetch('https://mini-production-cf60.up.railway.app/api/likes', {
                 method: 'POST',
                 headers: {
@@ -298,15 +309,22 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (response.ok) {
                 const data = await response.json();
-                console.log('✅ Like enviado para o servidor:', data);
+                console.log('✅ Resposta do servidor:', data);
                 
-                // Se deu match no servidor, mostra animação
+                // Se deu match no servidor, retorna true
                 if (data.match) {
-                    console.log('🎉 Match confirmado pelo servidor!');
+                    console.log('🎉 MATCH CONFIRMADO PELO SERVIDOR!');
                 }
+                
+                return data;
+            } else {
+                const error = await response.json();
+                console.error('❌ Erro do servidor:', error);
+                return null;
             }
         } catch (error) {
-            console.log('⚠️ Erro ao enviar like (não impede uso):', error);
+            console.error('❌ Erro ao enviar like:', error);
+            return null;
         }
     }
 
