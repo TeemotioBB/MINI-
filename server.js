@@ -977,10 +977,157 @@ app.use((req, res) => {
     res.status(404).json({ error: 'Rota não encontrada' });
 });
 
+// ========== DEBUG - RESETAR APENAS OS LIMITES DOS USUÁRIOS DE TESTE ==========
+app.get('/api/debug/reset-limits-only', async (req, res) => {
+    try {
+        const testUserIds = [8542013089, 1293602874];
+        
+        console.log('🔄 RESETANDO APENAS LIMITES DE:', testUserIds);
+        
+        let result = {
+            success: true,
+            users_updated: []
+        };
+        
+        for (const telegramId of testUserIds) {
+            console.log('\n┌────────────────────────────────');
+            console.log('🔄 Resetando limites de:', telegramId);
+            
+            // Busca e reseta APENAS os limites
+            const userResult = await pool.query(`
+                UPDATE users 
+                SET 
+                    daily_likes = 0,
+                    daily_super_likes = 0,
+                    last_reset_date = CURRENT_DATE
+                WHERE telegram_id = $1
+                RETURNING id, telegram_id, name, daily_likes, daily_super_likes, last_reset_date, is_premium
+            `, [telegramId]);
+            
+            if (userResult.rows.length === 0) {
+                console.log('⚠️ Usuário não encontrado:', telegramId);
+                result.users_updated.push({
+                    telegram_id: telegramId,
+                    status: 'not_found'
+                });
+            } else {
+                const user = userResult.rows[0];
+                console.log('✅ Limites resetados:', user.name);
+                console.log('📊 Novo status:', {
+                    daily_likes: user.daily_likes,
+                    daily_super_likes: user.daily_super_likes,
+                    last_reset_date: user.last_reset_date,
+                    is_premium: user.is_premium
+                });
+                
+                result.users_updated.push({
+                    telegram_id: user.telegram_id,
+                    user_id: user.id,
+                    name: user.name,
+                    status: 'success',
+                    daily_likes: user.daily_likes,
+                    daily_super_likes: user.daily_super_likes,
+                    last_reset_date: user.last_reset_date,
+                    is_premium: user.is_premium
+                });
+            }
+        }
+        
+        console.log('\n┌────────────────────────────────');
+        console.log('🎉 LIMITES RESETADOS COM SUCESSO!');
+        console.log('└────────────────────────────────\n');
+        
+        res.json(result);
+    } catch (error) {
+        console.error('❌ Erro ao resetar limites:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ========== DEBUG - VERIFICAR STATUS DOS LIMITES ==========
+app.get('/api/debug/check-limits/:telegramId', async (req, res) => {
+    try {
+        const { telegramId } = req.params;
+        
+        console.log('🔍 Verificando limites de:', telegramId);
+        
+        const result = await pool.query(`
+            SELECT 
+                id,
+                telegram_id,
+                name,
+                daily_likes,
+                daily_super_likes,
+                last_reset_date,
+                is_premium,
+                created_at,
+                updated_at
+            FROM users 
+            WHERE telegram_id = $1
+        `, [telegramId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ 
+                error: 'Usuário não encontrado',
+                telegram_id: telegramId 
+            });
+        }
+        
+        const user = result.rows[0];
+        
+        // Calcula quantos likes restam
+        const maxLikes = user.is_premium ? Infinity : 10;
+        const maxSuperLikes = user.is_premium ? 5 : 0;
+        
+        const remainingLikes = user.is_premium ? 'unlimited' : Math.max(0, maxLikes - user.daily_likes);
+        const remainingSuperLikes = user.is_premium ? (maxSuperLikes - user.daily_super_likes) : 0;
+        
+        const response = {
+            user: {
+                id: user.id,
+                telegram_id: user.telegram_id,
+                name: user.name,
+                is_premium: user.is_premium
+            },
+            limits: {
+                daily_likes: {
+                    used: user.daily_likes,
+                    max: maxLikes,
+                    remaining: remainingLikes
+                },
+                daily_super_likes: {
+                    used: user.daily_super_likes,
+                    max: maxSuperLikes,
+                    remaining: remainingSuperLikes
+                },
+                last_reset_date: user.last_reset_date
+            },
+            status: {
+                can_like: user.is_premium || user.daily_likes < maxLikes,
+                can_super_like: user.is_premium && user.daily_super_likes < maxSuperLikes,
+                needs_reset: user.last_reset_date < new Date().toISOString().split('T')[0]
+            },
+            timestamps: {
+                created_at: user.created_at,
+                updated_at: user.updated_at
+            }
+        };
+        
+        console.log('✅ Status do usuário:', response);
+        
+        res.json(response);
+        
+    } catch (error) {
+        console.error('❌ Erro ao verificar limites:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ========== INICIAR ==========
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
+
 
 
