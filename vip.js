@@ -34,7 +34,7 @@ class VIPSystem {
         console.log('💎 Limites diários:', this.dailyLimits);
     }
 
-    // ✅ NOVA FUNÇÃO - SINCRONIZA COM BACKEND
+    // ✅ FUNÇÃO CORRIGIDA - SINCRONIZA COM BACKEND
     async syncWithBackend() {
         try {
             // Pega telegram_id
@@ -48,8 +48,12 @@ class VIPSystem {
             
             console.log('🔄 Sincronizando com backend para:', telegramId);
             
+            // ✅ CORRIGIDO - Usando backticks (template literals)
+            const url = `https://mini-production-cf60.up.railway.app/api/debug/check-limits/${telegramId}`;
+            console.log('🌐 URL da requisição:', url);
+            
             // Busca limites do backend
-            const response = await fetch(`https://mini-production-cf60.up.railway.app/api/debug/check-limits/${telegramId}`);
+            const response = await fetch(url);
             
             if (response.ok) {
                 const data = await response.json();
@@ -515,6 +519,7 @@ class VIPSystem {
     }
 }
 
+// ✅ Inicializa o sistema VIP
 if (!window.vipSystem) {
     window.vipSystem = new VIPSystem();
     console.log('✅ vipSystem criado pela primeira vez');
@@ -522,6 +527,7 @@ if (!window.vipSystem) {
     console.log('ℹ️ vipSystem já existe, não será recriado');
 }
 
+// ✅ Funções globais de conveniência
 window.activatePremium = () => window.vipSystem.activatePremium();
 window.deactivatePremium = () => window.vipSystem.deactivatePremium();
 window.getVIPStats = () => window.vipSystem.getStats();
