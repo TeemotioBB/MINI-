@@ -127,6 +127,176 @@
     <script src="match.js"></script>
     <script src="app.js"></script>
 
+
+  <!-- ADICIONE ISSO NO FINAL DO index.html, ANTES DE FECHAR </body> -->
+
+<!-- ========== BOTÃO SECRETO DE DEBUG - SÓ PARA USUÁRIOS DE TESTE ========== -->
+<script>
+// Verifica se é um dos usuários de teste
+function isTestUser() {
+    const testUsers = [1293602874, 8542013089];
+    
+    // Tenta pegar do Telegram
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
+        const telegramId = window.Telegram.WebApp.initDataUnsafe.user.id;
+        return testUsers.includes(telegramId);
+    }
+    
+    // Tenta pegar do localStorage
+    const testId = localStorage.getItem('testTelegramId');
+    if (testId) {
+        return testUsers.includes(parseInt(testId));
+    }
+    
+    return false;
+}
+
+// Só mostra o botão se for usuário de teste
+if (isTestUser()) {
+    console.log('🧪 Usuário de teste detectado! Botão de debug ativado.');
+    
+    // Cria o botão
+    const debugBtn = document.createElement('button');
+    debugBtn.innerHTML = '🔄';
+    debugBtn.title = 'Limpar perfis vistos (só para teste)';
+    debugBtn.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: 3px solid white;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        font-size: 24px;
+        cursor: pointer;
+        z-index: 9999;
+        opacity: 0.7;
+        transition: all 0.3s ease;
+    `;
+    
+    // Hover effect
+    debugBtn.addEventListener('mouseenter', () => {
+        debugBtn.style.opacity = '1';
+        debugBtn.style.transform = 'scale(1.1)';
+    });
+    
+    debugBtn.addEventListener('mouseleave', () => {
+        debugBtn.style.opacity = '0.7';
+        debugBtn.style.transform = 'scale(1)';
+    });
+    
+    // Função de limpar
+    debugBtn.addEventListener('click', () => {
+        console.log('🧹 Limpando perfis vistos...');
+        
+        // Limpa perfis vistos
+        localStorage.removeItem('sparkSeenProfiles');
+        
+        // Limpa limites VIP (opcional - descomente se quiser resetar também)
+        // localStorage.removeItem('sparkDailyLimits');
+        // localStorage.removeItem('sparkWeeklyLimits');
+        
+        // Animação de sucesso
+        debugBtn.innerHTML = '✅';
+        debugBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+        
+        // Mensagem de sucesso
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-lg z-[9999] text-sm font-bold';
+        toast.textContent = '✅ Perfis vistos limpos! Recarregando...';
+        document.body.appendChild(toast);
+        
+        console.log('✅ Perfis vistos limpos!');
+        
+        // Recarrega após 1 segundo
+        setTimeout(() => {
+            location.reload();
+        }, 1000);
+    });
+    
+    // Adiciona ao body
+    document.body.appendChild(debugBtn);
+}
+</script>
+
+<!-- ========== ATALHO DE TECLADO ALTERNATIVO ========== -->
+<script>
+// Atalho: Ctrl+Shift+R = Limpar perfis vistos
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+        e.preventDefault();
+        
+        if (isTestUser()) {
+            console.log('🔑 Atalho ativado! Limpando perfis vistos...');
+            localStorage.removeItem('sparkSeenProfiles');
+            
+            // Toast
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-purple-500 text-white px-6 py-3 rounded-full shadow-lg z-[9999] text-sm font-bold';
+            toast.textContent = '⌨️ Atalho: Perfis limpos! Recarregando...';
+            document.body.appendChild(toast);
+            
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            console.log('⚠️ Atalho disponível apenas para usuários de teste');
+        }
+    }
+});
+</script>
+
+<!-- ========== CONSOLE HELPER ========== -->
+<script>
+// Adiciona funções globais de debug
+if (isTestUser()) {
+    // Função para limpar tudo
+    window.clearAllDebugData = function() {
+        console.log('🧹 Limpando TODOS os dados de debug...');
+        
+        localStorage.removeItem('sparkSeenProfiles');
+        localStorage.removeItem('sparkDailyLimits');
+        localStorage.removeItem('sparkWeeklyLimits');
+        localStorage.removeItem('sparkUserPlan');
+        localStorage.removeItem('sparkConversations');
+        
+        console.log('✅ Tudo limpo!');
+        console.log('🔄 Recarregando em 2 segundos...');
+        
+        setTimeout(() => location.reload(), 2000);
+    };
+    
+    // Função para ver o que está salvo
+    window.showDebugData = function() {
+        console.log('📊 DADOS DE DEBUG:');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('👁️ Perfis vistos:', localStorage.getItem('sparkSeenProfiles'));
+        console.log('💎 Limites diários:', localStorage.getItem('sparkDailyLimits'));
+        console.log('⚡ Limites semanais:', localStorage.getItem('sparkWeeklyLimits'));
+        console.log('👤 Plano:', localStorage.getItem('sparkUserPlan'));
+        console.log('💬 Conversas:', localStorage.getItem('sparkConversations'));
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    };
+    
+    console.log('');
+    console.log('🧪 ════════════════════════════════════════');
+    console.log('🧪 MODO DEBUG ATIVADO PARA USUÁRIOS DE TESTE');
+    console.log('🧪 ════════════════════════════════════════');
+    console.log('');
+    console.log('📌 FUNÇÕES DISPONÍVEIS NO CONSOLE:');
+    console.log('   clearSeenProfiles()     - Limpa perfis vistos');
+    console.log('   clearAllDebugData()     - Limpa TUDO');
+    console.log('   showDebugData()         - Mostra dados salvos');
+    console.log('   getVIPStats()           - Ver status VIP');
+    console.log('');
+    console.log('🔘 BOTÃO: Clique no botão 🔄 no canto inferior esquerdo');
+    console.log('⌨️  ATALHO: Ctrl+Shift+R para limpar perfis');
+    console.log('');
+}
+</script>
+
 </body>
 
 </html>
+
