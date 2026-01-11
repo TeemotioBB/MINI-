@@ -14,18 +14,18 @@ const { requireTelegramAuth, optionalTelegramAuth } = require('./telegramAuth');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ========== CONFIGURAÃ‡ÃƒO DO BANCO ==========
+// ========== CONFIGURAÇÃO DO BANCO ==========
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Testa conexÃ£o
+// Testa conexão
 pool.connect((err, client, release) => {
     if (err) {
-        console.error('âŒ Erro ao conectar no banco:', err.stack);
+        console.error('❌ Erro ao conectar no banco:', err.stack);
     } else {
-        console.log('âœ… Conectado ao PostgreSQL!');
+        console.log('✅ Conectado ao PostgreSQL!');
         release();
     }
 });
@@ -38,7 +38,7 @@ app.use(helmet({
   contentSecurityPolicy: false,
 }));
 app.use(cors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: '*',
     credentials: true
 })); 
 app.use(express.json({ limit: '10mb' })); 
@@ -57,16 +57,13 @@ app.use((req, res, next) => {
     next();
 });
 
-// ========== SERVIR FRONTEND ========== ðŸ‘ˆ ADICIONE AQUI!
-// Serve arquivos estÃ¡ticos (HTML, CSS, JS, imagens)
+// ========== SERVIR FRONTEND ==========
 app.use(express.static(__dirname));
 
-// Rota raiz serve o index.html
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Rotas especÃ­ficas do frontend
 app.get('/perfil.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'perfil.html'));
 });
@@ -80,12 +77,11 @@ app.get('/likes.html', (req, res) => {
 });
 
 // ========== ROTAS DE UPLOAD ==========
-// ⚠️ SEM AUTENTICAÇÃO para testes
-app.use('/api/upload', uploadRoutes);
+app.use('/api/upload', optionalTelegramAuth, uploadRoutes);
 
-// ========== ROTAS DE USUÃRIOS ==========
+// ========== ROTAS DE USUÁRIOS ==========
 
-// GET - Buscar perfil por Telegram ID (pÃºblico)
+// GET - Buscar perfil por Telegram ID (público)
 app.get('/api/users/:telegramId', async (req, res) => {
     try {
         const { telegramId } = req.params;
@@ -96,34 +92,42 @@ app.get('/api/users/:telegramId', async (req, res) => {
         );
         
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+            return res.status(404).json({ error: 'Usuário não encontrado' });
         }
         
         res.json(result.rows[0]);
     } catch (error) {
-        console.error('Erro ao buscar usuÃ¡rio:', error);
+        console.error('Erro ao buscar usuário:', error);
         res.status(500).json({ error: 'Erro interno do servidor' });
     }
 });
 
-// POST - Criar ou atualizar usuÃ¡rio (requer autenticaÃ§Ã£o)
-app.post('/api/users', requireTelegramAuth, async (req, res) => {
+// POST - Criar ou atualizar usuário
+app.post('/api/users', optionalTelegramAuth, async (req, res) => {
     try {
         const { 
+            telegram_id,
             name, age, gender, bio, city, 
             photo_url, photos, pref_gender, pref_age_min, pref_age_max 
         } = req.body;
         
-        const telegram_id = req.telegramUser.telegram_id;
+        // Pega telegram_id do auth ou do body
+        const finalTelegramId = req.telegramUser?.telegram_id || telegram_id;
         
-        // ValidaÃ§Ãµes
+        if (!finalTelegramId) {
+            return res.status(400).json({ error: 'telegram_id é obrigatório' });
+        }
+        
+        // Validações
         if (!name || !age) {
-            return res.status(400).json({ error: 'Campos obrigatÃ³rios: name, age' });
+            return res.status(400).json({ error: 'Campos obrigatórios: name, age' });
         }
         
         if (age < 18 || age > 99) {
             return res.status(400).json({ error: 'Idade deve estar entre 18 e 99' });
         }
+        
+        console.log('📝 Salvando usuário:', { telegram_id: finalTelegramId, name, age, gender });
         
         // Upsert
         const result = await pool.query(`
@@ -146,56 +150,102 @@ app.post('/api/users', requireTelegramAuth, async (req, res) => {
                 updated_at = CURRENT_TIMESTAMP
             RETURNING *
         `, [
-            telegram_id, name, age, gender, bio, city, photo_url, 
-            photos, pref_gender, pref_age_min, pref_age_max
+            finalTelegramId, name, age, gender || 'feminino', bio, city, photo_url, 
+            photos, pref_gender || 'masculino', pref_age_min || 18, pref_age_max || 99
         ]);
         
+        console.log('✅ Usuário salvo:', result.rows[0].id);
         res.json(result.rows[0]);
     } catch (error) {
-        console.error('Erro ao salvar usuÃ¡rio:', error);
+        console.error('Erro ao salvar usuário:', error);
         res.status(500).json({ error: 'Erro interno do servidor' });
     }
 });
 
-// GET - Buscar perfis para swipe (requer autenticaÃ§Ã£o)
-app.get('/api/users/:telegramId/discover', requireTelegramAuth, async (req, res) => {
+// GET - Buscar perfis para swipe
+app.get('/api/users/:telegramId/discover', optionalTelegramAuth, async (req, res) => {
     try {
+        const { telegramId } = req.params;
         const { limit = 10 } = req.query;
-        const telegram_id = req.telegramUser.telegram_id;
         
-        // Busca usuÃ¡rio atual
+        // Pega telegram_id do auth ou do parâmetro
+        const finalTelegramId = req.telegramUser?.telegram_id || telegramId;
+        
+        console.log('🔍 Buscando perfis para:', finalTelegramId);
+        
+        // Busca usuário atual
         const userResult = await pool.query(
             'SELECT * FROM users WHERE telegram_id = $1',
-            [telegram_id]
+            [finalTelegramId]
         );
         
         if (userResult.rows.length === 0) {
-            return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+            console.log('⚠️ Usuário não encontrado, retornando todos os perfis');
+            // Se usuário não existe, retorna perfis genéricos
+            const genericResult = await pool.query(`
+                SELECT * FROM users 
+                WHERE is_active = TRUE 
+                ORDER BY RANDOM() 
+                LIMIT $1
+            `, [parseInt(limit)]);
+            
+            return res.json(genericResult.rows);
         }
         
         const user = userResult.rows[0];
+        console.log('👤 Usuário encontrado:', user.name, '| Preferência:', user.pref_gender);
         
-        // Busca perfis compatÃ­veis
-        const result = await pool.query(`
-            SELECT u.* 
-            FROM users u
-            WHERE u.id != $1
-              AND u.is_active = TRUE
-              AND u.gender = $2
-              AND u.age BETWEEN $3 AND $4
-              AND u.id NOT IN (
-                  SELECT to_user_id FROM likes WHERE from_user_id = $1
-              )
-            ORDER BY RANDOM()
-            LIMIT $5
-        `, [
-            user.id,
-            user.pref_gender || 'feminino',
-            user.pref_age_min || 18,
-            user.pref_age_max || 99,
-            parseInt(limit)
-        ]);
+        // Monta query baseada nas preferências
+        let query;
+        let params;
         
+        if (user.pref_gender === 'todos' || !user.pref_gender) {
+            // Se quer ver todos os gêneros
+            query = `
+                SELECT u.* 
+                FROM users u
+                WHERE u.id != $1
+                  AND u.is_active = TRUE
+                  AND u.age BETWEEN $2 AND $3
+                  AND u.id NOT IN (
+                      SELECT to_user_id FROM likes WHERE from_user_id = $1
+                  )
+                ORDER BY RANDOM()
+                LIMIT $4
+            `;
+            params = [
+                user.id,
+                user.pref_age_min || 18,
+                user.pref_age_max || 99,
+                parseInt(limit)
+            ];
+        } else {
+            // Se tem preferência de gênero específica
+            query = `
+                SELECT u.* 
+                FROM users u
+                WHERE u.id != $1
+                  AND u.is_active = TRUE
+                  AND u.gender = $2
+                  AND u.age BETWEEN $3 AND $4
+                  AND u.id NOT IN (
+                      SELECT to_user_id FROM likes WHERE from_user_id = $1
+                  )
+                ORDER BY RANDOM()
+                LIMIT $5
+            `;
+            params = [
+                user.id,
+                user.pref_gender,
+                user.pref_age_min || 18,
+                user.pref_age_max || 99,
+                parseInt(limit)
+            ];
+        }
+        
+        const result = await pool.query(query, params);
+        
+        console.log('✅ Perfis encontrados:', result.rows.length);
         res.json(result.rows);
     } catch (error) {
         console.error('Erro ao buscar perfis:', error);
@@ -205,15 +255,21 @@ app.get('/api/users/:telegramId/discover', requireTelegramAuth, async (req, res)
 
 // ========== ROTAS DE LIKES ==========
 
-// POST - Dar like/dislike (requer autenticaÃ§Ã£o)
-app.post('/api/likes', requireTelegramAuth, async (req, res) => {
+// POST - Dar like/dislike
+app.post('/api/likes', optionalTelegramAuth, async (req, res) => {
     try {
         const { to_telegram_id, type } = req.body;
-        const from_telegram_id = req.telegramUser.telegram_id;
+        const from_telegram_id = req.telegramUser?.telegram_id || req.body.from_telegram_id;
+        
+        if (!from_telegram_id) {
+            return res.status(400).json({ error: 'from_telegram_id é obrigatório' });
+        }
         
         if (!['like', 'superlike', 'dislike'].includes(type)) {
-            return res.status(400).json({ error: 'Tipo invÃ¡lido' });
+            return res.status(400).json({ error: 'Tipo inválido' });
         }
+        
+        console.log('❤️ Like:', from_telegram_id, '->', to_telegram_id, '(', type, ')');
         
         // Busca IDs
         const fromUser = await pool.query(
@@ -227,13 +283,13 @@ app.post('/api/likes', requireTelegramAuth, async (req, res) => {
         );
         
         if (fromUser.rows.length === 0 || toUser.rows.length === 0) {
-            return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+            return res.status(404).json({ error: 'Usuário não encontrado' });
         }
         
         const from = fromUser.rows[0];
         const to = toUser.rows[0];
         
-        // Verifica limites
+        // Verifica limites (apenas se não for premium)
         if (!from.is_premium) {
             if (type === 'like' && from.daily_likes >= 10) {
                 return res.status(403).json({ 
@@ -244,7 +300,7 @@ app.post('/api/likes', requireTelegramAuth, async (req, res) => {
             
             if (type === 'superlike') {
                 return res.status(403).json({ 
-                    error: 'Super Like Ã© recurso Premium',
+                    error: 'Super Like é recurso Premium',
                     code: 'PREMIUM_REQUIRED'
                 });
             }
@@ -259,7 +315,7 @@ app.post('/api/likes', requireTelegramAuth, async (req, res) => {
             RETURNING *
         `, [from.id, to.id, type]);
         
-        // Atualiza contador
+        // Atualiza contador (apenas para usuários não premium)
         if (type === 'like' && !from.is_premium) {
             await pool.query(
                 'UPDATE users SET daily_likes = daily_likes + 1 WHERE id = $1',
@@ -275,6 +331,8 @@ app.post('/api/likes', requireTelegramAuth, async (req, res) => {
         
         const hasMatch = matchCheck.rows[0].has_match;
         
+        console.log('✅ Like registrado! Match:', hasMatch);
+        
         res.json({
             like: result.rows[0],
             match: hasMatch,
@@ -286,10 +344,14 @@ app.post('/api/likes', requireTelegramAuth, async (req, res) => {
     }
 });
 
-// GET - Buscar likes recebidos (requer autenticaÃ§Ã£o)
-app.get('/api/likes/received', requireTelegramAuth, async (req, res) => {
+// GET - Buscar likes recebidos
+app.get('/api/likes/received', optionalTelegramAuth, async (req, res) => {
     try {
-        const telegram_id = req.telegramUser.telegram_id;
+        const telegram_id = req.telegramUser?.telegram_id || req.query.telegram_id;
+        
+        if (!telegram_id) {
+            return res.status(400).json({ error: 'telegram_id é obrigatório' });
+        }
         
         const userResult = await pool.query(
             'SELECT id, is_premium FROM users WHERE telegram_id = $1',
@@ -297,11 +359,12 @@ app.get('/api/likes/received', requireTelegramAuth, async (req, res) => {
         );
         
         if (userResult.rows.length === 0) {
-            return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+            return res.status(404).json({ error: 'Usuário não encontrado' });
         }
         
         const user = userResult.rows[0];
         
+        // Verifica se é premium (para ver likes)
         if (!user.is_premium) {
             return res.status(403).json({ 
                 error: 'Recurso Premium',
@@ -327,10 +390,14 @@ app.get('/api/likes/received', requireTelegramAuth, async (req, res) => {
 
 // ========== ROTAS DE MATCHES ==========
 
-// GET - Matches do usuÃ¡rio (requer autenticaÃ§Ã£o)
-app.get('/api/matches', requireTelegramAuth, async (req, res) => {
+// GET - Matches do usuário
+app.get('/api/matches', optionalTelegramAuth, async (req, res) => {
     try {
-        const telegram_id = req.telegramUser.telegram_id;
+        const telegram_id = req.telegramUser?.telegram_id || req.query.telegram_id;
+        
+        if (!telegram_id) {
+            return res.status(400).json({ error: 'telegram_id é obrigatório' });
+        }
         
         const userResult = await pool.query(
             'SELECT id FROM users WHERE telegram_id = $1',
@@ -338,7 +405,7 @@ app.get('/api/matches', requireTelegramAuth, async (req, res) => {
         );
         
         if (userResult.rows.length === 0) {
-            return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+            return res.status(404).json({ error: 'Usuário não encontrado' });
         }
         
         const userId = userResult.rows[0].id;
@@ -358,8 +425,8 @@ app.get('/api/matches', requireTelegramAuth, async (req, res) => {
 
 // ========== ROTAS DE CHAT ==========
 
-// GET - Mensagens (requer autenticaÃ§Ã£o)
-app.get('/api/matches/:matchId/messages', requireTelegramAuth, async (req, res) => {
+// GET - Mensagens
+app.get('/api/matches/:matchId/messages', optionalTelegramAuth, async (req, res) => {
     try {
         const { matchId } = req.params;
         const { limit = 50, offset = 0 } = req.query;
@@ -380,24 +447,28 @@ app.get('/api/matches/:matchId/messages', requireTelegramAuth, async (req, res) 
     }
 });
 
-// POST - Enviar mensagem (requer autenticaÃ§Ã£o)
-app.post('/api/matches/:matchId/messages', requireTelegramAuth, async (req, res) => {
+// POST - Enviar mensagem
+app.post('/api/matches/:matchId/messages', optionalTelegramAuth, async (req, res) => {
     try {
         const { matchId } = req.params;
-        const { content } = req.body;
-        const telegram_id = req.telegramUser.telegram_id;
+        const { content, telegram_id } = req.body;
+        const final_telegram_id = req.telegramUser?.telegram_id || telegram_id;
         
         if (!content || !content.trim()) {
             return res.status(400).json({ error: 'Mensagem vazia' });
         }
         
+        if (!final_telegram_id) {
+            return res.status(400).json({ error: 'telegram_id é obrigatório' });
+        }
+        
         const senderResult = await pool.query(
             'SELECT id FROM users WHERE telegram_id = $1',
-            [telegram_id]
+            [final_telegram_id]
         );
         
         if (senderResult.rows.length === 0) {
-            return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
+            return res.status(404).json({ error: 'Usuário não encontrado' });
         }
         
         const senderId = senderResult.rows[0].id;
@@ -430,6 +501,19 @@ app.get('/health', async (req, res) => {
     }
 });
 
+// ========== DEBUG - Listar usuários ==========
+app.get('/api/debug/users', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT id, telegram_id, name, age, gender, pref_gender, is_active FROM users ORDER BY id');
+        res.json({
+            count: result.rows.length,
+            users: result.rows
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ========== ERROR HANDLERS ==========
 app.use((err, req, res, next) => {
     console.error(err.stack);
@@ -437,12 +521,11 @@ app.use((err, req, res, next) => {
 });
 
 app.use((req, res) => {
-    res.status(404).json({ error: 'Rota nÃ£o encontrada' });
+    res.status(404).json({ error: 'Rota não encontrada' });
 });
 
 // ========== INICIAR ==========
 app.listen(PORT, () => {
-    console.log(`ðŸš€ Servidor rodando na porta ${PORT}`);
-    console.log(`ðŸ“Š Ambiente: ${process.env.NODE_ENV || 'development'}`);
-
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
+    console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
