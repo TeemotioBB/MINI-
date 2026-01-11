@@ -175,11 +175,13 @@ if (isTestUser()) {
         try {
             const telegramId1 = '1293602874';  // Substitua pelo ID real do Celular 1
             const telegramId2 = '8542013089';  // Substitua pelo ID real do Celular 2
+            const adminSecret = 'minha_chave_super_secreta_admin_2024';  // Do .env - REMOVA EM PRODUÇÃO!
 
             const response = await fetch('https://mini-production-cf60.up.railway.app/api/admin/reset-likes-between-users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    secret: adminSecret,
                     telegram_id1: telegramId1,
                     telegram_id2: telegramId2
                 })
@@ -357,5 +359,3 @@ if (isTestUser()) {
 </script>
 </body>
 </html>
-
-
