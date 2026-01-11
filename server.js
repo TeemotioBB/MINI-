@@ -127,7 +127,7 @@ app.post('/api/users', optionalTelegramAuth, async (req, res) => {
             return res.status(400).json({ error: 'Idade deve estar entre 18 e 99' });
         }
         
-        console.log('📝 Salvando usuário:', { telegram_id: finalTelegramId, name, age, gender });
+        console.log('📝 Salvando usuário:', { telegram_id: finalTelegramId, name, age, gender, pref_gender });
         
         // Upsert
         const result = await pool.query(`
@@ -162,13 +162,12 @@ app.post('/api/users', optionalTelegramAuth, async (req, res) => {
     }
 });
 
-// GET - Buscar perfis para swipe
+// GET - Buscar perfis para swipe (COM COMPATIBILIDADE MÚTUA!)
 app.get('/api/users/:telegramId/discover', optionalTelegramAuth, async (req, res) => {
     try {
         const { telegramId } = req.params;
         const { limit = 10 } = req.query;
         
-        // Pega telegram_id do auth ou do parâmetro
         const finalTelegramId = req.telegramUser?.telegram_id || telegramId;
         
         console.log('🔍 Buscando perfis para:', finalTelegramId);
@@ -180,72 +179,78 @@ app.get('/api/users/:telegramId/discover', optionalTelegramAuth, async (req, res
         );
         
         if (userResult.rows.length === 0) {
-            console.log('⚠️ Usuário não encontrado, retornando todos os perfis');
-            // Se usuário não existe, retorna perfis genéricos
-            const genericResult = await pool.query(`
-                SELECT * FROM users 
-                WHERE is_active = TRUE 
-                ORDER BY RANDOM() 
-                LIMIT $1
-            `, [parseInt(limit)]);
-            
-            return res.json(genericResult.rows);
+            console.log('⚠️ Usuário não encontrado');
+            return res.json([]);
         }
         
         const user = userResult.rows[0];
-        console.log('👤 Usuário encontrado:', user.name, '| Preferência:', user.pref_gender);
+        console.log('👤 Usuário:', user.name, '| Eu sou:', user.gender, '| Quero ver:', user.pref_gender);
         
-        // Monta query baseada nas preferências
-        let query;
-        let params;
+        // 🔥 QUERY COM COMPATIBILIDADE MÚTUA!
+        const query = `
+            SELECT u.* 
+            FROM users u
+            WHERE u.id != $1
+              AND u.is_active = TRUE
+              
+              -- 1️⃣ O gênero DELES é o que EU quero ver?
+              AND (
+                $2 = 'todos'
+                OR u.gender = $2
+              )
+              
+              -- 2️⃣ ELES querem ver o MEU gênero?
+              AND (
+                u.pref_gender = 'todos'
+                OR u.pref_gender = $3
+              )
+              
+              -- 3️⃣ A idade DELES está na faixa que EU quero?
+              AND u.age BETWEEN $4 AND $5
+              
+              -- 4️⃣ A MINHA idade está na faixa que ELES querem?
+              AND $6 BETWEEN u.pref_age_min AND u.pref_age_max
+              
+              -- 5️⃣ Não mostrar quem já dei like/dislike
+              AND u.id NOT IN (
+                  SELECT to_user_id FROM likes WHERE from_user_id = $1
+              )
+            ORDER BY RANDOM()
+            LIMIT $7
+        `;
         
-        if (user.pref_gender === 'todos' || !user.pref_gender) {
-            // Se quer ver todos os gêneros
-            query = `
-                SELECT u.* 
-                FROM users u
-                WHERE u.id != $1
-                  AND u.is_active = TRUE
-                  AND u.age BETWEEN $2 AND $3
-                  AND u.id NOT IN (
-                      SELECT to_user_id FROM likes WHERE from_user_id = $1
-                  )
-                ORDER BY RANDOM()
-                LIMIT $4
-            `;
-            params = [
-                user.id,
-                user.pref_age_min || 18,
-                user.pref_age_max || 99,
-                parseInt(limit)
-            ];
-        } else {
-            // Se tem preferência de gênero específica
-            query = `
-                SELECT u.* 
-                FROM users u
-                WHERE u.id != $1
-                  AND u.is_active = TRUE
-                  AND u.gender = $2
-                  AND u.age BETWEEN $3 AND $4
-                  AND u.id NOT IN (
-                      SELECT to_user_id FROM likes WHERE from_user_id = $1
-                  )
-                ORDER BY RANDOM()
-                LIMIT $5
-            `;
-            params = [
-                user.id,
-                user.pref_gender,
-                user.pref_age_min || 18,
-                user.pref_age_max || 99,
-                parseInt(limit)
-            ];
-        }
+        const params = [
+            user.id,              // $1 - Meu ID
+            user.pref_gender,     // $2 - Gênero que EU quero ver
+            user.gender,          // $3 - MEU gênero
+            user.pref_age_min || 18,  // $4 - Idade mínima que EU quero
+            user.pref_age_max || 99,  // $5 - Idade máxima que EU quero
+            user.age,             // $6 - MINHA idade
+            parseInt(limit)       // $7 - Limite de resultados
+        ];
+        
+        console.log('📝 Params:', {
+            'Meu ID': params[0],
+            'Quero ver': params[1],
+            'Eu sou': params[2],
+            'Idade min/max que quero': `${params[3]}-${params[4]}`,
+            'Minha idade': params[5],
+            'Limit': params[6]
+        });
         
         const result = await pool.query(query, params);
         
-        console.log('✅ Perfis encontrados:', result.rows.length);
+        console.log('✅ Perfis compatíveis encontrados:', result.rows.length);
+        
+        if (result.rows.length > 0) {
+            console.log('📋 Perfis:');
+            result.rows.forEach(profile => {
+                console.log(`  - ${profile.name}: é ${profile.gender}, quer ver ${profile.pref_gender}`);
+            });
+        } else {
+            console.log('❌ Nenhum perfil compatível encontrado');
+        }
+        
         res.json(result.rows);
     } catch (error) {
         console.error('Erro ao buscar perfis:', error);
@@ -255,7 +260,7 @@ app.get('/api/users/:telegramId/discover', optionalTelegramAuth, async (req, res
 
 // ========== ROTAS DE LIKES ==========
 
-// POST - Dar like/dislike
+// POST - Dar like/dislike (COM MATCH AUTOMÁTICO!)
 app.post('/api/likes', optionalTelegramAuth, async (req, res) => {
     try {
         const { to_telegram_id, type } = req.body;
@@ -273,12 +278,12 @@ app.post('/api/likes', optionalTelegramAuth, async (req, res) => {
         
         // Busca IDs
         const fromUser = await pool.query(
-            'SELECT id, is_premium, daily_likes, daily_super_likes FROM users WHERE telegram_id = $1',
+            'SELECT id, name, is_premium, daily_likes, daily_super_likes FROM users WHERE telegram_id = $1',
             [from_telegram_id]
         );
         
         const toUser = await pool.query(
-            'SELECT id FROM users WHERE telegram_id = $1',
+            'SELECT id, name FROM users WHERE telegram_id = $1',
             [to_telegram_id]
         );
         
@@ -288,6 +293,9 @@ app.post('/api/likes', optionalTelegramAuth, async (req, res) => {
         
         const from = fromUser.rows[0];
         const to = toUser.rows[0];
+        
+        console.log('👤 De:', from.name, '(ID:', from.id, ')');
+        console.log('👤 Para:', to.name, '(ID:', to.id, ')');
         
         // Verifica limites (apenas se não for premium)
         if (!from.is_premium) {
@@ -315,6 +323,8 @@ app.post('/api/likes', optionalTelegramAuth, async (req, res) => {
             RETURNING *
         `, [from.id, to.id, type]);
         
+        console.log('✅ Like registrado no banco!');
+        
         // Atualiza contador (apenas para usuários não premium)
         if (type === 'like' && !from.is_premium) {
             await pool.query(
@@ -323,21 +333,61 @@ app.post('/api/likes', optionalTelegramAuth, async (req, res) => {
             );
         }
         
-        // Verifica match
-        const matchCheck = await pool.query(
-            'SELECT check_match($1, $2) as has_match',
-            [from.id, to.id]
-        );
+        // 🔥 VERIFICA MATCH MANUALMENTE (mais confiável que a função SQL)
+        console.log('🔍 Verificando se há match...');
         
-        const hasMatch = matchCheck.rows[0].has_match;
+        const matchCheck = await pool.query(`
+            SELECT COUNT(*) as mutual_likes
+            FROM likes l1
+            WHERE l1.from_user_id = $1 
+              AND l1.to_user_id = $2
+              AND l1.type IN ('like', 'superlike')
+              AND EXISTS (
+                  SELECT 1 FROM likes l2
+                  WHERE l2.from_user_id = $2
+                    AND l2.to_user_id = $1
+                    AND l2.type IN ('like', 'superlike')
+              )
+        `, [from.id, to.id]);
         
-        console.log('✅ Like registrado! Match:', hasMatch);
+        const hasMatch = parseInt(matchCheck.rows[0].mutual_likes) > 0;
         
-        res.json({
-            like: result.rows[0],
-            match: hasMatch,
-            remaining_likes: from.is_premium ? 'unlimited' : Math.max(0, 10 - from.daily_likes - 1)
-        });
+        console.log('💕 Tem match?', hasMatch);
+        
+        // Se tem match, cria na tabela matches
+        if (hasMatch) {
+            const smallerId = Math.min(from.id, to.id);
+            const largerId = Math.max(from.id, to.id);
+            
+            console.log('🎉 CRIANDO MATCH!');
+            console.log('   User1:', smallerId);
+            console.log('   User2:', largerId);
+            
+            const matchResult = await pool.query(`
+                INSERT INTO matches (user1_id, user2_id)
+                VALUES ($1, $2)
+                ON CONFLICT (user1_id, user2_id) DO UPDATE
+                SET is_active = TRUE, last_message_at = CURRENT_TIMESTAMP
+                RETURNING *
+            `, [smallerId, largerId]);
+            
+            console.log('✅ Match criado! ID:', matchResult.rows[0].id);
+            
+            res.json({
+                like: result.rows[0],
+                match: true,
+                match_id: matchResult.rows[0].id,
+                remaining_likes: from.is_premium ? 'unlimited' : Math.max(0, 10 - from.daily_likes - 1)
+            });
+        } else {
+            console.log('💚 Like normal, sem match ainda');
+            
+            res.json({
+                like: result.rows[0],
+                match: false,
+                remaining_likes: from.is_premium ? 'unlimited' : Math.max(0, 10 - from.daily_likes - 1)
+            });
+        }
     } catch (error) {
         console.error('Erro ao dar like:', error);
         res.status(500).json({ error: 'Erro interno do servidor' });
@@ -410,11 +460,30 @@ app.get('/api/matches', optionalTelegramAuth, async (req, res) => {
         
         const userId = userResult.rows[0].id;
         
+        console.log('🔍 Buscando matches para user ID:', userId);
+        
         const result = await pool.query(`
-            SELECT * FROM matches_with_last_message
-            WHERE user1_id = $1 OR user2_id = $1
-            ORDER BY last_message_at DESC
+            SELECT 
+                m.id as match_id,
+                m.user1_id,
+                m.user2_id,
+                m.created_at as matched_at,
+                m.last_message_at,
+                u1.telegram_id as user1_telegram_id,
+                u1.name as user1_name,
+                u1.photo_url as user1_photo,
+                u2.telegram_id as user2_telegram_id,
+                u2.name as user2_name,
+                u2.photo_url as user2_photo
+            FROM matches m
+            JOIN users u1 ON m.user1_id = u1.id
+            JOIN users u2 ON m.user2_id = u2.id
+            WHERE (m.user1_id = $1 OR m.user2_id = $1)
+              AND m.is_active = TRUE
+            ORDER BY m.last_message_at DESC
         `, [userId]);
+        
+        console.log('✅ Matches encontrados:', result.rows.length);
         
         res.json(result.rows);
     } catch (error) {
