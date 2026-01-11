@@ -29,6 +29,33 @@ function getMyTelegramId() {
     return localStorage.getItem('testTelegramId') || '123456789';
 }
 
+// ========== BUSCAR MATCHES DO BACKEND PARA FILTRAR ==========
+async function getMyMatches() {
+    try {
+        const telegramId = getMyTelegramId();
+        
+        const response = await fetch(`${API_BASE_URL}/matches?telegram_id=${telegramId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+            }
+        });
+        
+        if (response.ok) {
+            const matches = await response.json();
+            console.log('📋 Matches ativos encontrados:', matches.length);
+            return matches;
+        } else {
+            console.log('⚠️ Não foi possível carregar matches');
+            return [];
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar matches:', error);
+        return [];
+    }
+}
+
 // ========== BUSCAR LIKES RECEBIDOS DO BACKEND ==========
 async function loadLikesReceived() {
     console.log('🔥 Carregando likes recebidos...');
@@ -86,7 +113,31 @@ async function loadLikesReceived() {
         
         const data = await response.json();
         
-        likesReceived = data.map(like => ({
+        // 🔥 BUSCA MATCHES ATIVOS PARA FILTRAR (safeguard adicional)
+        const myMatches = await getMyMatches();
+        const matchedTelegramIds = new Set();
+        
+        // Extrai telegram_ids dos usuários com quem já temos match
+        myMatches.forEach(match => {
+            if (match.user1_telegram_id === parseInt(telegramId)) {
+                matchedTelegramIds.add(match.user2_telegram_id);
+            } else {
+                matchedTelegramIds.add(match.user1_telegram_id);
+            }
+        });
+        
+        console.log('🚫 Filtrando telegram_ids com match:', Array.from(matchedTelegramIds));
+        
+        // 🔥 FILTRA LIKES DE USUÁRIOS QUE JÁ TEM MATCH ATIVO
+        const filteredData = data.filter(like => {
+            const hasMatch = matchedTelegramIds.has(like.telegram_id);
+            if (hasMatch) {
+                console.log('🗑️ Removendo da lista:', like.name, '- já tem match ativo');
+            }
+            return !hasMatch;
+        });
+        
+        likesReceived = filteredData.map(like => ({
             id: like.id,
             telegram_id: like.telegram_id,
             name: like.name,
@@ -102,7 +153,7 @@ async function loadLikesReceived() {
             locked: false
         }));
         
-        console.log('✅ Likes recebidos:', likesReceived.length);
+        console.log('✅ Likes recebidos (após filtrar matches):', likesReceived.length);
         
     } catch (error) {
         console.error('❌ Erro:', error);

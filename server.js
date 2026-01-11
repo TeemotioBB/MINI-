@@ -451,12 +451,19 @@ app.get('/api/likes/received', optionalTelegramAuth, async (req, res) => {
             });
         }
         
+        // 🔥 FILTRA USUÁRIOS QUE JÁ TEM MATCH ATIVO
         const result = await pool.query(`
             SELECT u.*, l.type, l.created_at as liked_at
             FROM likes l
             JOIN users u ON l.from_user_id = u.id
             WHERE l.to_user_id = $1
               AND l.type IN ('like', 'superlike')
+              AND NOT EXISTS (
+                  SELECT 1 FROM matches m
+                  WHERE (m.user1_id = $1 AND m.user2_id = u.id)
+                     OR (m.user2_id = $1 AND m.user1_id = u.id)
+                     AND m.is_active = TRUE
+              )
             ORDER BY l.created_at DESC
         `, [user.id]);
         

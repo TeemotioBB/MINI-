@@ -12,11 +12,27 @@ function checkForMatch(profile) {
 function showMatchAnimation(profile, matchId) {
     console.log('🎉 Iniciando animação de match com:', profile.name);
     console.log('🆔 Match ID recebido do servidor:', matchId);
+    console.log('📦 Dados do perfil:', { 
+        name: profile.name, 
+        telegram_id: profile.telegram_id,
+        photo: profile.photo 
+    });
     
     if (!matchId) {
         console.error('❌ ERRO: matchId não foi recebido do servidor!');
+        alert('Erro ao criar match. Por favor, recarregue a página.');
         return;
     }
+    
+    // Valida que matchId é um número válido
+    const validMatchId = parseInt(matchId);
+    if (isNaN(validMatchId) || validMatchId <= 0) {
+        console.error('❌ ERRO: matchId inválido:', matchId);
+        alert('Erro ao criar match. Match ID inválido.');
+        return;
+    }
+    
+    console.log('✅ Match ID validado:', validMatchId);
     
     // Busca dados do usuário
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
