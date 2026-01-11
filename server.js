@@ -787,6 +787,94 @@ app.get('/api/debug/reset-my-test-users', async (req, res) => {
     }
 });
 
+// ========== DEBUG - RESETAR LIMITE DE LIKES DE NÃO-VIP ==========
+app.get('/api/debug/reset-like-limits', async (req, res) => {
+    try {
+        console.log('🔄 Resetando limites de likes para usuários não-VIP...');
+        
+        // Reseta daily_likes e daily_super_likes para todos os usuários não premium
+        const result = await pool.query(`
+            UPDATE users 
+            SET 
+                daily_likes = 0,
+                daily_super_likes = 0,
+                last_reset_date = CURRENT_DATE
+            WHERE is_premium = FALSE
+            RETURNING id, telegram_id, name, daily_likes, daily_super_likes
+        `);
+        
+        console.log('✅ Limites resetados para', result.rowCount, 'usuários não-VIP');
+        
+        res.json({
+            success: true,
+            message: `Limites de likes resetados para ${result.rowCount} usuários não-VIP`,
+            users_updated: result.rowCount,
+            users: result.rows.map(u => ({
+                telegram_id: u.telegram_id,
+                name: u.name,
+                daily_likes: u.daily_likes,
+                daily_super_likes: u.daily_super_likes
+            }))
+        });
+    } catch (error) {
+        console.error('❌ Erro ao resetar limites:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ========== DEBUG - RESETAR LIMITES DOS USUÁRIOS DE TESTE ==========
+app.get('/api/debug/reset-test-users-limits', async (req, res) => {
+    try {
+        const testUserIds = [8542013089, 1293602874];
+        
+        console.log('🔄 Resetando limites de likes dos usuários de teste:', testUserIds);
+        
+        let result = {
+            success: true,
+            users_updated: []
+        };
+        
+        for (const telegramId of testUserIds) {
+            // Busca e reseta o usuário
+            const userResult = await pool.query(`
+                UPDATE users 
+                SET 
+                    daily_likes = 0,
+                    daily_super_likes = 0,
+                    last_reset_date = CURRENT_DATE
+                WHERE telegram_id = $1
+                RETURNING id, telegram_id, name, daily_likes, daily_super_likes, is_premium
+            `, [telegramId]);
+            
+            if (userResult.rows.length === 0) {
+                console.log('⚠️ Usuário não encontrado:', telegramId);
+                result.users_updated.push({
+                    telegram_id: telegramId,
+                    status: 'not_found'
+                });
+            } else {
+                const user = userResult.rows[0];
+                console.log('✅ Limites resetados:', user.name, '(ID:', user.telegram_id, ')');
+                result.users_updated.push({
+                    telegram_id: user.telegram_id,
+                    name: user.name,
+                    status: 'success',
+                    daily_likes: user.daily_likes,
+                    daily_super_likes: user.daily_super_likes,
+                    is_premium: user.is_premium
+                });
+            }
+        }
+        
+        console.log('🎉 Reset de limites completo!');
+        
+        res.json(result);
+    } catch (error) {
+        console.error('❌ Erro ao resetar limites:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ========== DEBUG - DELETAR COMPLETAMENTE OS 2 USUÁRIOS (COMEÇAR DO ZERO) ==========
 app.get('/api/debug/delete-my-test-users', async (req, res) => {
     try {
