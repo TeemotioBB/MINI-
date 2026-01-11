@@ -1043,8 +1043,40 @@ app.use((req, res) => {
     res.status(404).json({ error: 'Rota não encontrada' });
 });
 
+// ========== ADMIN: RESET LIKES ENTRE DOIS USUÁRIOS DE TESTE ==========
+app.post('/api/admin/reset-likes-between-users', async (req, res) => {
+    const { secret, telegram_id1, telegram_id2 } = req.body;
+
+    if (secret !== process.env.ADMIN_SECRET) {
+        return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    try {
+        // Deleta likes mútuos
+        const result = await pool.query(`
+            DELETE FROM likes 
+            WHERE (from_telegram_id = $1 AND to_telegram_id = $2)
+            OR (from_telegram_id = $2 AND to_telegram_id = $1)
+        `, [telegram_id1, telegram_id2]);
+
+        // Opcional: Deleta matches relacionados
+        await pool.query(`
+            DELETE FROM matches 
+            WHERE (user1_telegram_id = $1 AND user2_telegram_id = $2)
+            OR (user1_telegram_id = $2 AND user2_telegram_id = $1)
+        `, [telegram_id1, telegram_id2]);
+
+        console.log('🧹 Likes resetados entre', telegram_id1, 'e', telegram_id2, ':', result.rowCount);
+        res.json({ success: true, deleted: result.rowCount });
+    } catch (error) {
+        console.error('❌ Erro ao resetar likes:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ========== INICIAR ==========
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
+
