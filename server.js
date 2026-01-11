@@ -928,6 +928,72 @@ app.get('/api/debug/check-limits/:telegramId', async (req, res) => {
     }
 });
 
+// ========== DEBUG - RESETAR APENAS OS LIMITES DOS USUÁRIOS DE TESTE ==========
+app.get('/api/debug/reset-limits-only', async (req, res) => {
+    try {
+        const testUserIds = [8542013089, 1293602874];
+        
+        console.log('🔄 RESETANDO APENAS LIMITES DE:', testUserIds);
+        
+        let result = {
+            success: true,
+            users_updated: []
+        };
+        
+        for (const telegramId of testUserIds) {
+            console.log('\n┌────────────────────────────────');
+            console.log('🔄 Resetando limites de:', telegramId);
+            
+            const userResult = await pool.query(`
+                UPDATE users 
+                SET 
+                    daily_likes = 0,
+                    daily_super_likes = 0,
+                    last_reset_date = CURRENT_DATE
+                WHERE telegram_id = $1
+                RETURNING id, telegram_id, name, daily_likes, daily_super_likes, last_reset_date, is_premium
+            `, [telegramId]);
+            
+            if (userResult.rows.length === 0) {
+                console.log('⚠️ Usuário não encontrado:', telegramId);
+                result.users_updated.push({
+                    telegram_id: telegramId,
+                    status: 'not_found'
+                });
+            } else {
+                const user = userResult.rows[0];
+                console.log('✅ Limites resetados:', user.name);
+                console.log('📊 Novo status:', {
+                    daily_likes: user.daily_likes,
+                    daily_super_likes: user.daily_super_likes,
+                    last_reset_date: user.last_reset_date,
+                    is_premium: user.is_premium
+                });
+                
+                result.users_updated.push({
+                    telegram_id: user.telegram_id,
+                    user_id: user.id,
+                    name: user.name,
+                    status: 'success',
+                    daily_likes: user.daily_likes,
+                    daily_super_likes: user.daily_super_likes,
+                    last_reset_date: user.last_reset_date,
+                    is_premium: user.is_premium
+                });
+            }
+        }
+        
+        console.log('\n┌────────────────────────────────');
+        console.log('🎉 LIMITES RESETADOS COM SUCESSO!');
+        console.log('└────────────────────────────────\n');
+        
+        res.json(result);
+    } catch (error) {
+        console.error('❌ Erro ao resetar limites:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ========== DEBUG - RESETAR LIKES DOS USUÁRIOS DE TESTE ==========
 app.get('/api/debug/reset-test-users-likes', async (req, res) => {
     try {
@@ -940,7 +1006,6 @@ app.get('/api/debug/reset-test-users-likes', async (req, res) => {
             likes_deleted: 0
         };
         
-        // Busca os IDs internos
         const users = await pool.query(
             'SELECT id FROM users WHERE telegram_id = ANY($1)',
             [testUserIds]
@@ -952,7 +1017,6 @@ app.get('/api/debug/reset-test-users-likes', async (req, res) => {
         
         const userIds = users.rows.map(u => u.id);
         
-        // Deleta likes ENTRE esses usuários
         const deleteLikes = await pool.query(`
             DELETE FROM likes 
             WHERE (from_user_id = ANY($1) AND to_user_id = ANY($1))
@@ -975,33 +1039,6 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Algo deu errado!' });
 });
 
-// ❌ NÃO ADICIONE DEPOIS DAQUI
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando na porta ${PORT}`);
-});
-```
-
----
-
-## 🎯 **Posição visual:**
-```
-server.js
-├── app.get('/api/debug/check-limits/:telegramId')  ← Última rota de debug
-│
-├── ✅ ADICIONE A NOVA ROTA AQUI
-│   app.get('/api/debug/reset-test-users-likes')
-│
-├── app.use((err, req, res, next) => { ... })  ← Error handlers
-├── app.use((req, res) => { ... })
-│
-└── app.listen(PORT, () => { ... })  ← Inicio do servidor
-
-// ========== ERROR HANDLERS ==========
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Algo deu errado!' });
-});
-
 app.use((req, res) => {
     res.status(404).json({ error: 'Rota não encontrada' });
 });
@@ -1011,5 +1048,3 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
-
-
