@@ -80,7 +80,7 @@ app.get('/likes.html', (req, res) => {
 });
 
 // ========== ROTAS DE UPLOAD ==========
-app.use('/api/upload', requireTelegramAuth, uploadRoutes);
+app.use('/api/upload', optionalTelegramAuth, uploadRoutes);
 
 // ========== ROTAS DE USUÁRIOS ==========
 
@@ -445,6 +445,7 @@ app.listen(PORT, () => {
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 
 });
+
 
 
 
