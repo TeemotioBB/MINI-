@@ -1,6 +1,6 @@
 // Aguarda o DOM carregar completamente
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('âœ… Iniciando perfil.js completo...');
+    console.log('✅ Iniciando perfil.js completo...');
 
     // ========== ELEMENTOS DO HTML ==========
     const userName = document.getElementById('user-name');
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const verifiedBadge = document.getElementById('verified-badge');
     const userPhotosGrid = document.getElementById('user-photos-grid');
 
-    // BotÃµes principais
+    // Botões principais
     const btnManagePhotos = document.getElementById('btn-manage-photos');
     const btnEditProfile = document.getElementById('btn-edit-profile');
     const btnPrivacy = document.getElementById('btn-privacy');
@@ -30,32 +30,42 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalPremium = document.getElementById('modal-premium');
     const modalHelp = document.getElementById('modal-help');
 
-    // Inputs do modal de ediÃ§Ã£o
+    // Inputs do modal de edição
     const inputName = document.getElementById('input-name');
     const inputAge = document.getElementById('input-age');
     const inputBio = document.getElementById('input-bio');
     const inputInstagram = document.getElementById('input-instagram');
     const inputCity = document.getElementById('input-city');
+    const inputGender = document.getElementById('input-gender');
+    const inputPrefGender = document.getElementById('input-pref-gender');
     const bioCount = document.getElementById('bio-count');
 
     // Modal de fotos
     const photosManagerGrid = document.getElementById('photos-manager-grid');
     const btnSavePhotos = document.getElementById('btn-save-photos');
 
-    // BotÃµes de fechar modais
+    // Botões de fechar modais
     const btnCloseEdit = document.getElementById('btn-close-edit');
     const btnSave = document.getElementById('btn-save');
     const btnSubscribe = document.getElementById('btn-subscribe');
     const btnBoostOnly = document.getElementById('btn-boost-only');
 
-    // ========== DADOS DO USUÃRIO ==========
+    // ========== CONFIGURAÇÃO DA API ==========
+    const API_URL = 'https://mini-production-cf60.up.railway.app/api';
+
+    // ========== DADOS DO USUÁRIO ==========
     let userData = {
+        telegram_id: null,
         name: "",
         age: null,
+        gender: "feminino",
         photos: [],
         bio: "",
         instagram: "",
         city: "",
+        pref_gender: "masculino",
+        pref_age_min: 18,
+        pref_age_max: 99,
         plan: "Spark Free",
         verified: false,
         privacy: {
@@ -73,9 +83,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // ========== FUNÃ‡Ã•ES PRINCIPAIS ==========
+    // ========== PEGAR TELEGRAM ID ==========
+    function getTelegramId() {
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
+            return window.Telegram.WebApp.initDataUnsafe.user.id;
+        }
+        // ID de teste para desenvolvimento
+        return localStorage.getItem('testTelegramId') || '123456789';
+    }
 
-    // Verifica se o perfil estÃ¡ completo
+    function getTelegramInitData() {
+        if (window.Telegram && window.Telegram.WebApp) {
+            return window.Telegram.WebApp.initData;
+        }
+        return '';
+    }
+
+    // ========== FUNÇÕES PRINCIPAIS ==========
+
+    // Verifica se o perfil está completo
     function isProfileComplete() {
         return userData.name && 
                userData.age && 
@@ -83,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
                userData.photos.length > 0;
     }
 
-    // Renderiza fotos do usuÃ¡rio no grid principal
+    // Renderiza fotos do usuário no grid principal
     function renderUserPhotos() {
         if (!userPhotosGrid) return;
         
@@ -180,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
         input.accept = 'image/*';
         input.style.display = 'none';
         
-        input.addEventListener('change', async (e) => {
+        input.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
             
@@ -194,106 +220,57 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Mostra loading
-            showToast('📤 Enviando foto...', 'info');
-            
-            try {
-                // Pega o telegram_id do usuário
-                const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'test_user';
-                
-                // Faz upload via API
-                const photoUrl = await uploadPhotoToCloudinary(file, telegramId);
-                
-                if (photoUrl) {
-                    userData.photos[index] = photoUrl;
-                    renderPhotosManager();
-                    showToast('📸 Foto enviada com sucesso!', 'success');
-                    console.log(`Foto ${index + 1} enviada para Cloudinary:`, photoUrl);
-                }
-            } catch (error) {
-                console.error('Erro no upload:', error);
-                showToast('❌ Erro ao enviar foto. Tente novamente.', 'error');
-            }
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                userData.photos[index] = event.target.result;
+                renderPhotosManager();
+                showToast('📸 Foto adicionada!');
+                console.log(`Foto ${index + 1} adicionada:`, file.name);
+            };
+            reader.readAsDataURL(file);
         });
         
         input.click();
-    }
-    
-    // ========== UPLOAD PARA CLOUDINARY VIA API ==========
-    async function uploadPhotoToCloudinary(file, telegramId) {
-        const API_BASE_URL = 'https://mini-production-cf60.up.railway.app/api';
-        
-        const formData = new FormData();
-        formData.append('photo', file);
-        formData.append('telegram_id', telegramId);
-        
-        // Pega initData do Telegram para autenticação
-        const initData = window.Telegram?.WebApp?.initData || '';
-        
-        try {
-            const response = await fetch(`${API_BASE_URL}/upload/photo`, {
-                method: 'POST',
-                headers: {
-                    'X-Telegram-Init-Data': initData
-                },
-                body: formData
-            });
-            
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Erro no upload');
-            }
-            
-            const result = await response.json();
-            console.log('✅ Upload Cloudinary sucesso:', result);
-            return result.url;
-        } catch (error) {
-            console.error('❌ Erro no upload Cloudinary:', error);
-            
-            // Fallback: salva como base64 local se API falhar
-            console.log('⚠️ Usando fallback local (base64)');
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (event) => resolve(event.target.result);
-                reader.readAsDataURL(file);
-            });
-        }
     }
 
     // Remove foto
     function removePhoto(index) {
         if (index === 0 && userData.photos.length > 1) {
-            showToast('âš ï¸ A primeira foto Ã© a principal. Mova as outras antes de remover.', 'warning');
+            showToast('⚠️ A primeira foto é a principal. Mova as outras antes de remover.', 'warning');
             return;
         }
         
         if (userData.photos.length === 1) {
-            showToast('âš ï¸ VocÃª precisa ter pelo menos 1 foto', 'warning');
+            showToast('⚠️ Você precisa ter pelo menos 1 foto', 'warning');
             return;
         }
         
         userData.photos.splice(index, 1);
         renderPhotosManager();
-        showToast('ðŸ—‘ï¸ Foto removida');
+        showToast('🗑️ Foto removida');
     }
 
     // Salva fotos
-    function savePhotos() {
+    async function savePhotos() {
         if (userData.photos.length === 0) {
-            showToast('âŒ Adicione pelo menos 1 foto', 'error');
+            showToast('❌ Adicione pelo menos 1 foto', 'error');
             return;
         }
         
+        // Salva localmente
         localStorage.setItem('userData', JSON.stringify(userData));
+        
+        // Envia para o servidor
+        await saveToServer();
         
         renderUserPhotos();
         loadUserProfile();
         closeModal(modalPhotos);
-        showToast('âœ… Fotos salvas com sucesso!');
-        console.log('ðŸ“¸ Fotos salvas:', userData.photos);
+        showToast('✅ Fotos salvas com sucesso!');
+        console.log('📸 Fotos salvas:', userData.photos);
     }
 
-    // Carrega dados do usuÃ¡rio
+    // Carrega dados do usuário
     function loadUserProfile() {
         if (userName) userName.textContent = userData.name || "Seu Nome";
         if (userAge) userAge.textContent = userData.age ? `, ${userData.age}` : "";
@@ -314,14 +291,14 @@ document.addEventListener('DOMContentLoaded', function() {
         renderUserPhotos();
     }
 
-    // Abre modal genÃ©rico
+    // Abre modal genérico
     function openModal(modal) {
         if (!modal) return;
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     }
 
-    // Fecha modal genÃ©rico
+    // Fecha modal genérico
     function closeModal(modal) {
         if (!modal) return;
         modal.classList.add('hidden');
@@ -335,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Mostra toast (notificaÃ§Ã£o temporÃ¡ria)
+    // Mostra toast (notificação temporária)
     function showToast(message, type = 'success') {
         const colors = {
             success: 'bg-green-500',
@@ -362,6 +339,99 @@ document.addEventListener('DOMContentLoaded', function() {
         bioCount.textContent = inputBio.value.length;
     }
 
+    // ========== SALVAR NO SERVIDOR ==========
+    async function saveToServer() {
+        try {
+            const telegramId = getTelegramId();
+            
+            console.log('📤 Enviando perfil para o servidor...');
+            console.log('📱 Telegram ID:', telegramId);
+            
+            const response = await fetch(`${API_URL}/users`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Telegram-Init-Data': getTelegramInitData()
+                },
+                body: JSON.stringify({
+                    telegram_id: telegramId,
+                    name: userData.name,
+                    age: userData.age,
+                    gender: userData.gender || 'feminino',
+                    bio: userData.bio || '',
+                    city: userData.city || '',
+                    photo_url: userData.photos[0] || null,
+                    photos: userData.photos,
+                    pref_gender: userData.pref_gender || 'masculino',
+                    pref_age_min: userData.pref_age_min || 18,
+                    pref_age_max: userData.pref_age_max || 99
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Perfil salvo no servidor:', data);
+                return data;
+            } else {
+                const error = await response.json();
+                console.error('❌ Erro do servidor:', error);
+                throw new Error(error.error || 'Erro ao salvar');
+            }
+        } catch (error) {
+            console.error('❌ Erro ao enviar para servidor:', error);
+            showToast('⚠️ Salvo localmente. Sem conexão com servidor.', 'warning');
+            return null;
+        }
+    }
+
+    // ========== CARREGAR DO SERVIDOR ==========
+    async function loadFromServer() {
+        try {
+            const telegramId = getTelegramId();
+            
+            console.log('📥 Buscando perfil do servidor...');
+            
+            const response = await fetch(`${API_URL}/users/${telegramId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Telegram-Init-Data': getTelegramInitData()
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Perfil carregado do servidor:', data);
+                
+                // Atualiza userData com dados do servidor
+                userData.telegram_id = data.telegram_id;
+                userData.name = data.name || userData.name;
+                userData.age = data.age || userData.age;
+                userData.gender = data.gender || userData.gender;
+                userData.bio = data.bio || userData.bio;
+                userData.city = data.city || userData.city;
+                userData.photos = data.photos || (data.photo_url ? [data.photo_url] : userData.photos);
+                userData.pref_gender = data.pref_gender || userData.pref_gender;
+                userData.pref_age_min = data.pref_age_min || userData.pref_age_min;
+                userData.pref_age_max = data.pref_age_max || userData.pref_age_max;
+                userData.verified = data.is_premium || false;
+                
+                // Salva localmente também
+                localStorage.setItem('userData', JSON.stringify(userData));
+                
+                return data;
+            } else if (response.status === 404) {
+                console.log('📭 Usuário não encontrado no servidor (novo usuário)');
+                return null;
+            } else {
+                throw new Error('Erro ao buscar perfil');
+            }
+        } catch (error) {
+            console.error('❌ Erro ao carregar do servidor:', error);
+            return null;
+        }
+    }
+
     // ========== EDITAR PERFIL ==========
 
     function openEditModal() {
@@ -370,18 +440,20 @@ document.addEventListener('DOMContentLoaded', function() {
         if (inputBio) inputBio.value = userData.bio || "";
         if (inputInstagram) inputInstagram.value = userData.instagram || "";
         if (inputCity) inputCity.value = userData.city || "";
+        if (inputGender) inputGender.value = userData.gender || "feminino";
+        if (inputPrefGender) inputPrefGender.value = userData.pref_gender || "masculino";
         updateBioCount();
         openModal(modalEdit);
     }
 
-    function saveProfile() {
+    async function saveProfile() {
         if (!inputName || !inputName.value.trim()) {
-            showToast('âŒ Nome nÃ£o pode estar vazio', 'error');
+            showToast('❌ Nome não pode estar vazio', 'error');
             return;
         }
         
         if (!inputAge || inputAge.value < 18 || inputAge.value > 99) {
-            showToast('âŒ Idade deve estar entre 18 e 99', 'error');
+            showToast('❌ Idade deve estar entre 18 e 99', 'error');
             return;
         }
         
@@ -390,14 +462,26 @@ document.addEventListener('DOMContentLoaded', function() {
         if (inputBio) userData.bio = inputBio.value.trim();
         if (inputInstagram) userData.instagram = inputInstagram.value.trim();
         if (inputCity) userData.city = inputCity.value.trim();
+        if (inputGender) userData.gender = inputGender.value;
+        if (inputPrefGender) userData.pref_gender = inputPrefGender.value;
         
+        // Salva localmente
         localStorage.setItem('userData', JSON.stringify(userData));
+        
+        // ✅ ENVIA PARA O SERVIDOR!
+        showToast('📤 Salvando...', 'info');
+        const result = await saveToServer();
         
         loadUserProfile();
         closeModal(modalEdit);
-        showToast('âœ… Perfil atualizado com sucesso!');
         
-        console.log('ðŸ“ Dados salvos:', userData);
+        if (result) {
+            showToast('✅ Perfil salvo no servidor!', 'success');
+        } else {
+            showToast('✅ Perfil salvo localmente!', 'success');
+        }
+        
+        console.log('📝 Dados salvos:', userData);
     }
 
     // ========== TROCAR FOTO ==========
@@ -407,7 +491,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function openPhotoManager(e) {
         if (e) e.preventDefault();
-        console.log('ðŸ“¸ Abrindo gerenciador de fotos!');
+        console.log('📸 Abrindo gerenciador de fotos!');
         renderPhotosManager();
         openModal(modalPhotos);
     }
@@ -448,11 +532,12 @@ document.addEventListener('DOMContentLoaded', function() {
             privateProfile: togglePrivate ? togglePrivate.checked : false
         };
         
-        console.log('ðŸ”’ Privacidade salva:', userData.privacy);
-        showToast('ðŸ”’ ConfiguraÃ§Ãµes de privacidade salvas!');
+        localStorage.setItem('userData', JSON.stringify(userData));
+        console.log('🔒 Privacidade salva:', userData.privacy);
+        showToast('🔒 Configurações de privacidade salvas!');
     }
 
-    // ========== NOTIFICAÃ‡Ã•ES ==========
+    // ========== NOTIFICAÇÕES ==========
 
     function loadNotificationSettings() {
         const notifLikes = document.getElementById('notif-likes');
@@ -483,8 +568,9 @@ document.addEventListener('DOMContentLoaded', function() {
             promo: notifPromo ? notifPromo.checked : false
         };
         
-        console.log('ðŸ”” NotificaÃ§Ãµes salvas:', userData.notifications);
-        showToast('ðŸ”” PreferÃªncias de notificaÃ§Ã£o salvas!');
+        localStorage.setItem('userData', JSON.stringify(userData));
+        console.log('🔔 Notificações salvas:', userData.notifications);
+        showToast('🔔 Preferências de notificação salvas!');
     }
 
     // ========== EVENT LISTENERS ==========
@@ -532,13 +618,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (btnSubscribe) {
         btnSubscribe.addEventListener('click', () => {
-            if (confirm('ðŸ’Ž Confirmar assinatura Spark Premium por R$ 29,90/mÃªs?')) {
-                showToast('ðŸŽ‰ Processando pagamento...', 'info');
+            if (confirm('💎 Confirmar assinatura Spark Premium por R$ 29,90/mês?')) {
+                showToast('🎉 Processando pagamento...', 'info');
                 setTimeout(() => {
                     userData.plan = 'Spark Premium';
                     loadUserProfile();
                     closeModal(modalPremium);
-                    showToast('ðŸ‘‘ Bem-vindo ao Spark Premium!', 'success');
+                    showToast('👑 Bem-vindo ao Spark Premium!', 'success');
                 }, 2000);
             }
         });
@@ -546,8 +632,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (btnBoostOnly) {
         btnBoostOnly.addEventListener('click', () => {
-            if (confirm('âš¡ Comprar 1 Boost de 1 hora por R$ 4,90?')) {
-                showToast('âš¡ Boost ativado por 1 hora!', 'success');
+            if (confirm('⚡ Comprar 1 Boost de 1 hora por R$ 4,90?')) {
+                showToast('⚡ Boost ativado por 1 hora!', 'success');
                 closeModal(modalPremium);
             }
         });
@@ -557,8 +643,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (btnLogout) {
         btnLogout.addEventListener('click', () => {
-            if (confirm('ðŸšª Tem certeza que deseja sair da conta?')) {
-                showToast('ðŸ‘‹ Saindo...', 'info');
+            if (confirm('🚪 Tem certeza que deseja sair da conta?')) {
+                showToast('👋 Saindo...', 'info');
                 setTimeout(() => {
                     window.location.href = 'index.html';
                 }, 1000);
@@ -582,23 +668,42 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // ========== INICIALIZAÃ‡ÃƒO ==========
+    // ========== INICIALIZAÇÃO ==========
     
+    // Primeiro carrega dados locais
     const savedData = localStorage.getItem('userData');
     if (savedData) {
         try {
             const parsedData = JSON.parse(savedData);
             userData = { ...userData, ...parsedData };
-            console.log('âœ… Dados carregados do localStorage:', userData);
+            console.log('✅ Dados carregados do localStorage:', userData);
         } catch (e) {
-            console.error('âŒ Erro ao carregar dados:', e);
+            console.error('❌ Erro ao carregar dados:', e);
         }
     }
     
+    // Pega dados do Telegram se disponível
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user) {
+        const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+        userData.telegram_id = tgUser.id;
+        
+        // Se não tem nome, usa do Telegram
+        if (!userData.name) {
+            userData.name = tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '');
+        }
+        
+        console.log('📱 Dados do Telegram:', tgUser);
+    }
+    
+    // Depois tenta carregar do servidor (atualiza se tiver dados mais recentes)
+    loadFromServer().then(() => {
+        loadUserProfile();
+    });
+    
     loadUserProfile();
-    console.log('ðŸŽ‰ perfil.js carregado com sucesso!');
+    console.log('🎉 perfil.js carregado com sucesso!');
 
-    // ========== CSS PARA TOGGLES E ANIMAÃ‡Ã•ES ==========
+    // ========== CSS PARA TOGGLES E ANIMAÇÕES ==========
     const style = document.createElement('style');
     style.textContent = `
         @keyframes slide-up {
