@@ -5,38 +5,39 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { Pool } = require('pg');
 
-// Configuração do PostgreSQL
+// ConfiguraÃ§Ã£o do PostgreSQL
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Configuração do Cloudinary
+// ConfiguraÃ§Ã£o do Cloudinary
+// ⚠️ CREDENCIAIS DIRETAS - NÃO RECOMENDADO PARA PRODUÇÃO!
 cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
+    cloud_name: 'dx5ki2s1d',
+    api_key: '568959253727239',
+    api_secret: 'ffQsNQcYcSgE3VFdoLrsBYGXov4'
 });
 
-// Configuração do Multer (aceita até 4 fotos)
+// ConfiguraÃ§Ã£o do Multer (aceita atÃ© 4 fotos)
 const storage = multer.memoryStorage();
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB máximo
-        files: 4 // Máximo 4 fotos
+        fileSize: 5 * 1024 * 1024, // 5MB mÃ¡ximo
+        files: 4 // MÃ¡ximo 4 fotos
     },
     fileFilter: (req, file, cb) => {
         // Aceita apenas imagens
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
         } else {
-            cb(new Error('Apenas imagens são permitidas!'), false);
+            cb(new Error('Apenas imagens sÃ£o permitidas!'), false);
         }
     }
 });
 
-// ========== UPLOAD DE FOTO ÚNICA ==========
+// ========== UPLOAD DE FOTO ÃšNICA ==========
 router.post('/photo', upload.single('photo'), async (req, res) => {
     try {
         if (!req.file) {
@@ -46,7 +47,7 @@ router.post('/photo', upload.single('photo'), async (req, res) => {
         const { telegram_id } = req.body;
 
         if (!telegram_id) {
-            return res.status(400).json({ error: 'telegram_id é obrigatório' });
+            return res.status(400).json({ error: 'telegram_id Ã© obrigatÃ³rio' });
         }
 
         // Faz upload para Cloudinary
@@ -91,7 +92,7 @@ router.post('/photo', upload.single('photo'), async (req, res) => {
     }
 });
 
-// ========== UPLOAD DE MÚLTIPLAS FOTOS ==========
+// ========== UPLOAD DE MÃšLTIPLAS FOTOS ==========
 router.post('/photos', upload.array('photos', 4), async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
@@ -101,7 +102,7 @@ router.post('/photos', upload.array('photos', 4), async (req, res) => {
         const { telegram_id } = req.body;
 
         if (!telegram_id) {
-            return res.status(400).json({ error: 'telegram_id é obrigatório' });
+            return res.status(400).json({ error: 'telegram_id Ã© obrigatÃ³rio' });
         }
 
         // Upload de todas as fotos em paralelo
@@ -143,7 +144,7 @@ router.post('/photos', upload.array('photos', 4), async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Erro no upload múltiplo:', error);
+        console.error('Erro no upload mÃºltiplo:', error);
         res.status(500).json({ error: 'Erro ao fazer upload das fotos' });
     }
 });
@@ -154,7 +155,7 @@ router.delete('/photo', async (req, res) => {
         const { telegram_id, public_id } = req.body;
 
         if (!telegram_id || !public_id) {
-            return res.status(400).json({ error: 'telegram_id e public_id são obrigatórios' });
+            return res.status(400).json({ error: 'telegram_id e public_id sÃ£o obrigatÃ³rios' });
         }
 
         // Deleta do Cloudinary
@@ -167,7 +168,7 @@ router.delete('/photo', async (req, res) => {
         );
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Usuário não encontrado' });
+            return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
         }
 
         // Remove a foto do array
