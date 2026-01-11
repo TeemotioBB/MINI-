@@ -610,9 +610,6 @@ app.post('/api/matches/:matchId/messages', optionalTelegramAuth, async (req, res
 
 
 // ========== ADICIONE ESTA ROTA NO SEU server.js ==========
-// Cole esta rota ANTES dos "ERROR HANDLERS" (antes da linha app.use((err, req, res, next) => {)
-
-// GET - Contar likes recebidos (para usuários não-premium verem quantos likes têm)
 app.get('/api/likes/count', optionalTelegramAuth, async (req, res) => {
     try {
         const telegram_id = req.telegramUser?.telegram_id || req.query.telegram_id;
@@ -1105,4 +1102,3 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
-
