@@ -187,6 +187,8 @@ app.get('/api/users/:telegramId/discover', optionalTelegramAuth, async (req, res
         console.log('👤 Usuário:', user.name, '| Eu sou:', user.gender, '| Quero ver:', user.pref_gender);
         
         // 🔥 QUERY COM COMPATIBILIDADE MÚTUA!
+        // ✅ CORRIGIDO: Agora usa NOT EXISTS para filtrar TODOS os perfis que o usuário já interagiu
+        // (like, superlike ou dislike), evitando que apareçam novamente
         const query = `
             SELECT u.* 
             FROM users u
@@ -211,9 +213,10 @@ app.get('/api/users/:telegramId/discover', optionalTelegramAuth, async (req, res
               -- 4️⃣ A MINHA idade está na faixa que ELES querem?
               AND $6 BETWEEN u.pref_age_min AND u.pref_age_max
               
-              -- 5️⃣ Não mostrar quem já dei like/dislike
-              AND u.id NOT IN (
-                  SELECT to_user_id FROM likes WHERE from_user_id = $1
+              -- 5️⃣ Não mostrar quem já dei like/dislike/superlike (qualquer interação)
+              -- Usa NOT EXISTS ao invés de NOT IN para melhor performance e correção
+              AND NOT EXISTS (
+                  SELECT 1 FROM likes WHERE from_user_id = $1 AND to_user_id = u.id
               )
             ORDER BY RANDOM()
             LIMIT $7
@@ -319,11 +322,16 @@ app.post('/api/likes', optionalTelegramAuth, async (req, res) => {
             INSERT INTO likes (from_user_id, to_user_id, type)
             VALUES ($1, $2, $3)
             ON CONFLICT (from_user_id, to_user_id) 
-            DO UPDATE SET type = EXCLUDED.type
+            DO UPDATE SET type = EXCLUDED.type, created_at = CURRENT_TIMESTAMP
             RETURNING *
         `, [from.id, to.id, type]);
         
-        console.log('✅ Like registrado no banco!');
+        console.log('✅ Like registrado no banco!', {
+            like_id: result.rows[0].id,
+            from_user_id: from.id,
+            to_user_id: to.id,
+            type: type
+        });
         
         // Atualiza contador (apenas para usuários não premium)
         if (type === 'like' && !from.is_premium) {
@@ -333,59 +341,83 @@ app.post('/api/likes', optionalTelegramAuth, async (req, res) => {
             );
         }
         
-        // 🔥 VERIFICA MATCH MANUALMENTE (mais confiável que a função SQL)
-        console.log('🔍 Verificando se há match...');
-        
-        const matchCheck = await pool.query(`
-            SELECT COUNT(*) as mutual_likes
-            FROM likes l1
-            WHERE l1.from_user_id = $1 
-              AND l1.to_user_id = $2
-              AND l1.type IN ('like', 'superlike')
-              AND EXISTS (
-                  SELECT 1 FROM likes l2
-                  WHERE l2.from_user_id = $2
-                    AND l2.to_user_id = $1
-                    AND l2.type IN ('like', 'superlike')
-              )
-        `, [from.id, to.id]);
-        
-        const hasMatch = parseInt(matchCheck.rows[0].mutual_likes) > 0;
-        
-        console.log('💕 Tem match?', hasMatch);
-        
-        // Se tem match, cria na tabela matches
-        if (hasMatch) {
-            const smallerId = Math.min(from.id, to.id);
-            const largerId = Math.max(from.id, to.id);
+        // 🔥 VERIFICA MATCH APENAS PARA LIKES/SUPERLIKES (não para dislikes!)
+        if (type === 'like' || type === 'superlike') {
+            console.log('🔍 Verificando se há match...');
+            console.log('   Checando se ambos deram like:');
+            console.log('   - User A (from):', from.id, 'deu', type, 'para User B (to):', to.id);
+            console.log('   - Verificando se User B (to):', to.id, 'já deu like/superlike para User A (from):', from.id);
             
-            console.log('🎉 CRIANDO MATCH!');
-            console.log('   User1:', smallerId);
-            console.log('   User2:', largerId);
+            const matchCheck = await pool.query(`
+                SELECT COUNT(*) as mutual_likes
+                FROM likes l1
+                WHERE l1.from_user_id = $1 
+                  AND l1.to_user_id = $2
+                  AND l1.type IN ('like', 'superlike')
+                  AND EXISTS (
+                      SELECT 1 FROM likes l2
+                      WHERE l2.from_user_id = $2
+                        AND l2.to_user_id = $1
+                        AND l2.type IN ('like', 'superlike')
+                  )
+            `, [from.id, to.id]);
             
-            const matchResult = await pool.query(`
-                INSERT INTO matches (user1_id, user2_id)
-                VALUES ($1, $2)
-                ON CONFLICT (user1_id, user2_id) DO UPDATE
-                SET is_active = TRUE, last_message_at = CURRENT_TIMESTAMP
-                RETURNING *
-            `, [smallerId, largerId]);
+            const hasMatch = parseInt(matchCheck.rows[0].mutual_likes) > 0;
             
-            console.log('✅ Match criado! ID:', matchResult.rows[0].id);
+            console.log('💕 Tem match?', hasMatch);
             
-            res.json({
-                like: result.rows[0],
-                match: true,
-                match_id: matchResult.rows[0].id,
-                remaining_likes: from.is_premium ? 'unlimited' : Math.max(0, 10 - from.daily_likes - 1)
-            });
+            // Debug adicional: verificar likes individuais
+            const debugLikes = await pool.query(`
+                SELECT from_user_id, to_user_id, type 
+                FROM likes 
+                WHERE (from_user_id = $1 AND to_user_id = $2)
+                   OR (from_user_id = $2 AND to_user_id = $1)
+            `, [from.id, to.id]);
+            
+            console.log('🔍 Likes entre os dois usuários:', debugLikes.rows);
+            
+            // Se tem match, cria na tabela matches
+            if (hasMatch) {
+                const smallerId = Math.min(from.id, to.id);
+                const largerId = Math.max(from.id, to.id);
+                
+                console.log('🎉 CRIANDO MATCH!');
+                console.log('   User1:', smallerId);
+                console.log('   User2:', largerId);
+                
+                const matchResult = await pool.query(`
+                    INSERT INTO matches (user1_id, user2_id)
+                    VALUES ($1, $2)
+                    ON CONFLICT (user1_id, user2_id) DO UPDATE
+                    SET is_active = TRUE, last_message_at = CURRENT_TIMESTAMP
+                    RETURNING *
+                `, [smallerId, largerId]);
+                
+                console.log('✅ Match criado! ID:', matchResult.rows[0].id);
+                
+                res.json({
+                    like: result.rows[0],
+                    match: true,
+                    match_id: matchResult.rows[0].id,
+                    remaining_likes: from.is_premium ? 'unlimited' : Math.max(0, 10 - from.daily_likes - 1)
+                });
+            } else {
+                console.log('💚 Like normal, sem match ainda');
+                
+                res.json({
+                    like: result.rows[0],
+                    match: false,
+                    remaining_likes: from.is_premium ? 'unlimited' : Math.max(0, 10 - from.daily_likes - 1)
+                });
+            }
         } else {
-            console.log('💚 Like normal, sem match ainda');
+            // Para dislikes, apenas retorna sucesso sem verificar match
+            console.log('👎 Dislike registrado, sem verificação de match');
             
             res.json({
                 like: result.rows[0],
                 match: false,
-                remaining_likes: from.is_premium ? 'unlimited' : Math.max(0, 10 - from.daily_likes - 1)
+                remaining_likes: from.is_premium ? 'unlimited' : Math.max(0, 10 - from.daily_likes)
             });
         }
     } catch (error) {
