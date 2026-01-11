@@ -199,7 +199,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 setTimeout(() => {
                     if (typeof showMatchAnimation !== 'undefined') {
-                        showMatchAnimation(profile);
+                        // 🔥 CORREÇÃO: PASSA O MATCH_ID DO SERVIDOR!
+                        showMatchAnimation(profile, response.match_id);
                     }
                 }, 300);
             }, 500);
@@ -285,7 +286,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 setTimeout(() => {
                     if (typeof showMatchAnimation !== 'undefined') {
-                        showMatchAnimation(profile);
+                        // 🔥 CORREÇÃO: PASSA O MATCH_ID DO SERVIDOR!
+                        showMatchAnimation(profile, response.match_id);
                     }
                 }, 300);
             }, 600);
@@ -321,7 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const myTelegramId = getMyTelegramId();
             
             console.log('🔄 Chamando API:', {
-                from: myTelegramId,  // ✅ ADICIONADO!
+                from: myTelegramId,
                 to: toTelegramId,
                 type: type
             });
@@ -333,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
                 },
                 body: JSON.stringify({
-                    from_telegram_id: myTelegramId,  // ✅ ADICIONADO!
+                    from_telegram_id: myTelegramId,
                     to_telegram_id: toTelegramId,
                     type: type
                 })
@@ -343,7 +345,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 console.log('✅ Resposta do servidor:', data);
                 
-                // Se deu match no servidor, retorna true
                 if (data.match) {
                     console.log('🎉 MATCH CONFIRMADO PELO SERVIDOR!');
                 }
