@@ -9,7 +9,6 @@ const sendBtn = document.getElementById('send-btn');
 const backToList = document.getElementById('back-to-list');
 const chatUserName = document.getElementById('chat-user-name');
 const chatUserPhoto = document.getElementById('chat-user-photo');
-const inputContainer = document.getElementById('input-container');
 const bottomNav = document.getElementById('bottom-nav');
 
 // ========== CONFIGURAÇÃO DA API ==========
@@ -18,8 +17,8 @@ const API_BASE_URL = 'https://mini-production-cf60.up.railway.app/api';
 // ========== DADOS DE CONVERSAS ==========
 let conversations = [];
 let currentChat = null;
-let myUserId = null; // ID do usuário atual (user_id do banco, não telegram_id)
-let myTelegramId = null; // Telegram ID do usuário atual
+let myUserId = null;
+let myTelegramId = null;
 
 // ========== PEGAR MEU TELEGRAM ID ==========
 function getMyTelegramId() {
@@ -84,7 +83,7 @@ function formatTime(timestamp) {
     
     const date = new Date(timestamp);
     const now = new Date();
-    const diff = Math.floor((now - date) / 1000); // segundos
+    const diff = Math.floor((now - date) / 1000);
     
     if (diff < 60) return 'Agora';
     if (diff < 3600) return `${Math.floor(diff / 60)}min`;
@@ -96,7 +95,7 @@ function formatTime(timestamp) {
 
 // ========== CARREGAR MATCHES DO BACKEND ==========
 async function loadConversationsFromServer() {
-    console.log('📥 Carregando matches do backend...');
+    console.log('🔥 Carregando matches do backend...');
     
     try {
         if (!myTelegramId) {
@@ -125,9 +124,7 @@ async function loadConversationsFromServer() {
             await getMyUserId();
         }
         
-        // Mapeia os matches para o formato do frontend
         const backendConversations = data.map(match => {
-            // Determina qual usuário é o "outro" (não sou eu)
             const isUser1 = match.user1_id === myUserId;
             
             const otherUser = {
@@ -182,7 +179,7 @@ async function loadConversationsFromServer() {
 
 // ========== CARREGAR MENSAGENS DO BACKEND ==========
 async function loadMessagesFromServer(matchId) {
-    console.log('📥 Carregando mensagens do match:', matchId);
+    console.log('🔥 Carregando mensagens do match:', matchId);
     
     try {
         const response = await fetch(`${API_BASE_URL}/matches/${matchId}/messages?limit=50`, {
@@ -201,7 +198,6 @@ async function loadMessagesFromServer(matchId) {
         const data = await response.json();
         console.log('📦 Mensagens recebidas:', data.length);
         
-        // Converte mensagens do backend para o formato do frontend
         const messages = data.map(msg => ({
             sender: msg.sender_id === myUserId ? 'me' : 'other',
             text: msg.content,
@@ -221,85 +217,68 @@ async function loadMessagesFromServer(matchId) {
     }
 }
 
-// ========== 🔥 MESCLAR CONVERSAS (LOCALSTORAGE + BACKEND) ==========
+// ========== MESCLAR CONVERSAS ==========
 async function loadAllConversations() {
-    console.log('🔄 Carregando TODAS as conversas (localStorage + backend)...');
+    console.log('🔄 Carregando TODAS as conversas...');
     
-    // 1. Carrega do localStorage (conversas criadas pelo match.js)
     const localConversations = loadConversationsFromStorage();
-    console.log('📱 Conversas do localStorage:', localConversations.length);
+    console.log('📱 localStorage:', localConversations.length);
     
-    // 2. Carrega do backend (matches do banco)
     const backendConversations = await loadConversationsFromServer();
-    console.log('☁️ Conversas do backend:', backendConversations.length);
+    console.log('☁️ backend:', backendConversations.length);
     
-    // 3. Mescla sem duplicar usando Map
     const conversationMap = new Map();
     
-    // Adiciona conversas do backend primeiro (são a fonte de verdade)
     backendConversations.forEach(conv => {
         conversationMap.set(conv.id, conv);
     });
     
-    // Mescla conversas do localStorage (mantém mensagens locais)
     localConversations.forEach(conv => {
         if (conversationMap.has(conv.id)) {
-            // Se já existe no backend, mescla as mensagens
             const existing = conversationMap.get(conv.id);
             
-            // Mantém mensagens locais que não estão no servidor
             if (conv.messages && conv.messages.length > 0) {
                 const localOnlyMessages = conv.messages.filter(m => !m.fromServer);
                 existing.messages = [...existing.messages, ...localOnlyMessages];
             }
             
-            // Atualiza lastMessage e time do localStorage se mais recente
             if (conv.matchTimestamp > (existing.matchTimestamp || 0)) {
                 existing.lastMessage = conv.lastMessage;
                 existing.time = conv.time;
             }
         } else {
-            // Conversa só existe no localStorage (caso raro)
             conversationMap.set(conv.id, conv);
         }
     });
     
-    // Converte Map de volta para array
     conversations = Array.from(conversationMap.values());
     
-    // Ordena por timestamp (mais recente primeiro)
     conversations.sort((a, b) => {
         const timeA = a.matchTimestamp || 0;
         const timeB = b.matchTimestamp || 0;
         return timeB - timeA;
     });
     
-    console.log('✅ Total de conversas mescladas:', conversations.length);
-    console.log('📋 Conversas:', conversations.map(c => ({ id: c.id, name: c.name })));
+    console.log('✅ Total mesclado:', conversations.length);
     
-    // Salva a versão mesclada no localStorage
     saveConversationsToStorage();
     
     return conversations;
 }
 
-// ========== RENDERIZAR LISTA DE CONVERSAS ==========
+// ========== RENDERIZAR LISTA ==========
 function renderChatList() {
-    console.log('🎨 Renderizando lista de conversas...');
-    console.log('📊 Total de conversas:', conversations.length);
+    console.log('🎨 Renderizando lista...');
     
     if (conversations.length === 0) {
         chatList.innerHTML = '';
         noChats.classList.remove('hidden');
-        console.log('ℹ️ Nenhuma conversa para exibir');
         return;
     }
 
     noChats.classList.add('hidden');
     
-    chatList.innerHTML = conversations.map(conv => {
-        console.log('📌 Renderizando:', conv.name, '| ID:', conv.id);
-        return `
+    chatList.innerHTML = conversations.map(conv => `
         <div class="chat-item flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-50 cursor-pointer transition-all" data-chat-id="${conv.id}">
             <div class="relative">
                 <img src="${conv.photo}" class="w-14 h-14 rounded-full object-cover border-2 border-white shadow" onerror="this.src='https://via.placeholder.com/100?text=Foto'">
@@ -318,16 +297,11 @@ function renderChatList() {
                 </div>
             ` : ''}
         </div>
-    `;
-    }).join('');
+    `).join('');
 
-    console.log('✅ Lista renderizada com sucesso!');
-
-    // Adiciona evento de clique em cada conversa
     document.querySelectorAll('.chat-item').forEach(item => {
         item.addEventListener('click', () => {
             const chatId = parseInt(item.dataset.chatId);
-            console.log('🖱️ Conversa clicada:', chatId);
             openChat(chatId);
         });
     });
@@ -341,78 +315,48 @@ async function openChat(chatId) {
     
     if (!currentChat) {
         console.error('❌ Conversa não encontrada:', chatId);
-        console.log('📋 Conversas disponíveis:', conversations.map(c => ({ id: c.id, name: c.name })));
         return;
     }
 
-    console.log('✅ Conversa encontrada:', currentChat.name);
-    console.log('📝 Mensagens locais:', currentChat.messages?.length || 0);
+    console.log('✅ Conversa:', currentChat.name);
 
-    // Atualiza informações do header
     chatUserName.textContent = currentChat.name;
     chatUserPhoto.src = currentChat.photo;
 
-    // Marca mensagens como lidas
     currentChat.unread = 0;
     saveConversationsToStorage();
 
-    // 🔥 CARREGA MENSAGENS DO SERVIDOR
     const serverMessages = await loadMessagesFromServer(chatId);
     
     if (serverMessages.length > 0) {
-        // Mescla mensagens do servidor com as locais
         const localMessages = currentChat.messages?.filter(m => m.sender === 'system') || [];
         currentChat.messages = [...localMessages, ...serverMessages];
-        console.log('📥 Mensagens do servidor carregadas:', serverMessages.length);
     }
 
-    // Garante que messages existe
     if (!currentChat.messages || currentChat.messages.length === 0) {
         currentChat.messages = [
             {
                 sender: 'system',
-                text: `🎉 Parabéns! Você e ${currentChat.name} deram match! Que tal começar uma conversa?`,
+                text: `🎉 Parabéns! Você e ${currentChat.name} deram match!`,
                 time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
             }
         ];
     }
 
-    // Renderiza as mensagens
     renderMessages();
 
-    // Esconde lista e bottom nav, mostra chat
     chatListScreen.classList.add('hidden');
-    bottomNav.classList.add('hidden');
+    if (bottomNav) bottomNav.classList.add('hidden');
     chatScreen.classList.remove('hidden');
 
-    // Scroll para o fim quando abrir o chat
-    setTimeout(() => {
-        scrollToBottom();
-    }, 150);
-    
-    console.log('✅ Chat aberto com sucesso!');
+    setTimeout(() => scrollToBottom(), 150);
 }
 
 // ========== RENDERIZAR MENSAGENS ==========
 function renderMessages() {
-    if (!currentChat) return;
-
-    console.log('💬 Renderizando mensagens para:', currentChat.name);
-    console.log('📝 Total de mensagens:', currentChat.messages?.length || 0);
-
-    // Garante que messages existe
-    if (!currentChat.messages || currentChat.messages.length === 0) {
-        currentChat.messages = [
-            {
-                sender: 'system',
-                text: `🎉 Parabéns! Você e ${currentChat.name} deram match! Que tal começar uma conversa?`,
-                time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-            }
-        ];
-    }
+    if (!currentChat || !messagesContainer) return;
 
     messagesContainer.innerHTML = currentChat.messages.map(msg => {
-        // Mensagem do sistema (match)
         if (msg.sender === 'system') {
             return `
                 <div class="flex justify-center my-4">
@@ -435,30 +379,21 @@ function renderMessages() {
         `;
     }).join('');
 
-    // Scroll múltiplo para garantir
     setTimeout(() => scrollToBottom(), 50);
-    setTimeout(() => scrollToBottom(), 100);
-    
-    console.log('✅ Mensagens renderizadas!');
 }
 
-// ========== 🔥 ENVIAR MENSAGEM (CORRIGIDO - ENVIA PARA O BACKEND!) ==========
+// ========== ENVIAR MENSAGEM ==========
 async function sendMessage() {
     const text = messageInput.value.trim();
     if (!text || !currentChat) return;
 
-    console.log('📤 Enviando mensagem:', text);
-    console.log('📌 Match ID:', currentChat.id);
-
     const now = new Date();
     const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-    // Garante que messages existe
     if (!currentChat.messages) {
         currentChat.messages = [];
     }
 
-    // Adiciona mensagem do usuário localmente (otimistic update)
     const newMessage = {
         sender: 'me',
         text: text,
@@ -467,21 +402,13 @@ async function sendMessage() {
     };
     
     currentChat.messages.push(newMessage);
-
-    // Atualiza última mensagem
     currentChat.lastMessage = text;
     currentChat.time = "Agora";
 
-    // Limpa input
     messageInput.value = '';
-
-    // Renderiza mensagens
     renderMessages();
-
-    // Força scroll imediato
     setTimeout(() => scrollToBottom(), 50);
 
-    // 🔥 ENVIA PARA O BACKEND!
     try {
         const response = await fetch(`${API_BASE_URL}/matches/${currentChat.id}/messages`, {
             method: 'POST',
@@ -497,184 +424,78 @@ async function sendMessage() {
 
         if (response.ok) {
             const data = await response.json();
-            console.log('✅ Mensagem salva no servidor! ID:', data.id);
-            
-            // Marca como enviada
             newMessage.pending = false;
             newMessage.id = data.id;
             newMessage.fromServer = true;
         } else {
-            console.error('❌ Erro ao enviar mensagem para o servidor');
-            // Marca como erro (poderia mostrar indicador visual)
             newMessage.error = true;
         }
     } catch (error) {
-        console.error('❌ Erro ao enviar mensagem:', error);
+        console.error('❌ Erro:', error);
         newMessage.error = true;
     }
 
-    // Salva no localStorage
     saveConversationsToStorage();
-
-    console.log('✅ Mensagem enviada!');
-
-    // Simula resposta automática após 2 segundos (REMOVER EM PRODUÇÃO!)
-    setTimeout(() => {
-        if (!currentChat) return;
-        
-        const responses = [
-            "Que legal! 😊",
-            "Verdade! Adorei isso",
-            "Hahaha muito bom!",
-            "Sério? Conta mais!",
-            "Também acho! 💕",
-            "Combinamos então! 🎉"
-        ];
-        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-
-        currentChat.messages.push({
-            sender: 'other',
-            text: randomResponse,
-            time: time
-        });
-
-        currentChat.lastMessage = randomResponse;
-        currentChat.time = "Agora";
-
-        renderMessages();
-        saveConversationsToStorage();
-        
-        setTimeout(() => scrollToBottom(), 50);
-        
-        console.log('🤖 Resposta automática enviada');
-    }, 2000);
 }
 
-// ========== SALVAR CONVERSAS ==========
+// ========== SALVAR ==========
 function saveConversationsToStorage() {
     try {
         localStorage.setItem('sparkConversations', JSON.stringify(conversations));
-        console.log('💾 Conversas salvas no localStorage:', conversations.length);
     } catch (e) {
-        console.error('❌ Erro ao salvar conversas:', e);
+        console.error('❌ Erro ao salvar:', e);
     }
 }
 
-// ========== SCROLL PARA BAIXO ==========
+// ========== SCROLL ==========
 function scrollToBottom() {
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
 }
 
-// ========== AUTO-SCROLL QUANDO TECLADO APARECE ==========
-messageInput.addEventListener('focus', () => {
-    setTimeout(() => scrollToBottom(), 100);
-    setTimeout(() => scrollToBottom(), 300);
-    setTimeout(() => scrollToBottom(), 500);
-});
+// ========== EVENTOS ==========
+if (backToList) {
+    backToList.addEventListener('click', () => {
+        chatScreen.classList.add('hidden');
+        chatListScreen.classList.remove('hidden');
+        if (bottomNav) bottomNav.classList.remove('hidden');
+        currentChat = null;
+        renderChatList();
+    });
+}
 
-messageInput.addEventListener('blur', () => {
-    setTimeout(() => scrollToBottom(), 100);
-});
+if (sendBtn) {
+    sendBtn.addEventListener('click', sendMessage);
+}
 
-// ========== DETECTA RESIZE (TECLADO) ==========
-let lastHeight = window.innerHeight;
-let scrollInterval = null;
-
-window.addEventListener('resize', () => {
-    const currentHeight = window.innerHeight;
-    
-    if (currentHeight < lastHeight && !chatScreen.classList.contains('hidden')) {
-        if (scrollInterval) clearInterval(scrollInterval);
-        
-        scrollInterval = setInterval(() => scrollToBottom(), 50);
-        
-        setTimeout(() => {
-            if (scrollInterval) {
-                clearInterval(scrollInterval);
-                scrollInterval = null;
-            }
-            scrollToBottom();
-        }, 1000);
-    }
-    
-    lastHeight = currentHeight;
-});
-
-// ========== VOLTAR PARA LISTA ==========
-backToList.addEventListener('click', () => {
-    console.log('⬅️ Voltando para lista de conversas');
-    chatScreen.classList.add('hidden');
-    chatListScreen.classList.remove('hidden');
-    bottomNav.classList.remove('hidden');
-    currentChat = null;
-    renderChatList();
-});
-
-// ========== ENVIAR MENSAGEM (EVENTOS) ==========
-sendBtn.addEventListener('click', sendMessage);
-
-messageInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        sendMessage();
-    }
-});
+if (messageInput) {
+    messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+}
 
 // ========== INICIALIZAÇÃO ==========
 console.log('🚀 chat.js iniciando...');
 
-// Busca meu user_id primeiro, depois carrega conversas
 getMyUserId().then(async () => {
-    console.log('👤 User ID carregado, agora carregando conversas...');
-    
-    // 🔥 CARREGA TODAS AS CONVERSAS (LOCALSTORAGE + BACKEND)
     await loadAllConversations();
-    
-    // Renderiza lista
     renderChatList();
     
-    // ========== ABRE CHAT AUTOMATICAMENTE SE VIER DO MATCH ==========
+    // ✅ ABRE CHAT AUTOMATICAMENTE SE VIER DO MATCH
     const openChatId = localStorage.getItem('openChatId');
 
     if (openChatId) {
-        console.log('🎯 Detectado pedido para abrir chat:', openChatId);
-        console.log('📋 Conversas disponíveis:', conversations.map(c => ({ id: c.id, name: c.name })));
-        
-        // Remove IMEDIATAMENTE para evitar loops
+        console.log('🎯 Abrindo chat automaticamente:', openChatId);
         localStorage.removeItem('openChatId');
         
-        // Aguarda um pouco para garantir que tudo carregou
         setTimeout(() => {
             const chatId = parseInt(openChatId);
-            console.log('🚀 Tentando abrir chat automaticamente:', chatId);
-            
-            // Verifica se a conversa existe
-            let conversation = conversations.find(c => c.id === chatId);
-            
-            if (conversation) {
-                console.log('✅ Conversa encontrada, abrindo:', conversation.name);
-                openChat(chatId);
-            } else {
-                console.warn('⚠️ Conversa não encontrada com ID:', chatId);
-                console.log('💡 IDs disponíveis:', conversations.map(c => c.id));
-                
-                // 🔥 TENTA RECARREGAR DO BACKEND
-                console.log('🔄 Tentando recarregar conversas do backend...');
-                loadAllConversations().then(() => {
-                    conversation = conversations.find(c => c.id === chatId);
-                    if (conversation) {
-                        console.log('✅ Conversa encontrada após reload:', conversation.name);
-                        openChat(chatId);
-                    } else {
-                        console.error('❌ Conversa definitivamente não encontrada');
-                        // Mostra a lista de conversas mesmo assim
-                        renderChatList();
-                    }
-                });
-            }
+            openChat(chatId);
         }, 500);
-    } else {
-        console.log('ℹ️ Nenhum chat para abrir automaticamente');
     }
 });
 
-console.log('✅ chat.js carregado com sucesso!');
+console.log('✅ chat.js carregado!');
