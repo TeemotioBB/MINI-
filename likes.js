@@ -11,31 +11,34 @@ const modalBio = document.getElementById('modal-bio');
 const modalLike = document.getElementById('modal-like');
 const modalDislike = document.getElementById('modal-dislike');
 
-// ========== DADOS DE LIKES (VÊM DO BACKEND!) ==========
+// ========== CONFIGURAÇÃO DA API ==========
+const API_BASE_URL = 'https://mini-production-cf60.up.railway.app/api';
+
+// ========== DADOS DE LIKES ==========
 let likesReceived = [];
 let likesSent = [];
 
 let currentTab = 'received';
 let selectedProfile = null;
 
+// ========== PEGAR MEU TELEGRAM ID ==========
+function getMyTelegramId() {
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
+        return window.Telegram.WebApp.initDataUnsafe.user.id;
+    }
+    return localStorage.getItem('testTelegramId') || '123456789';
+}
+
 // ========== BUSCAR LIKES RECEBIDOS DO BACKEND ==========
 async function loadLikesReceived() {
     console.log('📥 Carregando likes recebidos do servidor...');
     
     try {
-        // Pega telegram_id
-        let telegramId = null;
-        
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
-            telegramId = window.Telegram.WebApp.initDataUnsafe.user.id;
-        } else {
-            telegramId = localStorage.getItem('testTelegramId') || '123456789';
-        }
-        
+        const telegramId = getMyTelegramId();
         console.log('👤 Buscando likes para:', telegramId);
         
         // ✅ BUSCA LIKES RECEBIDOS
-        const response = await fetch(`https://mini-production-cf60.up.railway.app/api/likes/received?telegram_id=${telegramId}`, {
+        const response = await fetch(`${API_BASE_URL}/likes/received?telegram_id=${telegramId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -44,9 +47,43 @@ async function loadLikesReceived() {
         });
         
         if (response.status === 403) {
-            // Não é premium, não pode ver
-            console.log('⚠️ Usuário não é premium - não pode ver likes');
-            likesReceived = [];
+            // Não é premium - ainda assim podemos mostrar likes com blur
+            console.log('⚠️ Usuário não é premium - likes serão mostrados com blur');
+            
+            // Tenta buscar contagem de likes (se tiver essa rota)
+            try {
+                const countResponse = await fetch(`${API_BASE_URL}/likes/count?telegram_id=${telegramId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+                    }
+                });
+                
+                if (countResponse.ok) {
+                    const countData = await countResponse.json();
+                    // Cria likes "fake" com blur para mostrar quantidade
+                    likesReceived = Array(countData.count || 0).fill(null).map((_, i) => ({
+                        id: i + 1,
+                        telegram_id: 0,
+                        name: '???',
+                        age: '??',
+                        gender: 'unknown',
+                        photo: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=crop&q=80&w=500',
+                        photos: [],
+                        bio: 'Assine Premium para ver',
+                        city: '',
+                        verified: false,
+                        time: 'Agora',
+                        type: 'like',
+                        locked: true
+                    }));
+                    console.log('🔒 Likes bloqueados criados:', likesReceived.length);
+                }
+            } catch (e) {
+                console.log('ℹ️ Não foi possível buscar contagem de likes');
+                likesReceived = [];
+            }
             return;
         }
         
@@ -69,7 +106,8 @@ async function loadLikesReceived() {
             city: like.city || '',
             verified: like.is_premium || false,
             time: formatTime(like.liked_at),
-            type: like.type
+            type: like.type,
+            locked: false
         }));
         
         console.log('✅ Likes recebidos:', likesReceived.length);
@@ -80,14 +118,24 @@ async function loadLikesReceived() {
     }
 }
 
-// ========== BUSCAR LIKES ENVIADOS (OPCIONAL) ==========
+// ========== BUSCAR LIKES ENVIADOS ==========
 async function loadLikesSent() {
     console.log('📤 Carregando likes enviados...');
     
-    // Por enquanto vazio, mas você pode implementar depois
-    // Precisaria criar uma rota no backend: GET /api/likes/sent
-    
-    likesSent = [];
+    try {
+        const telegramId = getMyTelegramId();
+        
+        // Se tiver uma rota para likes enviados, use aqui
+        // Por enquanto, vamos deixar vazio
+        // const response = await fetch(`${API_BASE_URL}/likes/sent?telegram_id=${telegramId}`, ...);
+        
+        likesSent = [];
+        console.log('ℹ️ Likes enviados: funcionalidade em desenvolvimento');
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar likes enviados:', error);
+        likesSent = [];
+    }
 }
 
 // ========== FORMATAR TEMPO ==========
@@ -132,11 +180,11 @@ function renderLikes() {
 
     likesGrid.innerHTML = likes.map(like => {
         // Se é aba de "Recebidas" e NÃO é VIP, mostra bloqueado
-        if (currentTab === 'received' && !canSeeLikes) {
+        if (currentTab === 'received' && (!canSeeLikes || like.locked)) {
             return `
-                <div class="like-card relative cursor-pointer group" data-id="${like.id}">
+                <div class="like-card relative cursor-pointer group" data-id="${like.id}" data-locked="true">
                     <div class="relative overflow-hidden rounded-2xl">
-                        <img src="${like.photo}" class="w-full h-56 object-cover blur-lg">
+                        <img src="${like.photo}" class="w-full h-56 object-cover blur-lg" onerror="this.src='https://via.placeholder.com/500x600?text=Foto'">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-black/40 flex flex-col items-center justify-center">
                             <i class="fa-solid fa-lock text-white text-3xl mb-2"></i>
                             <p class="text-white font-bold text-sm">Premium</p>
@@ -149,9 +197,9 @@ function renderLikes() {
 
         // Mostra normalmente para VIP ou aba "Enviadas"
         return `
-            <div class="like-card relative cursor-pointer group" data-id="${like.id}">
+            <div class="like-card relative cursor-pointer group" data-id="${like.id}" data-locked="false">
                 <div class="relative overflow-hidden rounded-2xl">
-                    <img src="${like.photo}" class="w-full h-56 object-cover transition-transform group-hover:scale-105">
+                    <img src="${like.photo}" class="w-full h-56 object-cover transition-transform group-hover:scale-105" onerror="this.src='https://via.placeholder.com/500x600?text=Foto'">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                     
                     ${like.verified ? `
@@ -179,10 +227,11 @@ function renderLikes() {
     document.querySelectorAll('.like-card').forEach(card => {
         card.addEventListener('click', () => {
             const id = parseInt(card.dataset.id);
+            const isLocked = card.dataset.locked === 'true';
             
-            // Se é aba recebidas e não é VIP, mostra modal de upgrade
-            if (currentTab === 'received' && !canSeeLikes) {
-                console.log('❌ Bloqueando acesso - não é VIP');
+            // Se é aba recebidas e está bloqueado, mostra modal de upgrade
+            if (currentTab === 'received' && isLocked) {
+                console.log('❌ Bloqueando acesso - não é VIP ou like bloqueado');
                 if (window.vipSystem) {
                     window.vipSystem.showUpgradeModal('viewLikes');
                 }
@@ -200,24 +249,38 @@ function openProfileModal(id) {
     const likes = currentTab === 'received' ? likesReceived : likesSent;
     selectedProfile = likes.find(l => l.id === id);
     
-    if (!selectedProfile) return;
+    if (!selectedProfile) {
+        console.error('❌ Perfil não encontrado:', id);
+        return;
+    }
 
     modalPhoto.src = selectedProfile.photo;
     modalName.textContent = `${selectedProfile.name}, ${selectedProfile.age}`;
     modalBio.textContent = selectedProfile.bio;
 
+    // Reset do botão de like
+    modalLike.innerHTML = '<i class="fa-solid fa-heart text-lg"></i> Curtir';
+    modalLike.classList.remove('from-pink-500', 'from-green-500');
+    modalLike.classList.add('from-green-400', 'to-emerald-500');
+
     profileModal.classList.remove('hidden');
     
     setTimeout(() => {
-        document.querySelector('.modal-content').style.transform = 'scale(1)';
-        document.querySelector('.modal-content').style.opacity = '1';
+        const modalContent = document.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.style.transform = 'scale(1)';
+            modalContent.style.opacity = '1';
+        }
     }, 10);
 }
 
 // ========== FECHAR MODAL ==========
 function closeProfileModal() {
-    document.querySelector('.modal-content').style.transform = 'scale(0.95)';
-    document.querySelector('.modal-content').style.opacity = '0';
+    const modalContent = document.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.style.transform = 'scale(0.95)';
+        modalContent.style.opacity = '0';
+    }
     
     setTimeout(() => {
         profileModal.classList.add('hidden');
@@ -237,16 +300,24 @@ modalLike.addEventListener('click', async () => {
     }
 
     console.log('❤️ Dando like em:', selectedProfile.name);
+    console.log('📌 Telegram ID:', selectedProfile.telegram_id);
+
+    // Desabilita botão temporariamente
+    modalLike.disabled = true;
+    modalLike.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-lg"></i> Enviando...';
 
     // ✅ ENVIA LIKE PARA O BACKEND
     try {
-        const response = await fetch('https://mini-production-cf60.up.railway.app/api/likes', {
+        const myTelegramId = getMyTelegramId();
+        
+        const response = await fetch(`${API_BASE_URL}/likes`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
             },
             body: JSON.stringify({
+                from_telegram_id: myTelegramId,
                 to_telegram_id: selectedProfile.telegram_id,
                 type: 'like'
             })
@@ -256,9 +327,15 @@ modalLike.addEventListener('click', async () => {
             const data = await response.json();
             console.log('✅ Like enviado:', data);
 
-            modalLike.innerHTML = '<i class="fa-solid fa-check text-xl"></i> ' + (data.match ? 'Match!' : 'Like enviado!');
-            modalLike.classList.remove('from-green-400', 'to-emerald-500');
-            modalLike.classList.add(data.match ? 'from-pink-500' : 'from-green-500', 'to-rose-500');
+            if (data.match) {
+                modalLike.innerHTML = '<i class="fa-solid fa-heart text-xl"></i> Match! 🎉';
+                modalLike.classList.remove('from-green-400', 'to-emerald-500');
+                modalLike.classList.add('from-pink-500', 'to-rose-500');
+            } else {
+                modalLike.innerHTML = '<i class="fa-solid fa-check text-xl"></i> Like enviado!';
+                modalLike.classList.remove('from-green-400', 'to-emerald-500');
+                modalLike.classList.add('from-green-500', 'to-green-600');
+            }
 
             setTimeout(() => {
                 // Remove da lista
@@ -269,21 +346,60 @@ modalLike.addEventListener('click', async () => {
 
                 closeProfileModal();
                 renderLikes();
+                updateTabCounter();
                 
                 if (data.match) {
-                    showMatchNotification(selectedProfile);
+                    showMatchNotification(selectedProfile, data.match_id);
                 }
             }, 1000);
+        } else {
+            const error = await response.json();
+            console.error('❌ Erro ao dar like:', error);
+            modalLike.innerHTML = '<i class="fa-solid fa-exclamation-triangle text-lg"></i> Erro';
+            
+            setTimeout(() => {
+                modalLike.innerHTML = '<i class="fa-solid fa-heart text-lg"></i> Curtir';
+                modalLike.disabled = false;
+            }, 2000);
         }
     } catch (error) {
         console.error('❌ Erro ao dar like:', error);
+        modalLike.innerHTML = '<i class="fa-solid fa-exclamation-triangle text-lg"></i> Erro';
+        
+        setTimeout(() => {
+            modalLike.innerHTML = '<i class="fa-solid fa-heart text-lg"></i> Curtir';
+            modalLike.disabled = false;
+        }, 2000);
     }
 });
 
 // ========== REJEITAR NO MODAL ==========
-modalDislike.addEventListener('click', () => {
+modalDislike.addEventListener('click', async () => {
     if (!selectedProfile) return;
 
+    console.log('❌ Rejeitando:', selectedProfile.name);
+
+    // Envia dislike para o backend
+    try {
+        const myTelegramId = getMyTelegramId();
+        
+        await fetch(`${API_BASE_URL}/likes`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+            },
+            body: JSON.stringify({
+                from_telegram_id: myTelegramId,
+                to_telegram_id: selectedProfile.telegram_id,
+                type: 'dislike'
+            })
+        });
+    } catch (error) {
+        console.error('⚠️ Erro ao enviar dislike (ignorado):', error);
+    }
+
+    // Remove da lista
     const index = likesReceived.findIndex(l => l.id === selectedProfile.id);
     if (index > -1) {
         likesReceived.splice(index, 1);
@@ -291,27 +407,39 @@ modalDislike.addEventListener('click', () => {
 
     closeProfileModal();
     renderLikes();
+    updateTabCounter();
 });
 
 // ========== MOSTRAR NOTIFICAÇÃO DE MATCH ==========
-function showMatchNotification(profile) {
+function showMatchNotification(profile, matchId) {
     const notification = document.createElement('div');
-    notification.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-6 py-4 rounded-2xl shadow-2xl z-[200] flex items-center gap-3 animate-bounce';
+    notification.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-6 py-4 rounded-2xl shadow-2xl z-[200] flex items-center gap-3 cursor-pointer';
     notification.innerHTML = `
-        <i class="fa-solid fa-heart text-2xl"></i>
+        <i class="fa-solid fa-heart text-2xl animate-pulse"></i>
         <div>
             <p class="font-bold">É um Match! 💕</p>
             <p class="text-xs opacity-90">Você e ${profile.name} deram match!</p>
         </div>
     `;
     
+    // Clique leva para o chat
+    notification.addEventListener('click', () => {
+        if (matchId) {
+            localStorage.setItem('openChatId', matchId.toString());
+        }
+        window.location.href = 'chat.html';
+    });
+    
     document.body.appendChild(notification);
+    
+    // Animação de entrada
+    notification.style.animation = 'bounceIn 0.5s ease-out';
     
     setTimeout(() => {
         notification.style.opacity = '0';
         notification.style.transform = 'translate(-50%, -20px)';
         setTimeout(() => notification.remove(), 300);
-    }, 3000);
+    }, 5000);
 }
 
 // ========== TROCAR DE TAB ==========
@@ -344,8 +472,21 @@ profileModal.addEventListener('click', (e) => {
 
 // ========== ATUALIZAR CONTADOR NA TAB ==========
 function updateTabCounter() {
-    if (tabReceived && likesReceived.length > 0) {
-        tabReceived.innerHTML = `Recebidas (${likesReceived.length})`;
+    if (tabReceived) {
+        const count = likesReceived.length;
+        tabReceived.textContent = `Recebidas (${count})`;
+        
+        // Também atualiza o badge se existir
+        const badge = document.querySelector('[href="likes.html"] .absolute');
+        if (badge && count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.classList.remove('hidden');
+        }
+    }
+    
+    if (tabSent) {
+        const count = likesSent.length;
+        tabSent.textContent = `Enviadas (${count})`;
     }
 }
 
