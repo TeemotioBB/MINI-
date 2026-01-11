@@ -986,7 +986,6 @@ app.listen(PORT, () => {
 ## 🎯 **Posição visual:**
 ```
 server.js
-├── ... outras rotas ...
 ├── app.get('/api/debug/check-limits/:telegramId')  ← Última rota de debug
 │
 ├── ✅ ADICIONE A NOVA ROTA AQUI
@@ -1012,4 +1011,5 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
+
 
