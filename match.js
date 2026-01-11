@@ -12,9 +12,10 @@ function checkForMatch(profile) {
     return hasMatch;
 }
 
-// Função para mostrar a tela de match
-function showMatchAnimation(profile) {
+// 🔥 CORREÇÃO: Função agora recebe matchId como segundo parâmetro
+function showMatchAnimation(profile, matchId) {
     console.log('🎉 Iniciando animação de match com:', profile.name);
+    console.log('🆔 Match ID recebido do servidor:', matchId);
     
     // Busca dados do usuário
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
@@ -71,7 +72,8 @@ function showMatchAnimation(profile) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('📨 Botão Enviar Mensagem clicado!');
-                handleMatchSendMessage(profile, matchOverlay);
+                // 🔥 PASSA O MATCH_ID!
+                handleMatchSendMessage(profile, matchOverlay, matchId);
             });
         }
         
@@ -80,7 +82,8 @@ function showMatchAnimation(profile) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('➡️ Continuar explorando clicado!');
-                handleMatchContinue(profile, matchOverlay);
+                // 🔥 PASSA O MATCH_ID!
+                handleMatchContinue(profile, matchOverlay, matchId);
             });
         }
     }, 100);
@@ -103,15 +106,17 @@ function createMatchConfetti() {
     }
 }
 
-// Handler para enviar mensagem
-function handleMatchSendMessage(profile, overlay) {
+// 🔥 CORREÇÃO: Handler agora recebe matchId como terceiro parâmetro
+function handleMatchSendMessage(profile, overlay, matchId) {
     console.log('💬 Criando conversa com:', profile.name);
+    console.log('🆔 Usando Match ID do servidor:', matchId);
     
     // Cria a conversa
     const timestamp = Date.now();
     const newConversation = {
-        id: profile.id,
-        matchTimestamp: timestamp, // Adiciona timestamp único
+        id: matchId, // 🔥 USA O MATCH_ID DO SERVIDOR, NÃO PROFILE.ID!
+        matchId: matchId, // 🔥 Mantém referência ao match_id
+        matchTimestamp: timestamp,
         name: profile.name,
         photo: profile.photo,
         lastMessage: `Vocês deram match! 💕`,
@@ -139,8 +144,8 @@ function handleMatchSendMessage(profile, overlay) {
         console.error('❌ Erro ao carregar conversas:', e);
     }
     
-    // Verifica se já existe conversa com esse perfil
-    const existingIndex = conversations.findIndex(c => c.id === profile.id);
+    // 🔥 VERIFICA SE JÁ EXISTE CONVERSA COM ESSE MATCH_ID
+    const existingIndex = conversations.findIndex(c => c.id === matchId);
     
     if (existingIndex >= 0) {
         console.log('⚠️ Conversa já existe, atualizando...');
@@ -168,9 +173,9 @@ function handleMatchSendMessage(profile, overlay) {
         console.error('❌ Erro ao salvar conversas:', e);
     }
     
-    // Marca para abrir o chat
-    localStorage.setItem('openChatId', profile.id.toString());
-    console.log('🔖 Marcado para abrir chat:', profile.id);
+    // 🔥 MARCA PARA ABRIR O CHAT COM O MATCH_ID!
+    localStorage.setItem('openChatId', matchId.toString());
+    console.log('🔖 Marcado para abrir chat com Match ID:', matchId);
     
     // Remove overlay
     overlay.remove();
@@ -182,14 +187,16 @@ function handleMatchSendMessage(profile, overlay) {
     }, 300);
 }
 
-// Handler para continuar explorando
-function handleMatchContinue(profile, overlay) {
+// 🔥 CORREÇÃO: Handler agora recebe matchId como terceiro parâmetro
+function handleMatchContinue(profile, overlay, matchId) {
     console.log('✨ Criando conversa em segundo plano para:', profile.name);
+    console.log('🆔 Usando Match ID do servidor:', matchId);
     
     // Cria a conversa em segundo plano
     const timestamp = Date.now();
     const newConversation = {
-        id: profile.id,
+        id: matchId, // 🔥 USA O MATCH_ID DO SERVIDOR, NÃO PROFILE.ID!
+        matchId: matchId, // 🔥 Mantém referência ao match_id
         matchTimestamp: timestamp,
         name: profile.name,
         photo: profile.photo,
@@ -217,8 +224,8 @@ function handleMatchContinue(profile, overlay) {
         console.error('❌ Erro ao carregar conversas:', e);
     }
     
-    // Verifica se já existe
-    const existingIndex = conversations.findIndex(c => c.id === profile.id);
+    // 🔥 VERIFICA SE JÁ EXISTE CONVERSA COM ESSE MATCH_ID
+    const existingIndex = conversations.findIndex(c => c.id === matchId);
     
     if (existingIndex >= 0) {
         conversations[existingIndex] = {
@@ -236,7 +243,7 @@ function handleMatchContinue(profile, overlay) {
     // Salva
     try {
         localStorage.setItem('sparkConversations', JSON.stringify(conversations));
-        console.log('💾 Conversa salva em segundo plano');
+        console.log('💾 Conversa salva em segundo plano com Match ID:', matchId);
     } catch (e) {
         console.error('❌ Erro ao salvar:', e);
     }
