@@ -736,18 +736,10 @@ app.get('/api/debug/reset-my-test-users', async (req, res) => {
                 'DELETE FROM likes WHERE from_user_id = $1 OR to_user_id = $1',
                 [userId]
             );
-            console.log('🗑️ Likes deletados:', likesResult.rowCount);
-            result.likes_deleted += likesResult.rowCount;
-            
-            // 2. Deleta TODOS os matches
-            const matchesResult = await pool.query(
-                'DELETE FROM matches WHERE user1_id = $1 OR user2_id = $1',
-                [userId]
-            );
             console.log('🗑️ Matches deletados:', matchesResult.rowCount);
             result.matches_deleted += matchesResult.rowCount;
             
-            // 3. LIMPA O PERFIL (mantém usuário, mas limpa dados)
+            // 3. LIMPA O PERFIL E RESETA LIMITES (mantém usuário, mas limpa dados)
             const cleanResult = await pool.query(`
                 UPDATE users SET
                     name = 'Usuário Teste',
@@ -759,10 +751,11 @@ app.get('/api/debug/reset-my-test-users', async (req, res) => {
                     daily_super_likes = 0,
                     last_reset_date = CURRENT_DATE
                 WHERE id = $1
-                RETURNING name
+                RETURNING name, daily_likes, daily_super_likes
             `, [userId]);
             
             console.log('🧹 Perfil limpo:', cleanResult.rows[0].name);
+            console.log('🔄 Limites resetados: daily_likes =', cleanResult.rows[0].daily_likes, '| daily_super_likes =', cleanResult.rows[0].daily_super_likes);
             result.profiles_cleaned++;
             
             result.users_reset.push({
@@ -770,7 +763,9 @@ app.get('/api/debug/reset-my-test-users', async (req, res) => {
                 user_id: userId,
                 status: 'reset_success',
                 old_name: userName,
-                new_name: 'Usuário Teste'
+                new_name: 'Usuário Teste',
+                daily_likes: 0,
+                daily_super_likes: 0
             });
             
             console.log('✅ Usuário resetado com sucesso!');
@@ -953,4 +948,12 @@ app.use((req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
-});
+}); Likes deletados:', likesResult.rowCount);
+            result.likes_deleted += likesResult.rowCount;
+            
+            // 2. Deleta TODOS os matches
+            const matchesResult = await pool.query(
+                'DELETE FROM matches WHERE user1_id = $1 OR user2_id = $1',
+                [userId]
+            );
+            console.log('🗑️
