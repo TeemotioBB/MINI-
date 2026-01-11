@@ -189,9 +189,28 @@ function handleMatchSendMessage(profile, overlay, matchId) {
     try {
         localStorage.setItem('sparkConversations', JSON.stringify(conversations));
         console.log('💾 Conversas salvas:', conversations.length);
-        console.log('🔍 Nova conversa:', newConversation);
+        console.log('🔍 Nova conversa salva:', {
+            id: newConversation.id,
+            matchId: newConversation.matchId,
+            name: newConversation.name,
+            telegram_id: newConversation.otherTelegramId
+        });
+        
+        // 🔥 VALIDA QUE A CONVERSA FOI SALVA CORRETAMENTE
+        const verification = localStorage.getItem('sparkConversations');
+        if (verification) {
+            const parsed = JSON.parse(verification);
+            const found = parsed.find(c => c.id === matchId);
+            if (found) {
+                console.log('✅ Conversa verificada no localStorage!');
+            } else {
+                console.error('⚠️ Conversa não encontrada após salvar!');
+            }
+        }
     } catch (e) {
         console.error('❌ Erro ao salvar conversas:', e);
+        alert('Erro ao salvar conversa. Tente novamente.');
+        return;
     }
     
     // 🔥 MARCA PARA ABRIR O CHAT COM O MATCH_ID!
@@ -266,8 +285,15 @@ function handleMatchContinue(profile, overlay, matchId) {
     try {
         localStorage.setItem('sparkConversations', JSON.stringify(conversations));
         console.log('💾 Conversa salva em segundo plano com Match ID:', matchId);
+        console.log('🔍 Conversa criada:', {
+            id: newConversation.id,
+            matchId: newConversation.matchId,
+            name: newConversation.name
+        });
     } catch (e) {
         console.error('❌ Erro ao salvar:', e);
+        showToast('⚠️ Erro ao salvar match', 'error');
+        return;
     }
     
     // Remove overlay

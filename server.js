@@ -641,15 +641,21 @@ app.get('/api/likes/count', optionalTelegramAuth, async (req, res) => {
         
         const userId = userResult.rows[0].id;
         
-        // Conta likes recebidos (like e superlike, não dislike)
+        // 🔥 CONTA LIKES RECEBIDOS (excluindo usuários com match ativo)
         const countResult = await pool.query(`
             SELECT 
                 COUNT(*) FILTER (WHERE type = 'like') as likes,
                 COUNT(*) FILTER (WHERE type = 'superlike') as superlikes,
                 COUNT(*) as total
-            FROM likes 
-            WHERE to_user_id = $1 
-              AND type IN ('like', 'superlike')
+            FROM likes l
+            WHERE l.to_user_id = $1 
+              AND l.type IN ('like', 'superlike')
+              AND NOT EXISTS (
+                  SELECT 1 FROM matches m
+                  WHERE (m.user1_id = $1 AND m.user2_id = l.from_user_id)
+                     OR (m.user2_id = $1 AND m.user1_id = l.from_user_id)
+                     AND m.is_active = TRUE
+              )
         `, [userId]);
         
         const counts = countResult.rows[0];
