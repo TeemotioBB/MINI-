@@ -691,7 +691,7 @@ app.get('/api/debug/reset-likes/:telegramId', async (req, res) => {
     }
 });
 
-// ========== DEBUG - RESET COMPLETO DOS 2 USUÁRIOS DE TESTE ==========
+// ========== DEBUG - RESET COMPLETO DOS 2 USUÁRIOS DE TESTE (ATUALIZADO) ==========
 app.get('/api/debug/reset-my-test-users', async (req, res) => {
     try {
         const testUserIds = [8542013089, 1293602874];
@@ -707,7 +707,7 @@ app.get('/api/debug/reset-my-test-users', async (req, res) => {
         };
         
         for (const telegramId of testUserIds) {
-            console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('\n┌────────────────────────────────');
             console.log('🧹 Limpando usuário:', telegramId);
             
             // Busca o user_id
@@ -750,7 +750,7 @@ app.get('/api/debug/reset-my-test-users', async (req, res) => {
             console.log('🗑️ Matches deletados:', matchesResult.rowCount);
             result.matches_deleted += matchesResult.rowCount;
             
-            // 3. LIMPA O PERFIL E RESETA LIMITES (mantém usuário, mas limpa dados)
+            // ✅ 3. LIMPA O PERFIL E RESETA **TODOS** OS LIMITES DIÁRIOS
             const cleanResult = await pool.query(`
                 UPDATE users SET
                     name = 'Usuário Teste',
@@ -758,17 +758,29 @@ app.get('/api/debug/reset-my-test-users', async (req, res) => {
                     city = NULL,
                     photo_url = NULL,
                     photos = NULL,
+                    
+                    -- ✅ RESETAR LIMITES DIÁRIOS (PRINCIPAL!)
                     daily_likes = 0,
                     daily_super_likes = 0,
-                    last_reset_date = CURRENT_DATE
+                    last_reset_date = CURRENT_DATE,
+                    
+                    -- ✅ RESETAR PREFERÊNCIAS
+                    pref_gender = 'masculino',
+                    pref_age_min = 18,
+                    pref_age_max = 99,
+                    
+                    -- ✅ ATUALIZAR TIMESTAMPS
+                    updated_at = CURRENT_TIMESTAMP,
+                    last_active = CURRENT_TIMESTAMP
                 WHERE id = $1
-                RETURNING name, daily_likes, daily_super_likes
+                RETURNING name, daily_likes, daily_super_likes, last_reset_date
             `, [userId]);
             
             console.log('🧹 Perfil limpo:', cleanResult.rows[0].name);
             console.log('🔄 Limites DEPOIS:', {
                 daily_likes: cleanResult.rows[0].daily_likes,
-                daily_super_likes: cleanResult.rows[0].daily_super_likes
+                daily_super_likes: cleanResult.rows[0].daily_super_likes,
+                last_reset_date: cleanResult.rows[0].last_reset_date
             });
             result.profiles_cleaned++;
             
@@ -778,25 +790,30 @@ app.get('/api/debug/reset-my-test-users', async (req, res) => {
                 status: 'reset_success',
                 old_name: userName,
                 new_name: 'Usuário Teste',
-                old_daily_likes: oldLikes,
-                old_daily_super_likes: oldSuperLikes,
-                daily_likes: cleanResult.rows[0].daily_likes,
-                daily_super_likes: cleanResult.rows[0].daily_super_likes
+                limits_before: {
+                    daily_likes: oldLikes,
+                    daily_super_likes: oldSuperLikes
+                },
+                limits_after: {
+                    daily_likes: cleanResult.rows[0].daily_likes,
+                    daily_super_likes: cleanResult.rows[0].daily_super_likes,
+                    last_reset_date: cleanResult.rows[0].last_reset_date
+                }
             });
             
             console.log('✅ Usuário resetado com sucesso!');
         }
         
-        console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('\n┌────────────────────────────────');
         console.log('🎉 RESET COMPLETO!');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+        console.log('└────────────────────────────────\n');
         
         res.json(result);
     } catch (error) {
         console.error('❌ Erro ao resetar:', error);
         res.status(500).json({ error: error.message });
     }
-});;
+});
 
 // ========== DEBUG - RESETAR LIMITE DE LIKES DE NÃO-VIP ==========
 app.get('/api/debug/reset-like-limits', async (req, res) => {
@@ -965,4 +982,5 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
+
 
