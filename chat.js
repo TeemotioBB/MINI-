@@ -302,11 +302,11 @@ function renderChatList() {
     document.querySelectorAll('.chat-item').forEach(item => {
         item.addEventListener('click', async () => {
             const chatId = parseInt(item.dataset.chatId);
-            console.log('🖱️ Click no chat item, ID:', chatId);
+            console.log('🖱️ Click on chat item, ID:', chatId);
             try {
                 await openChat(chatId);
             } catch (err) {
-                console.error('❌ Erro ao abrir chat do click:', err);
+                console.error('❌ Erro ao abrir chat no click:', err);
                 alert('Erro ao abrir conversa. Por favor, tente novamente.');
             }
         });
@@ -317,8 +317,15 @@ function renderChatList() {
 async function openChat(chatId) {
     console.log('💬 Abrindo chat ID:', chatId, '| Tipo:', typeof chatId);
     
-    // 🔥 GARANTE QUE chatId É UM NÚMERO
+    // 🔥 GARANTE QUE chatId É UM NÚMERO VÁLIDO
     const numericChatId = typeof chatId === 'string' ? parseInt(chatId) : chatId;
+    
+    if (isNaN(numericChatId) || numericChatId <= 0) {
+        console.error('❌ Chat ID inválido:', chatId);
+        alert('Erro: ID de conversa inválido.');
+        return;
+    }
+    
     console.log('🔢 Chat ID numérico:', numericChatId);
     
     // 🔥 TENTA ENCONTRAR A CONVERSA
@@ -326,7 +333,10 @@ async function openChat(chatId) {
     
     if (!currentChat) {
         console.error('❌ Conversa não encontrada no array local:', numericChatId);
-        console.log('📋 Conversas disponíveis:', conversations.map(c => ({ id: c.id, tipo: typeof c.id, name: c.name })));
+        if (conversations.length > 0) {
+            console.log('📋 Total de conversas disponíveis:', conversations.length);
+            console.log('📋 Primeiros IDs:', conversations.slice(0, 5).map(c => ({ id: c.id, nome: c.name })));
+        }
         
         // 🔥 TENTA RECARREGAR AS CONVERSAS DO BACKEND ANTES DE DESISTIR
         console.log('🔄 Tentando recarregar conversas do backend...');
@@ -335,7 +345,7 @@ async function openChat(chatId) {
         
         if (!currentChat) {
             console.error('❌ Conversa ainda não encontrada após recarregar. ID procurado:', numericChatId);
-            console.error('📋 IDs após recarregar:', conversations.map(c => c.id));
+            console.error('📋 Total após recarregar:', conversations.length);
             alert('Erro ao abrir conversa. Tente novamente.');
             return;
         }
