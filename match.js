@@ -63,7 +63,7 @@ function showMatchAnimation(profile, matchId) {
             <h2 class="match-name">${profile.name}</h2>
             
             <div class="match-buttons">
-                <a href="chat.html" id="match-send-message" class="match-btn match-btn-primary">
+                <a href="#" id="match-send-message" class="match-btn match-btn-primary">
                     <i class="fa-solid fa-paper-plane"></i>
                     Enviar Mensagem
                 </a>
@@ -85,11 +85,10 @@ function showMatchAnimation(profile, matchId) {
         const continueBtn = document.getElementById('match-continue');
         
         if (sendBtn) {
-            // ✅ REMOVE event listener e usa onclick direto no link
             sendBtn.onclick = (e) => {
                 e.preventDefault();
                 console.log('🔨 Botão Enviar Mensagem clicado!');
-                handleMatchSendMessage(profile, matchOverlay, matchId);
+                handleMatchSendMessage(profile, matchOverlay, validMatchId);
             };
         } else {
             console.error('❌ Botão "Enviar Mensagem" não encontrado!');
@@ -99,7 +98,7 @@ function showMatchAnimation(profile, matchId) {
             continueBtn.onclick = (e) => {
                 e.preventDefault();
                 console.log('➡️ Continuar explorando clicado!');
-                handleMatchContinue(profile, matchOverlay, matchId);
+                handleMatchContinue(profile, matchOverlay, validMatchId);
             };
         } else {
             console.error('❌ Botão "Continuar" não encontrado!');
@@ -129,10 +128,18 @@ function handleMatchSendMessage(profile, overlay, matchId) {
     console.log('💬 Criando conversa com:', profile.name);
     console.log('🆔 Usando Match ID do servidor:', matchId);
     
+    // Valida matchId novamente
+    if (!matchId || matchId <= 0) {
+        console.error('❌ Match ID inválido!');
+        alert('Erro: Match ID inválido. Por favor, recarregue a página.');
+        overlay.remove();
+        return;
+    }
+    
     // Cria a conversa com dados do perfil
     const timestamp = Date.now();
     const newConversation = {
-        id: matchId, // 🔥 USA O MATCH_ID DO SERVIDOR!
+        id: matchId,
         matchId: matchId,
         matchTimestamp: timestamp,
         name: profile.name,
@@ -151,6 +158,13 @@ function handleMatchSendMessage(profile, overlay, matchId) {
         ]
     };
     
+    console.log('📝 Conversa criada:', {
+        id: newConversation.id,
+        matchId: newConversation.matchId,
+        name: newConversation.name,
+        otherTelegramId: newConversation.otherTelegramId
+    });
+    
     // Carrega conversas existentes
     let conversations = [];
     try {
@@ -161,69 +175,77 @@ function handleMatchSendMessage(profile, overlay, matchId) {
         }
     } catch (e) {
         console.error('❌ Erro ao carregar conversas:', e);
+        conversations = [];
     }
     
-    // 🔥 VERIFICA SE JÁ EXISTE CONVERSA COM ESSE MATCH_ID
-    const existingIndex = conversations.findIndex(c => c.id === matchId);
+    // Remove conversa duplicada (se existir)
+    conversations = conversations.filter(c => c.id !== matchId && c.matchId !== matchId);
+    console.log('🧹 Conversas após filtrar duplicadas:', conversations.length);
     
-    if (existingIndex >= 0) {
-        console.log('⚠️ Conversa já existe, atualizando...');
-        // Atualiza conversa existente
-        conversations[existingIndex] = {
-            ...conversations[existingIndex],
-            ...newConversation,
-            messages: [
-                ...conversations[existingIndex].messages,
-                ...newConversation.messages.filter(m => 
-                    !conversations[existingIndex].messages.some(em => em.text === m.text)
-                )
-            ]
-        };
-    } else {
-        console.log('✅ Criando nova conversa');
-        // Adiciona nova conversa no início
-        conversations.unshift(newConversation);
-    }
+    // Adiciona nova conversa no início
+    conversations.unshift(newConversation);
+    console.log('➕ Nova conversa adicionada. Total:', conversations.length);
     
     // Salva conversas
     try {
-        localStorage.setItem('sparkConversations', JSON.stringify(conversations));
-        console.log('💾 Conversas salvas:', conversations.length);
-        console.log('🔍 Nova conversa salva:', {
-            id: newConversation.id,
-            matchId: newConversation.matchId,
-            name: newConversation.name,
-            telegram_id: newConversation.otherTelegramId
+        const conversationsJson = JSON.stringify(conversations);
+        localStorage.setItem('sparkConversations', conversationsJson);
+        console.log('💾 Conversas salvas no localStorage');
+        
+        // 🔥 VALIDAÇÃO CRÍTICA: Verifica se salvou corretamente
+        const verification = localStorage.getItem('sparkConversations');
+        if (!verification) {
+            throw new Error('localStorage.setItem não salvou os dados!');
+        }
+        
+        const parsed = JSON.parse(verification);
+        const found = parsed.find(c => c.id === matchId);
+        
+        if (!found) {
+            throw new Error('Conversa não encontrada após salvar!');
+        }
+        
+        console.log('✅ Validação OK! Conversa salva:', {
+            id: found.id,
+            name: found.name,
+            matchId: found.matchId
         });
         
-        // 🔥 VALIDA QUE A CONVERSA FOI SALVA CORRETAMENTE
-        const verification = localStorage.getItem('sparkConversations');
-        if (verification) {
-            const parsed = JSON.parse(verification);
-            const found = parsed.find(c => c.id === matchId);
-            if (found) {
-                console.log('✅ Conversa verificada no localStorage!');
-            } else {
-                console.error('⚠️ Conversa não encontrada após salvar!');
-            }
-        }
     } catch (e) {
-        console.error('❌ Erro ao salvar conversas:', e);
-        overlay.remove(); // Remove overlay antes de mostrar erro
-        alert('Erro ao salvar conversa. Tente novamente.');
+        console.error('❌ ERRO CRÍTICO ao salvar conversas:', e);
+        overlay.remove();
+        alert('Erro ao salvar conversa. Por favor, tente novamente.');
         return;
     }
     
-    // 🔥 MARCA PARA ABRIR O CHAT COM O MATCH_ID!
-    localStorage.setItem('openChatId', matchId.toString());
-    console.log('📌 Marcado para abrir chat com Match ID:', matchId);
+    // 🔥 MARCA PARA ABRIR O CHAT
+    try {
+        localStorage.setItem('openChatId', matchId.toString());
+        console.log('📌 Marcado para abrir chat com Match ID:', matchId);
+        
+        // Valida que foi salvo
+        const savedChatId = localStorage.getItem('openChatId');
+        if (savedChatId !== matchId.toString()) {
+            throw new Error('openChatId não foi salvo corretamente!');
+        }
+        console.log('✅ openChatId validado:', savedChatId);
+        
+    } catch (e) {
+        console.error('❌ Erro ao salvar openChatId:', e);
+        overlay.remove();
+        alert('Erro ao preparar abertura do chat. Tente novamente.');
+        return;
+    }
     
     // Remove overlay
     overlay.remove();
     
-    // ✅ REDIRECT DIRETO SEM DELAY
-    console.log('🚀 Redirecionando para chat.html...');
-    window.location.href = 'chat.html';
+    // ✅ AGUARDA UM POUCO ANTES DE REDIRECIONAR (garante que localStorage sincronizou)
+    console.log('⏳ Aguardando 200ms antes de redirecionar...');
+    setTimeout(() => {
+        console.log('🚀 Redirecionando para chat.html...');
+        window.location.href = 'chat.html';
+    }, 200);
 }
 
 // 🔥 HANDLER: Continuar explorando após match
@@ -231,10 +253,18 @@ function handleMatchContinue(profile, overlay, matchId) {
     console.log('✨ Criando conversa em segundo plano para:', profile.name);
     console.log('🆔 Usando Match ID do servidor:', matchId);
     
+    // Valida matchId
+    if (!matchId || matchId <= 0) {
+        console.error('❌ Match ID inválido!');
+        overlay.remove();
+        showToast('⚠️ Erro ao salvar match', 'error');
+        return;
+    }
+    
     // Cria a conversa em segundo plano
     const timestamp = Date.now();
     const newConversation = {
-        id: matchId, // 🔥 USA O MATCH_ID DO SERVIDOR!
+        id: matchId,
         matchId: matchId,
         matchTimestamp: timestamp,
         name: profile.name,
@@ -262,25 +292,14 @@ function handleMatchContinue(profile, overlay, matchId) {
         }
     } catch (e) {
         console.error('❌ Erro ao carregar conversas:', e);
+        conversations = [];
     }
     
-    // 🔥 VERIFICA SE JÁ EXISTE CONVERSA COM ESSE MATCH_ID
-    const existingIndex = conversations.findIndex(c => c.id === matchId);
+    // Remove duplicadas
+    conversations = conversations.filter(c => c.id !== matchId && c.matchId !== matchId);
     
-    if (existingIndex >= 0) {
-        conversations[existingIndex] = {
-            ...conversations[existingIndex],
-            ...newConversation,
-            messages: [
-                ...conversations[existingIndex].messages,
-                ...newConversation.messages.filter(m => 
-                    !conversations[existingIndex].messages.some(em => em.text === m.text)
-                )
-            ]
-        };
-    } else {
-        conversations.unshift(newConversation);
-    }
+    // Adiciona nova conversa
+    conversations.unshift(newConversation);
     
     // Salva
     try {
@@ -291,9 +310,20 @@ function handleMatchContinue(profile, overlay, matchId) {
             matchId: newConversation.matchId,
             name: newConversation.name
         });
+        
+        // Valida
+        const verification = localStorage.getItem('sparkConversations');
+        if (verification) {
+            const parsed = JSON.parse(verification);
+            const found = parsed.find(c => c.id === matchId);
+            if (found) {
+                console.log('✅ Conversa validada no localStorage!');
+            }
+        }
+        
     } catch (e) {
         console.error('❌ Erro ao salvar:', e);
-        overlay.remove(); // Remove overlay antes de mostrar erro
+        overlay.remove();
         showToast('⚠️ Erro ao salvar match', 'error');
         return;
     }
