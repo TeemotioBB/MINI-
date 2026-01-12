@@ -9,6 +9,23 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
+  <style>
+  /* 🔥 CORREÇÃO MOBILE: Permite scroll na página de perfil */
+  html, body {
+    height: auto !important;
+    min-height: 100vh;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+  
+  /* Garante scroll nos modais */
+  #modal-photos .animate-slide-up,
+  #modal-edit .animate-slide-up {
+    max-height: 85vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  </style>
 </head>
 
 <body>
