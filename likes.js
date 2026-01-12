@@ -384,22 +384,29 @@ if (profileModal) {
 async function init() {
     console.log('🚀 Inicializando likes.js...');
     
-    // Carrega likes em paralelo
-    await Promise.all([
-        loadReceivedLikes(),
-        loadSentLikes()
-    ]);
-    
-    // Renderiza a tab ativa
-    renderLikes();
-    
-    console.log('✅ likes.js inicializado!');
+    try {
+        // Carrega likes em paralelo
+        await Promise.all([
+            loadReceivedLikes(),
+            loadSentLikes()
+        ]);
+        
+        // Renderiza a tab ativa
+        renderLikes();
+        
+        console.log('✅ likes.js inicializado!');
+    } catch (error) {
+        console.error('❌ Erro ao inicializar likes.js:', error);
+    }
 }
 
 // Inicia quando o DOM carregar
+console.log('📜 likes.js carregado, estado do documento:', document.readyState);
 if (document.readyState === 'loading') {
+    console.log('⏳ Aguardando DOMContentLoaded...');
     document.addEventListener('DOMContentLoaded', init);
 } else {
+    console.log('✅ DOM já carregado, iniciando imediatamente...');
     init();
 }
 
