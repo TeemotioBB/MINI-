@@ -1,5 +1,4 @@
-// ========== CHAT.JS CORRIGIDO ==========
-// Correções: tipos de dados, prioridade absoluta do backend, melhor tratamento de erros
+// ========== CHAT.JS COM TEMPO REAL E ÚLTIMA MENSAGEM ==========
 
 const chatListScreen = document.getElementById('chat-list-screen');
 const chatScreen = document.getElementById('chat-screen');
@@ -20,7 +19,12 @@ let currentChat = null;
 let myUserId = null;
 let myTelegramId = null;
 
-// ========== DEBUG: Console com timestamp ==========
+// 🔥 Variáveis para polling
+let pollingInterval = null;
+let lastMessageId = null;
+const POLLING_RATE = 3000; // 3 segundos
+
+// ========== DEBUG ==========
 function debugLog(message, data = null) {
     const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
     if (data) {
@@ -52,7 +56,6 @@ async function getMyUserId() {
 
         if (response.ok) {
             const data = await response.json();
-            // 🔥 CORREÇÃO: Garantir que myUserId é sempre número
             myUserId = parseInt(data.id);
             debugLog('✅ Meu user_id encontrado:', { id: myUserId, name: data.name });
             return myUserId;
@@ -68,16 +71,14 @@ async function getMyUserId() {
 
 // ========== CARREGAR MATCHES DO BACKEND ==========
 async function loadConversationsFromServer() {
-    debugLog('🌐 === INICIANDO LOAD DO BACKEND ===');
+    debugLog('🌐 === CARREGANDO CONVERSAS DO BACKEND ===');
 
     try {
         if (!myTelegramId) {
             myTelegramId = getMyTelegramId();
-            debugLog('⚠️ myTelegramId não estava setado, obtido agora:', myTelegramId);
         }
 
         if (!myUserId) {
-            debugLog('⚠️ myUserId não está setado! Tentando buscar...');
             await getMyUserId();
             if (!myUserId) {
                 debugLog('❌ CRÍTICO: myUserId não pôde ser obtido!');
@@ -85,10 +86,8 @@ async function loadConversationsFromServer() {
             }
         }
 
-        debugLog('👤 Credenciais confirmadas:', { myTelegramId, myUserId, myUserIdType: typeof myUserId });
-
         const url = `${API_BASE_URL}/matches?telegram_id=${myTelegramId}`;
-        debugLog('📡 Fazendo requisição para:', url);
+        debugLog('📡 Requisição para:', url);
 
         const response = await fetch(url, {
             method: 'GET',
@@ -98,38 +97,20 @@ async function loadConversationsFromServer() {
             }
         });
 
-        debugLog('📨 Resposta HTTP:', response.status);
-
         if (!response.ok) {
             debugLog('❌ Erro na resposta:', response.status);
             return [];
         }
 
         const data = await response.json();
-        debugLog('📦 Dados brutos do backend:', {
-            quantidade: data.length,
-            primeiros: data.slice(0, 2)
-        });
+        debugLog('📦 Matches recebidos:', data.length);
 
-        const backendConversations = data.map((match, index) => {
-            // 🔥 CORREÇÃO: Converter todos os IDs para número
+        const backendConversations = data.map((match) => {
             const matchUser1Id = parseInt(match.user1_id);
             const matchUser2Id = parseInt(match.user2_id);
             const matchId = parseInt(match.match_id);
             
-            debugLog(`🔄 Processando match ${index + 1}/${data.length}:`, {
-                match_id: matchId,
-                user1_id: matchUser1Id,
-                user2_id: matchUser2Id,
-                user1_name: match.user1_name,
-                user2_name: match.user2_name,
-                myUserId: myUserId
-            });
-
-            // 🔥 CORREÇÃO: Comparação numérica garantida
             const isUser1 = matchUser1Id === myUserId;
-            debugLog(`   ↳ Comparação: ${matchUser1Id} === ${myUserId} ? ${isUser1}`);
-            debugLog(`   ↳ Eu sou user${isUser1 ? '1' : '2'}. Meu ID: ${myUserId}`);
 
             const otherUser = {
                 id: isUser1 ? matchUser2Id : matchUser1Id,
@@ -139,137 +120,71 @@ async function loadConversationsFromServer() {
                 photo: isUser1 ? (match.user2_photo || match.user2_photos?.[0]) : (match.user1_photo || match.user1_photos?.[0])
             };
 
-            debugLog(`   ↳ Outro usuário:`, {
-                name: otherUser.name,
-                id: otherUser.id,
-                telegram_id: otherUser.telegram_id
-            });
+            // 🔥 CORREÇÃO: Usar última mensagem do servidor
+            let lastMessage = 'Vocês deram match! 💕';
+            let lastMessageTime = formatTime(match.matched_at);
+            
+            if (match.last_message_content) {
+                // Verifica se fui eu que enviei
+                const isSentByMe = parseInt(match.last_message_sender_id) === myUserId;
+                lastMessage = isSentByMe ? `Você: ${match.last_message_content}` : match.last_message_content;
+                lastMessageTime = formatTime(match.last_message_time);
+            }
 
             const conversation = {
-                id: matchId, // 🔥 Sempre número
+                id: matchId,
                 matchId: matchId,
                 otherUserId: otherUser.id,
                 otherTelegramId: otherUser.telegram_id,
                 name: otherUser.name,
                 photo: otherUser.photo || 'https://via.placeholder.com/100?text=Sem+Foto',
-                lastMessage: `Vocês deram match! 💕`,
-                time: formatTime(match.matched_at),
-                unread: 0,
+                lastMessage: lastMessage,
+                time: lastMessageTime,
+                unread: parseInt(match.unread_count) || 0,
                 online: true,
-                matchTimestamp: new Date(match.matched_at).getTime(),
-                messages: [{
-                    sender: 'system',
-                    text: `🎉 Parabéns! Você e ${otherUser.name} deram match!`,
-                    time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-                }]
+                matchTimestamp: new Date(match.last_message_time || match.matched_at).getTime(),
+                messages: []
             };
-
-            debugLog(`   ↳ Conversa criada:`, {
-                id: conversation.id,
-                matchId: conversation.matchId,
-                name: conversation.name
-            });
 
             return conversation;
         });
 
-        debugLog('✅ Total de conversas processadas do backend:', backendConversations.length);
-        debugLog('📋 IDs das conversas:', backendConversations.map(c => ({ id: c.id, name: c.name, idType: typeof c.id })));
-
+        debugLog('✅ Conversas processadas:', backendConversations.length);
         return backendConversations;
 
     } catch (error) {
-        debugLog('❌ ERRO CRÍTICO no loadConversationsFromServer:', error);
+        debugLog('❌ ERRO:', error);
         return [];
     }
 }
 
-// ========== CARREGAR LOCALSTORAGE ==========
-function loadConversationsFromStorage() {
-    debugLog('📦 Carregando localStorage...');
-    try {
-        const saved = localStorage.getItem('sparkConversations');
-        if (!saved) {
-            debugLog('ℹ️ localStorage vazio');
-            return [];
-        }
-
-        const parsed = JSON.parse(saved);
-        
-        // 🔥 CORREÇÃO: Garantir que IDs são números
-        const normalized = parsed.map(conv => ({
-            ...conv,
-            id: parseInt(conv.id),
-            matchId: parseInt(conv.matchId || conv.id)
-        }));
-        
-        debugLog('✅ localStorage tem', normalized.length, 'conversas');
-        if (normalized.length > 0) {
-            debugLog('📋 Primeiras do localStorage:', normalized.slice(0, 3).map(c => ({ id: c.id, name: c.name, idType: typeof c.id })));
-        }
-        return normalized;
-    } catch (e) {
-        debugLog('❌ Erro ao ler localStorage:', e);
-        return [];
-    }
-}
-
-// ========== MESCLAR CONVERSAS ==========
+// ========== CARREGAR TODAS AS CONVERSAS ==========
 async function loadAllConversations() {
-    debugLog('🔄 === INICIANDO LOAD ALL CONVERSATIONS ===');
+    debugLog('🔄 === LOAD ALL CONVERSATIONS ===');
 
-    // 🔥 CORREÇÃO: Sempre buscar do backend PRIMEIRO
     const backendConversations = await loadConversationsFromServer();
-    debugLog('☁️ backend:', backendConversations.length);
-
-    const localConversations = loadConversationsFromStorage();
-    debugLog('📱 localStorage:', localConversations.length);
-
-    // 🔥 PRIORIDADE ABSOLUTA DO BACKEND
-    const conversationMap = new Map();
-
-    // Primeiro adiciona do BACKEND (fonte da verdade)
-    backendConversations.forEach(conv => {
-        conversationMap.set(conv.id, conv);
-        debugLog(`   ✅ Adicionado do backend: ID ${conv.id} (${typeof conv.id}) - ${conv.name}`);
-    });
-
-    // Depois complementa APENAS com mensagens locais (não adiciona conversas que não existem no backend)
-    localConversations.forEach(conv => {
-        if (conversationMap.has(conv.id)) {
-            const existing = conversationMap.get(conv.id);
-            // Adiciona mensagens locais não sincronizadas
-            if (conv.messages && conv.messages.length > 0) {
-                const localOnlyMessages = conv.messages.filter(m => !m.fromServer && m.sender !== 'system');
-                if (localOnlyMessages.length > 0) {
-                    existing.messages = [...existing.messages, ...localOnlyMessages];
-                    debugLog(`   💬 Adicionadas ${localOnlyMessages.length} mensagens locais ao match ${conv.id}`);
-                }
-            }
-        } else {
-            // 🔥 CORREÇÃO: NÃO adicionar conversas que só existem localmente
-            // Isso evita conversas "fantasma" que não existem mais no backend
-            debugLog(`   ⚠️ Conversa ${conv.id} - ${conv.name} ignorada (não existe no backend)`);
-        }
-    });
-
-    conversations = Array.from(conversationMap.values());
+    
+    // Backend é a fonte da verdade
+    conversations = backendConversations;
     conversations.sort((a, b) => (b.matchTimestamp || 0) - (a.matchTimestamp || 0));
 
-    debugLog('✅ Total mesclado:', conversations.length);
-    debugLog('📋 IDs finais:', conversations.map(c => ({ id: c.id, idType: typeof c.id, name: c.name })));
-
+    debugLog('✅ Total:', conversations.length);
     saveConversationsToStorage();
 
     return conversations;
 }
 
 // ========== CARREGAR MENSAGENS ==========
-async function loadMessagesFromServer(matchId) {
-    debugLog('💬 Carregando mensagens do match:', matchId);
+async function loadMessagesFromServer(matchId, afterId = null) {
+    debugLog('💬 Carregando mensagens do match:', matchId, afterId ? `(após ID ${afterId})` : '');
 
     try {
-        const response = await fetch(`${API_BASE_URL}/matches/${matchId}/messages?limit=50`, {
+        let url = `${API_BASE_URL}/matches/${matchId}/messages?limit=50`;
+        if (afterId) {
+            url += `&after_id=${afterId}`;
+        }
+
+        const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -298,6 +213,60 @@ async function loadMessagesFromServer(matchId) {
     } catch (error) {
         debugLog('❌ Erro:', error);
         return [];
+    }
+}
+
+// ========== POLLING PARA NOVAS MENSAGENS ==========
+function startPolling() {
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+    }
+
+    debugLog('🔄 Iniciando polling...');
+
+    pollingInterval = setInterval(async () => {
+        if (!currentChat) {
+            debugLog('⏸️ Polling pausado (sem chat aberto)');
+            return;
+        }
+
+        try {
+            const newMessages = await loadMessagesFromServer(currentChat.id, lastMessageId);
+
+            if (newMessages.length > 0) {
+                debugLog('📬 Novas mensagens recebidas:', newMessages.length);
+
+                // Adiciona apenas mensagens que ainda não existem
+                newMessages.forEach(msg => {
+                    const exists = currentChat.messages.some(m => m.id === msg.id);
+                    if (!exists) {
+                        currentChat.messages.push(msg);
+                        // Atualiza o lastMessageId
+                        if (msg.id > lastMessageId) {
+                            lastMessageId = msg.id;
+                        }
+                    }
+                });
+
+                // Atualiza última mensagem na conversa
+                const lastMsg = newMessages[newMessages.length - 1];
+                currentChat.lastMessage = lastMsg.sender === 'me' ? `Você: ${lastMsg.text}` : lastMsg.text;
+                currentChat.time = lastMsg.time;
+
+                renderMessages();
+                saveConversationsToStorage();
+            }
+        } catch (error) {
+            debugLog('❌ Erro no polling:', error);
+        }
+    }, POLLING_RATE);
+}
+
+function stopPolling() {
+    if (pollingInterval) {
+        debugLog('⏹️ Parando polling');
+        clearInterval(pollingInterval);
+        pollingInterval = null;
     }
 }
 
@@ -349,9 +318,8 @@ function renderChatList() {
 
     document.querySelectorAll('.chat-item').forEach(item => {
         item.addEventListener('click', async () => {
-            // 🔥 CORREÇÃO: Converter para número no click
             const chatId = parseInt(item.dataset.chatId);
-            debugLog('🖱️ Click no chat ID:', chatId, typeof chatId);
+            debugLog('🖱️ Click no chat ID:', chatId);
             try {
                 await openChat(chatId);
             } catch (err) {
@@ -368,31 +336,21 @@ function renderChatList() {
 async function openChat(chatId) {
     debugLog('💬 === ABRINDO CHAT ===', chatId);
 
-    // 🔥 CORREÇÃO: Garantir que chatId é número
     const numericChatId = parseInt(chatId);
     if (isNaN(numericChatId) || numericChatId <= 0) {
         debugLog('❌ Chat ID inválido:', chatId);
         throw new Error('ID inválido');
     }
 
-    debugLog('📊 Total de conversas:', conversations.length);
-    debugLog('🔍 Procurando conversa com ID:', numericChatId, '(tipo:', typeof numericChatId, ')');
-    debugLog('📋 IDs disponíveis:', conversations.map(c => ({ id: c.id, tipo: typeof c.id })));
-
-    // 🔥 CORREÇÃO: Comparação numérica explícita
     currentChat = conversations.find(c => parseInt(c.id) === numericChatId);
 
     if (!currentChat) {
-        debugLog('❌ Conversa NÃO encontrada no array!');
-        debugLog('🔄 Recarregando TUDO do backend...');
-        
-        // 🔥 CORREÇÃO: Forçar refresh completo
+        debugLog('❌ Conversa não encontrada, recarregando...');
         await loadAllConversations();
         currentChat = conversations.find(c => parseInt(c.id) === numericChatId);
         
         if (!currentChat) {
-            debugLog('❌ CRÍTICO: Conversa não existe mesmo após reload!');
-            debugLog('🔍 IDs após reload:', conversations.map(c => c.id));
+            debugLog('❌ CRÍTICO: Conversa não existe!');
             throw new Error('Conversa não encontrada: ' + numericChatId);
         }
     }
@@ -403,22 +361,28 @@ async function openChat(chatId) {
     chatUserPhoto.src = currentChat.photo;
 
     currentChat.unread = 0;
-    saveConversationsToStorage();
     
+    // Carrega mensagens do servidor
     const serverMessages = await loadMessagesFromServer(numericChatId);
 
-    if (serverMessages.length > 0) {
-        const localMessages = currentChat.messages?.filter(m => m.sender === 'system') || [];
-        currentChat.messages = [...localMessages, ...serverMessages];
-    }
-
-    if (!currentChat.messages || currentChat.messages.length === 0) {
-        currentChat.messages = [{
+    // Mensagem de sistema + mensagens do servidor
+    currentChat.messages = [
+        {
             sender: 'system',
             text: `🎉 Parabéns! Você e ${currentChat.name} deram match!`,
             time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-        }];
+        },
+        ...serverMessages
+    ];
+
+    // Define o último ID de mensagem para o polling
+    if (serverMessages.length > 0) {
+        lastMessageId = Math.max(...serverMessages.map(m => m.id || 0));
+    } else {
+        lastMessageId = 0;
     }
+
+    debugLog('📝 lastMessageId definido:', lastMessageId);
 
     renderMessages();
 
@@ -427,13 +391,16 @@ async function openChat(chatId) {
     chatScreen.classList.remove('hidden');
 
     setTimeout(() => scrollToBottom(), 150);
+
+    // 🔥 Inicia polling para novas mensagens
+    startPolling();
+
     debugLog('✅ Chat aberto com sucesso!');
 }
 
 // ========== RENDERIZAR MENSAGENS ==========
 function renderMessages() {
     if (!currentChat || !messagesContainer) {
-        debugLog('❌ Erro ao renderizar:', { currentChat: !!currentChat, messagesContainer: !!messagesContainer });
         return;
     }
 
@@ -477,10 +444,6 @@ async function sendMessage() {
     const now = new Date();
     const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-    if (!currentChat.messages) {
-        currentChat.messages = [];
-    }
-
     const newMessage = {
         sender: 'me',
         text: text,
@@ -489,16 +452,13 @@ async function sendMessage() {
     };
 
     currentChat.messages.push(newMessage);
-    currentChat.lastMessage = text;
+    currentChat.lastMessage = `Você: ${text}`;
     currentChat.time = "Agora";
 
     messageInput.value = '';
     renderMessages();
-    setTimeout(() => scrollToBottom(), 50);
 
     try {
-        debugLog('📡 POST para:', `${API_BASE_URL}/matches/${currentChat.id}/messages`);
-        
         const response = await fetch(`${API_BASE_URL}/matches/${currentChat.id}/messages`, {
             method: 'POST',
             headers: {
@@ -511,13 +471,17 @@ async function sendMessage() {
             })
         });
 
-        debugLog('📨 Resposta do envio:', response.status);
-
         if (response.ok) {
             const data = await response.json();
             newMessage.pending = false;
             newMessage.id = data.id;
             newMessage.fromServer = true;
+            
+            // Atualiza lastMessageId para o polling não duplicar
+            if (data.id > lastMessageId) {
+                lastMessageId = data.id;
+            }
+            
             debugLog('✅ Mensagem enviada! ID:', data.id);
         } else {
             newMessage.error = true;
@@ -534,9 +498,22 @@ async function sendMessage() {
 function saveConversationsToStorage() {
     try {
         localStorage.setItem('sparkConversations', JSON.stringify(conversations));
-        debugLog('💾 Conversas salvas:', conversations.length);
     } catch (e) {
         debugLog('❌ Erro ao salvar:', e);
+    }
+}
+
+function loadConversationsFromStorage() {
+    try {
+        const saved = localStorage.getItem('sparkConversations');
+        if (!saved) return [];
+        return JSON.parse(saved).map(conv => ({
+            ...conv,
+            id: parseInt(conv.id),
+            matchId: parseInt(conv.matchId || conv.id)
+        }));
+    } catch (e) {
+        return [];
     }
 }
 
@@ -548,11 +525,18 @@ function scrollToBottom() {
 
 // ========== EVENTOS ==========
 if (backToList) {
-    backToList.addEventListener('click', () => {
+    backToList.addEventListener('click', async () => {
+        // 🔥 Para o polling ao voltar
+        stopPolling();
+        
         chatScreen.classList.add('hidden');
         chatListScreen.classList.remove('hidden');
         if (bottomNav) bottomNav.classList.remove('hidden');
         currentChat = null;
+        lastMessageId = null;
+        
+        // 🔥 Recarrega a lista para atualizar última mensagem
+        await loadAllConversations();
         renderChatList();
     });
 }
@@ -573,12 +557,10 @@ async function tryOpenChatFromMatch(chatId) {
     debugLog('🎯 === ABRINDO CHAT DO MATCH ===', chatId);
     
     try {
-        // 🔥 CORREÇÃO: Garantir número
         const numericChatId = parseInt(chatId);
         
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        debugLog('🔄 Recarregando conversas...');
         await loadAllConversations();
         
         const found = conversations.find(c => parseInt(c.id) === numericChatId);
@@ -590,7 +572,6 @@ async function tryOpenChatFromMatch(chatId) {
         }
         
         debugLog('❌ Conversa não encontrada!');
-        debugLog('📋 IDs disponíveis:', conversations.map(c => c.id));
         return false;
         
     } catch (err) {
@@ -599,17 +580,31 @@ async function tryOpenChatFromMatch(chatId) {
     }
 }
 
+// ========== ATUALIZAÇÃO PERIÓDICA DA LISTA ==========
+let listRefreshInterval = null;
+
+function startListRefresh() {
+    // Atualiza a lista a cada 10 segundos quando NÃO está em um chat
+    listRefreshInterval = setInterval(async () => {
+        if (!currentChat) {
+            debugLog('🔄 Atualizando lista de conversas...');
+            await loadAllConversations();
+            renderChatList();
+        }
+    }, 10000);
+}
+
 // ========== INICIALIZAÇÃO ==========
 debugLog('🚀 === INICIANDO CHAT.JS ===');
 
 getMyUserId().then(async () => {
-    debugLog('✅ User ID obtido:', myUserId, '(tipo:', typeof myUserId, ')');
-    
-    // 🔥 CORREÇÃO: Limpar localStorage antigo para evitar conflitos
-    // localStorage.removeItem('sparkConversations'); // Descomente para forçar limpeza
+    debugLog('✅ User ID obtido:', myUserId);
     
     await loadAllConversations();
     renderChatList();
+
+    // Inicia refresh da lista
+    startListRefresh();
 
     const openChatId = localStorage.getItem('openChatId');
 
@@ -627,6 +622,14 @@ getMyUserId().then(async () => {
                 alert('Erro ao abrir conversa. Selecione manualmente.');
             }
         }
+    }
+});
+
+// Limpa intervals quando a página é fechada
+window.addEventListener('beforeunload', () => {
+    stopPolling();
+    if (listRefreshInterval) {
+        clearInterval(listRefreshInterval);
     }
 });
 
