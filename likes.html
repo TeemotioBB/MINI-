@@ -14,6 +14,30 @@
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
         }
+        
+        /* 🔥 CORREÇÃO MOBILE: Permite scroll na página */
+        html, body {
+            height: auto;
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        /* Container principal com scroll */
+        .likes-container {
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Grid de likes com scroll */
+        #likes-grid {
+            max-height: calc(100vh - 380px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
     </style>
 </head>
 
@@ -21,10 +45,10 @@
 
     <div class="w-full max-w-[370px] p-4 min-h-screen flex flex-col">
         <!-- Tela de Likes -->
-        <div class="glass-card p-4 relative flex-1 overflow-y-auto max-h-[calc(100vh-120px)]">
+        <div class="glass-card p-4 relative flex-1 likes-container">
 
             <!-- Header -->
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
                 <a href="index.html" class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-700">
                     <i class="fa-solid fa-arrow-left"></i>
                 </a>
@@ -35,17 +59,17 @@
             </div>
 
             <!-- Tabs -->
-            <div class="flex gap-2 mb-4 bg-gray-100 rounded-full p-1">
+            <div class="flex gap-2 mb-4 bg-gray-100 rounded-full p-1 flex-shrink-0">
                 <button id="tab-received" class="flex-1 py-2 px-3 rounded-full font-bold text-xs transition-all bg-gradient-to-r from-orange-500 to-pink-500 text-white">
-                    Recebidas (33)
+                    Recebidas (<span id="received-count">0</span>)
                 </button>
                 <button id="tab-sent" class="flex-1 py-2 px-3 rounded-full font-bold text-xs transition-all text-gray-500">
-                    Enviadas (12)
+                    Enviadas (<span id="sent-count">0</span>)
                 </button>
             </div>
 
             <!-- Contador de Likes Premium -->
-            <div class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-3 mb-4 text-white">
+            <div class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-3 mb-4 text-white flex-shrink-0">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-[10px] uppercase font-bold opacity-90">Likes restantes hoje</p>
@@ -61,7 +85,7 @@
                 </button>
             </div>
 
-            <!-- Grid de Likes -->
+            <!-- Grid de Likes com SCROLL -->
             <div id="likes-grid" class="grid grid-cols-2 gap-2 pb-4">
                 <!-- Os cards de likes serão inseridos aqui -->
             </div>
@@ -87,7 +111,7 @@
 
             <a href="likes.html" class="flex flex-col items-center text-orange-500 relative">
                 <i class="fa-solid fa-star text-xl"></i>
-                <span class="absolute -top-1 -right-2 bg-pink-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">33</span>
+                <span id="likes-badge" class="absolute -top-1 -right-2 bg-pink-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">0</span>
                 <span class="text-[9px] font-bold mt-1 uppercase">Likes</span>
             </a>
 
@@ -104,7 +128,7 @@
     </div>
 
     <!-- Modal de Perfil -->
-    <div id="profile-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div id="profile-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4" style="overflow-y: auto;">
         <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-[370px] w-full overflow-hidden modal-content">
             <div class="relative">
                 <img id="modal-photo" src="" class="w-full h-[300px] object-cover">
