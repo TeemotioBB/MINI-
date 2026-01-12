@@ -33,6 +33,18 @@ pool.connect((err, client, release) => {
 // Exporta pool para usar nas rotas
 global.pool = pool;
 
+// ========== CONFIGURAÇÕES DO SISTEMA ==========
+const LIMITS = {
+    FREE: {
+        DAILY_LIKES: 10,
+        DAILY_SUPER_LIKES: 0
+    },
+    PREMIUM: {
+        DAILY_SUPER_LIKES: 5
+    },
+    PREMIUM_DURATION_DAYS: 30
+};
+
 // ========== MIDDLEWARES ==========
 app.use(helmet({
   contentSecurityPolicy: false,
@@ -299,7 +311,7 @@ app.post('/api/likes', optionalTelegramAuth, async (req, res) => {
         
         // Verifica limites (apenas se não for premium)
         if (!from.is_premium) {
-            if (type === 'like' && from.daily_likes >= 10) {
+            if (type === 'like' && from.daily_likes >= LIMITS.FREE.DAILY_LIKES) {
                 return res.status(403).json({ 
                     error: 'Limite de likes atingido',
                     code: 'LIMIT_REACHED'
@@ -396,7 +408,7 @@ app.post('/api/likes', optionalTelegramAuth, async (req, res) => {
                     like: result.rows[0],
                     match: true,
                     match_id: matchResult.rows[0].id,
-                    remaining_likes: from.is_premium ? 'unlimited' : Math.max(0, 10 - from.daily_likes - 1)
+                    remaining_likes: from.is_premium ? 'unlimited' : Math.max(0, LIMITS.FREE.DAILY_LIKES - from.daily_likes - 1)
                 });
             } else {
                 console.log('💚 Like normal, sem match ainda');
@@ -404,7 +416,7 @@ app.post('/api/likes', optionalTelegramAuth, async (req, res) => {
                 res.json({
                     like: result.rows[0],
                     match: false,
-                    remaining_likes: from.is_premium ? 'unlimited' : Math.max(0, 10 - from.daily_likes - 1)
+                    remaining_likes: from.is_premium ? 'unlimited' : Math.max(0, LIMITS.FREE.DAILY_LIKES - from.daily_likes - 1)
                 });
             }
         } else {
@@ -414,7 +426,7 @@ app.post('/api/likes', optionalTelegramAuth, async (req, res) => {
             res.json({
                 like: result.rows[0],
                 match: false,
-                remaining_likes: from.is_premium ? 'unlimited' : Math.max(0, 10 - from.daily_likes)
+                remaining_likes: from.is_premium ? 'unlimited' : Math.max(0, LIMITS.FREE.DAILY_LIKES - from.daily_likes)
             });
         }
     } catch (error) {
@@ -896,8 +908,8 @@ app.get('/api/users/:telegramId/premium', optionalTelegramAuth, async (req, res)
             );
         }
         
-        const maxLikes = isActive ? Infinity : 10;
-        const maxSuperLikes = isActive ? 5 : 0;
+        const maxLikes = isActive ? Infinity : LIMITS.FREE.DAILY_LIKES;
+        const maxSuperLikes = isActive ? LIMITS.PREMIUM.DAILY_SUPER_LIKES : LIMITS.FREE.DAILY_SUPER_LIKES;
         
         res.json({
             premium: {
@@ -933,7 +945,9 @@ app.post('/api/users/:telegramId/premium', optionalTelegramAuth, async (req, res
         const finalTelegramId = req.telegramUser?.telegram_id || telegramId;
         
         // Simple security check (in production, use proper payment verification)
-        if (secret && secret !== 'spark_admin_2024') {
+        // Check if secret is provided and matches environment variable
+        const ADMIN_SECRET = process.env.ADMIN_SECRET || 'spark_admin_2024';
+        if (secret && secret !== ADMIN_SECRET) {
             return res.status(403).json({ error: 'Acesso negado' });
         }
         
@@ -951,7 +965,7 @@ app.post('/api/users/:telegramId/premium', optionalTelegramAuth, async (req, res
         const user = userResult.rows[0];
         
         if (action === 'activate') {
-            const days = duration_days || 30;
+            const days = duration_days || LIMITS.PREMIUM_DURATION_DAYS;
             const expiresAt = new Date();
             expiresAt.setDate(expiresAt.getDate() + days);
             
@@ -1006,14 +1020,20 @@ app.post('/api/users/:telegramId/premium', optionalTelegramAuth, async (req, res
 });
 
 // ========== DEBUG PREMIUM ENDPOINTS ==========
+// Note: These endpoints should be disabled in production
 
 // Activate premium (debug mode)
 app.get('/api/debug/activate-premium/:telegramId', async (req, res) => {
+    // Disable in production
+    if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({ error: 'Debug endpoints disabled in production' });
+    }
+    
     try {
         const { telegramId } = req.params;
         
         const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 30);
+        expiresAt.setDate(expiresAt.getDate() + LIMITS.PREMIUM_DURATION_DAYS);
         
         const result = await pool.query(`
             UPDATE users 
@@ -1043,6 +1063,11 @@ app.get('/api/debug/activate-premium/:telegramId', async (req, res) => {
 
 // Deactivate premium (debug mode)
 app.get('/api/debug/deactivate-premium/:telegramId', async (req, res) => {
+    // Disable in production
+    if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({ error: 'Debug endpoints disabled in production' });
+    }
+    
     try {
         const { telegramId } = req.params;
         
@@ -1362,8 +1387,8 @@ app.get('/api/debug/check-limits/:telegramId', async (req, res) => {
         
         const user = result.rows[0];
         
-        const maxLikes = user.is_premium ? Infinity : 10;
-        const maxSuperLikes = user.is_premium ? 5 : 0;
+        const maxLikes = user.is_premium ? Infinity : LIMITS.FREE.DAILY_LIKES;
+        const maxSuperLikes = user.is_premium ? LIMITS.PREMIUM.DAILY_SUPER_LIKES : LIMITS.FREE.DAILY_SUPER_LIKES;
         
         const remainingLikes = user.is_premium ? 'unlimited' : Math.max(0, maxLikes - user.daily_likes);
         const remainingSuperLikes = user.is_premium ? (maxSuperLikes - user.daily_super_likes) : 0;
