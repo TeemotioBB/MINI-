@@ -612,14 +612,14 @@ app.get('/api/likes/received/preview', optionalTelegramAuth, async (req, res) =>
                     is_blurred: false
                 };
             } else {
-                // Usuário FREE - mostra borrado
+                // Usuário FREE - mostra placeholder borrado (não envia foto real!)
                 return {
                     id: like.id,
-                    telegram_id: like.telegram_id,
+                    telegram_id: null, // Esconde telegram_id para free
                     name: '???',
                     age: null,
                     bio: null,
-                    photo_url: like.photo_url || (like.photos && like.photos[0]),
+                    photo_url: 'https://via.placeholder.com/400x500/cccccc/666666?text=%3F%3F%3F', // Placeholder genérico
                     city: null,
                     type: like.type,
                     is_blurred: true
@@ -1593,4 +1593,3 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
-
