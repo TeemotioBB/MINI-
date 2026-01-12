@@ -49,11 +49,11 @@ async function loadProfiles() {
                     let photoUrl = null;
                     
                     // Try photo_url first
-                    if (user.photo_url && user.photo_url.trim() !== '') {
+                    if (user.photo_url && typeof user.photo_url === 'string' && user.photo_url.trim() !== '') {
                         photoUrl = user.photo_url;
                     }
                     // Then try first item in photos array
-                    else if (user.photos && Array.isArray(user.photos) && user.photos.length > 0 && user.photos[0] && user.photos[0].trim() !== '') {
+                    else if (user.photos && Array.isArray(user.photos) && user.photos.length > 0 && user.photos[0] && typeof user.photos[0] === 'string' && user.photos[0].trim() !== '') {
                         photoUrl = user.photos[0];
                     }
                     // Fallback to placeholder

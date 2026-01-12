@@ -360,7 +360,7 @@ async function openChat(chatId) {
     chatUserName.textContent = currentChat.name;
     
     // Ensure photo is valid before setting
-    if (currentChat.photo && currentChat.photo.trim() !== '') {
+    if (currentChat.photo && typeof currentChat.photo === 'string' && currentChat.photo.trim() !== '') {
         chatUserPhoto.src = currentChat.photo;
     } else {
         chatUserPhoto.src = 'https://via.placeholder.com/100x100/f3f4f6/9ca3af?text=Sem+Foto';

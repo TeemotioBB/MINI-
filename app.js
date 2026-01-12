@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
         profileBio.innerHTML = profile.bio || '';
         
         // Ensure photo is valid before setting
-        if (profile.photo && profile.photo.trim() !== '') {
+        if (profile.photo && typeof profile.photo === 'string' && profile.photo.trim() !== '') {
             profileImage.src = profile.photo;
         } else {
             profileImage.src = 'https://via.placeholder.com/500x600/f3f4f6/9ca3af?text=Sem+Foto';
