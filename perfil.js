@@ -410,6 +410,41 @@ document.addEventListener('DOMContentLoaded', function() {
         bioCount.textContent = inputBio.value.length;
     }
 
+    // ✅ NOVA FUNÇÃO - Salva APENAS as fotos (usa rota PATCH)
+async function savePhotosToServer() {
+    try {
+        const telegramId = getTelegramId();
+        
+        console.log('📸 Enviando fotos para o servidor...');
+        console.log('📷 Fotos:', userData.photos);
+        
+        const response = await fetch(`${API_URL}/users/${telegramId}/photos`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': getTelegramInitData()
+            },
+            body: JSON.stringify({
+                photo_url: userData.photos[0] || null,
+                photos: userData.photos || []
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            console.log('✅ Fotos salvas no servidor:', data);
+            return data;
+        } else {
+            console.error('❌ Erro do servidor:', data);
+            throw new Error(data.error || 'Erro ao salvar fotos');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao enviar fotos:', error);
+        throw error;
+    }
+}
+
     // ========== SALVAR NO SERVIDOR ==========
     async function saveToServer() {
         try {
@@ -839,3 +874,4 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
     document.head.appendChild(style);
 });
+
