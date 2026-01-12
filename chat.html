@@ -10,6 +10,22 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
   <style>
+    /* 🔥 CORREÇÃO MOBILE: Permite scroll na página */
+    html, body {
+      height: auto;
+      min-height: 100vh;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+    
+    /* Container de lista de chats com scroll */
+    #chat-list {
+      max-height: calc(100vh - 380px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    
     /* CSS específico para o chat */
     #chat-screen {
       position: fixed;
@@ -26,6 +42,8 @@
       border-radius: 32px;
       border: 1px solid rgba(255, 255, 255, 0.4);
       box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
     }
 
     #chat-screen.hidden {
@@ -35,11 +53,15 @@
     .messages-scroll {
       scroll-behavior: smooth;
       -webkit-overflow-scrolling: touch;
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
     }
 
     /* Garante que o input fique sempre visível */
     #input-container {
-      position: sticky;
+      flex-shrink: 0;
+      position: relative;
       bottom: 0;
       z-index: 10;
     }
@@ -48,7 +70,7 @@
     #messages-container::after {
       content: '';
       display: block;
-      height: 80px;
+      height: 20px;
     }
 
     /* Esconde o bottom nav quando necessário */
@@ -65,7 +87,7 @@
     <div id="chat-list-screen" class="glass-card p-6 relative">
 
       <!-- Header -->
-      <div class="flex justify-between items-center mb-6">
+      <div class="flex justify-between items-center mb-6 flex-shrink-0">
         <a href="index.html" class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-700">
           <i class="fa-solid fa-arrow-left"></i>
         </a>
@@ -75,7 +97,7 @@
         </button>
       </div>
 
-      <!-- Lista de Matches/Conversas -->
+      <!-- Lista de Matches/Conversas com SCROLL -->
       <div id="chat-list" class="space-y-3 mb-20">
         <!-- As conversas serão inseridas aqui pelo JavaScript -->
       </div>
@@ -93,7 +115,7 @@
     </div>
 
     <!-- Tela de Conversa Individual (escondida por padrão) -->
-    <div id="chat-screen" class="hidden flex-col glass-card-chat">
+    <div id="chat-screen" class="hidden">
       
       <!-- Header da Conversa -->
       <div class="flex items-center justify-between p-4 border-b border-gray-100 flex-shrink-0 bg-white rounded-t-[32px]">
@@ -149,7 +171,7 @@
 
       <a href="likes.html" class="flex flex-col items-center text-gray-400 relative">
         <i class="fa-solid fa-star text-xl"></i>
-        <span class="absolute -top-1 -right-2 bg-pink-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">33</span>
+        <span class="absolute -top-1 -right-2 bg-pink-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">0</span>
         <span class="text-[9px] font-bold mt-1 uppercase">Likes</span>
       </a>
 
