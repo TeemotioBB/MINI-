@@ -565,7 +565,7 @@ app.get('/api/likes/received/preview', optionalTelegramAuth, async (req, res) =>
         const user = userResult.rows[0];
         const isPremium = user.is_premium;
         
-        // Busca likes recebidos (exceto dislikes e usuários com match ativo)
+        // Busca likes recebidos (exceto dislikes, usuários que eu já deslikei, e usuários com match ativo)
         const result = await pool.query(`
             SELECT 
                 u.id,
@@ -587,6 +587,10 @@ app.get('/api/likes/received/preview', optionalTelegramAuth, async (req, res) =>
                   WHERE ((m.user1_id = $1 AND m.user2_id = u.id)
                      OR (m.user2_id = $1 AND m.user1_id = u.id))
                      AND m.is_active = TRUE
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM likes l2
+                  WHERE l2.from_user_id = $1 AND l2.to_user_id = u.id AND l2.type = 'dislike'
               )
             ORDER BY l.created_at DESC
         `, [user.id]);
