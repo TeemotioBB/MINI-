@@ -173,8 +173,8 @@ function renderLikes() {
             return `
                 <div class="like-card relative rounded-2xl overflow-hidden shadow-lg cursor-pointer transform hover:scale-105 transition-all" 
                      data-id="${like.id}" 
-                     data-telegram-id="${like.telegram_id}"
-                     ${!isBlurred ? 'onclick="openProfileModal(this)"' : ''}>
+                     data-telegram-id="${like.telegram_id || ''}"
+                     ${!isBlurred ? 'onclick="openProfileModal(this)"' : 'onclick="showPremiumModal()"'}>
                     
                     <!-- Foto -->
                     <div class="relative">
@@ -192,7 +192,7 @@ function renderLikes() {
                             </div>
                         ` : ''}
                         
-                        ${isSuperLike ? `
+                        ${isSuperLike && !isBlurred ? `
                             <!-- Badge Super Like -->
                             <div class="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
                                 <i class="fa-solid fa-star text-[10px]"></i> Super
@@ -338,7 +338,6 @@ async function dislikeFromReceivedLikes(telegramId, userId) {
             console.log('✅ Dislike registrado com sucesso');
             
             // Remove o usuário da lista local de likes recebidos
-            // Note: Direct mutation is acceptable here since we immediately update all related UI
             receivedLikes = receivedLikes.filter(like => like.id !== userId);
             
             // Atualiza o contador
@@ -506,5 +505,6 @@ if (document.readyState === 'loading') {
 window.openProfileModal = openProfileModal;
 window.likeBack = likeBack;
 window.dislikeFromReceivedLikes = dislikeFromReceivedLikes;
+window.showPremiumModal = showPremiumModal;
 
 console.log('✅ likes.js carregado!');
