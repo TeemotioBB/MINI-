@@ -1532,6 +1532,52 @@ app.post('/api/admin/reset-likes-between-users', async (req, res) => {
     }
 });
 
+// PATCH - Atualizar fotos do usuário
+app.patch('/api/users/:telegramId/photos', optionalTelegramAuth, async (req, res) => {
+    try {
+        const { telegramId } = req.params;
+        const { photo_url, photos } = req.body;
+        
+        const finalTelegramId = req.telegramUser?.telegram_id || telegramId;
+        
+        console.log('📸 Atualizando fotos do usuário:', finalTelegramId);
+        console.log('📷 photo_url:', photo_url);
+        console.log('📷 photos:', photos);
+        
+        // Verifica se usuário existe
+        const userCheck = await pool.query(
+            'SELECT id FROM users WHERE telegram_id = $1',
+            [finalTelegramId]
+        );
+        
+        if (userCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuário não encontrado. Preencha o perfil primeiro.' });
+        }
+        
+        // Atualiza apenas as fotos
+        const result = await pool.query(`
+            UPDATE users 
+            SET 
+                photo_url = $1,
+                photos = $2,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE telegram_id = $3
+            RETURNING id, telegram_id, name, photo_url, photos
+        `, [photo_url, photos, finalTelegramId]);
+        
+        console.log('✅ Fotos atualizadas:', result.rows[0]);
+        
+        res.json({
+            success: true,
+            user: result.rows[0]
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar fotos:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
 // ========== ERROR HANDLERS ==========
 app.use((err, req, res, next) => {
     console.error(err.stack);
@@ -1547,3 +1593,4 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
+
