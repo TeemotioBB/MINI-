@@ -22,572 +22,610 @@ let myTelegramId = null;
 
 // ========== PEGAR MEU TELEGRAM ID ==========
 function getMyTelegramId() {
-if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
-return window.Telegram.WebApp.initDataUnsafe.user.id;
-}
-return localStorage.getItem('testTelegramId') || '123456789';
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
+        return window.Telegram.WebApp.initDataUnsafe.user.id;
+    }
+    return localStorage.getItem('testTelegramId') || '123456789';
 }
 
 // ========== BUSCAR MEU USER_ID DO BANCO ==========
 async function getMyUserId() {
-try {
-myTelegramId = getMyTelegramId();
+    try {
+        myTelegramId = getMyTelegramId();
 
-console.log('🔍 Buscando user_id para telegram_id:', myTelegramId);
+        console.log('🔍 Buscando user_id para telegram_id:', myTelegramId);
 
-const response = await fetch(`${API_BASE_URL}/users/${myTelegramId}`, {
-method: 'GET',
-headers: {
-'Content-Type': 'application/json',
-'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
-}
-});
+        const response = await fetch(`${API_BASE_URL}/users/${myTelegramId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+            }
+        });
 
-if (response.ok) {
-const data = await response.json();
-myUserId = data.id;
-console.log('✅ Meu user_id:', myUserId, '| Nome:', data.name);
-return myUserId;
-} else {
-console.error('❌ Erro ao buscar user_id');
-return null;
-}
-} catch (error) {
-console.error('❌ Erro:', error);
-return null;
-}
+        if (response.ok) {
+            const data = await response.json();
+            myUserId = data.id;
+            console.log('✅ Meu user_id:', myUserId, '| Nome:', data.name);
+            return myUserId;
+        } else {
+            console.error('❌ Erro ao buscar user_id');
+            return null;
+        }
+    } catch (error) {
+        console.error('❌ Erro:', error);
+        return null;
+    }
 }
 
 // ========== CARREGAR CONVERSAS DO LOCALSTORAGE ==========
 function loadConversationsFromStorage() {
-console.log('📦 Carregando conversas do localStorage...');
-try {
-const saved = localStorage.getItem('sparkConversations');
-if (saved) {
-const parsed = JSON.parse(saved);
-console.log('✅ Conversas encontradas no localStorage:', parsed.length);
-return parsed;
-} else {
-console.log('ℹ️ Nenhuma conversa salva no localStorage');
-return [];
-}
-} catch (e) {
-console.error('❌ Erro ao carregar do localStorage:', e);
-return [];
-}
+    console.log('📦 Carregando conversas do localStorage...');
+    try {
+        const saved = localStorage.getItem('sparkConversations');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            console.log('✅ Conversas encontradas no localStorage:', parsed.length);
+            if (parsed.length > 0) {
+                console.log('📋 Primeiras conversas:', parsed.slice(0, 3).map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    matchId: c.matchId
+                })));
+            }
+            return parsed;
+        } else {
+            console.log('ℹ️ Nenhuma conversa salva no localStorage');
+            return [];
+        }
+    } catch (e) {
+        console.error('❌ Erro ao carregar do localStorage:', e);
+        return [];
+    }
 }
 
 // ========== FORMATAR TEMPO ==========
 function formatTime(timestamp) {
-if (!timestamp) return 'Agora';
+    if (!timestamp) return 'Agora';
 
-const date = new Date(timestamp);
-const now = new Date();
-const diff = Math.floor((now - date) / 1000);
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000);
 
-if (diff < 60) return 'Agora';
-if (diff < 3600) return `${Math.floor(diff / 60)}min`;
-if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+    if (diff < 60) return 'Agora';
+    if (diff < 3600) return `${Math.floor(diff / 60)}min`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
 
-return date.toLocaleDateString('pt-BR');
+    return date.toLocaleDateString('pt-BR');
 }
 
 // ========== CARREGAR MATCHES DO BACKEND ==========
 async function loadConversationsFromServer() {
-console.log('🔥 Carregando matches do backend...');
+    console.log('🔥 Carregando matches do backend...');
 
-try {
-if (!myTelegramId) {
-myTelegramId = getMyTelegramId();
-}
+    try {
+        if (!myTelegramId) {
+            myTelegramId = getMyTelegramId();
+        }
 
-console.log('👤 Buscando matches para telegram_id:', myTelegramId);
+        console.log('👤 Buscando matches para telegram_id:', myTelegramId);
 
-const response = await fetch(`${API_BASE_URL}/matches?telegram_id=${myTelegramId}`, {
-method: 'GET',
-headers: {
-'Content-Type': 'application/json',
-'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
-}
-});
+        const response = await fetch(`${API_BASE_URL}/matches?telegram_id=${myTelegramId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+            }
+        });
 
-if (!response.ok) {
-console.error('❌ Erro ao carregar matches:', response.status);
-return [];
-}
+        if (!response.ok) {
+            console.error('❌ Erro ao carregar matches:', response.status);
+            return [];
+        }
 
-const data = await response.json();
-console.log('📦 Dados recebidos do servidor:', data.length, 'matches');
+        const data = await response.json();
+        console.log('📦 Dados recebidos do servidor:', data.length, 'matches');
 
-if (!myUserId) {
-await getMyUserId();
-}
+        if (!myUserId) {
+            await getMyUserId();
+        }
 
-const backendConversations = data.map(match => {
-const isUser1 = match.user1_id === myUserId;
+        const backendConversations = data.map(match => {
+            const isUser1 = match.user1_id === myUserId;
 
-const otherUser = {
-id: isUser1 ? match.user2_id : match.user1_id,
-telegram_id: isUser1 ? match.user2_telegram_id : match.user1_telegram_id,
-name: isUser1 ? match.user2_name : match.user1_name,
-age: isUser1 ? match.user2_age : match.user1_age,
-photo: isUser1 ? (match.user2_photo || match.user2_photos?.[0]) : (match.user1_photo || match.user1_photos?.[0]),
-photos: isUser1 ? match.user2_photos : match.user1_photos
-};
+            const otherUser = {
+                id: isUser1 ? match.user2_id : match.user1_id,
+                telegram_id: isUser1 ? match.user2_telegram_id : match.user1_telegram_id,
+                name: isUser1 ? match.user2_name : match.user1_name,
+                age: isUser1 ? match.user2_age : match.user1_age,
+                photo: isUser1 ? (match.user2_photo || match.user2_photos?.[0]) : (match.user1_photo || match.user1_photos?.[0]),
+                photos: isUser1 ? match.user2_photos : match.user1_photos
+            };
 
-console.log('📌 Match processado:', {
-match_id: match.match_id,
-eu: isUser1 ? match.user1_name : match.user2_name,
-outro: otherUser.name,
-photo: otherUser.photo
-});
+            console.log('📌 Match processado:', {
+                match_id: match.match_id,
+                eu: isUser1 ? match.user1_name : match.user2_name,
+                outro: otherUser.name,
+                photo: otherUser.photo
+            });
 
-return {
-id: match.match_id,
-matchId: match.match_id,
-otherUserId: otherUser.id,
-otherTelegramId: otherUser.telegram_id,
-name: otherUser.name,
-photo: otherUser.photo || 'https://via.placeholder.com/100?text=Sem+Foto',
-lastMessage: `Vocês deram match! 💕`,
-time: formatTime(match.matched_at),
-unread: 0,
-online: true,
-matchTimestamp: new Date(match.matched_at).getTime(),
-messages: [
-{
-sender: 'system',
-text: `🎉 Parabéns! Você e ${otherUser.name} deram match! Que tal começar uma conversa?`,
-time: new Date(match.matched_at).toLocaleTimeString('pt-BR', { 
-hour: '2-digit', 
-minute: '2-digit' 
-})
-}
-]
-};
-});
+            return {
+                id: match.match_id,
+                matchId: match.match_id,
+                otherUserId: otherUser.id,
+                otherTelegramId: otherUser.telegram_id,
+                name: otherUser.name,
+                photo: otherUser.photo || 'https://via.placeholder.com/100?text=Sem+Foto',
+                lastMessage: `Vocês deram match! 💕`,
+                time: formatTime(match.matched_at),
+                unread: 0,
+                online: true,
+                matchTimestamp: new Date(match.matched_at).getTime(),
+                messages: [
+                    {
+                        sender: 'system',
+                        text: `🎉 Parabéns! Você e ${otherUser.name} deram match! Que tal começar uma conversa?`,
+                        time: new Date(match.matched_at).toLocaleTimeString('pt-BR', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        })
+                    }
+                ]
+            };
+        });
 
-console.log('✅ Conversas do backend:', backendConversations.length);
-return backendConversations;
+        console.log('✅ Conversas do backend:', backendConversations.length);
+        return backendConversations;
 
-} catch (error) {
-console.error('❌ Erro ao carregar conversas:', error);
-return [];
-}
+    } catch (error) {
+        console.error('❌ Erro ao carregar conversas:', error);
+        return [];
+    }
 }
 
 // ========== CARREGAR MENSAGENS DO BACKEND ==========
 async function loadMessagesFromServer(matchId) {
-console.log('🔥 Carregando mensagens do match:', matchId);
+    console.log('🔥 Carregando mensagens do match:', matchId);
 
-try {
-const response = await fetch(`${API_BASE_URL}/matches/${matchId}/messages?limit=50`, {
-method: 'GET',
-headers: {
-'Content-Type': 'application/json',
-'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
-}
-});
+    try {
+        const response = await fetch(`${API_BASE_URL}/matches/${matchId}/messages?limit=50`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+            }
+        });
 
-if (!response.ok) {
-console.error('❌ Erro ao carregar mensagens:', response.status);
-return [];
-}
+        if (!response.ok) {
+            console.error('❌ Erro ao carregar mensagens:', response.status);
+            return [];
+        }
 
-const data = await response.json();
-console.log('📦 Mensagens recebidas:', data.length);
+        const data = await response.json();
+        console.log('📦 Mensagens recebidas:', data.length);
 
-const messages = data.map(msg => ({
-sender: msg.sender_id === myUserId ? 'me' : 'other',
-text: msg.content,
-time: new Date(msg.created_at).toLocaleTimeString('pt-BR', { 
-hour: '2-digit', 
-minute: '2-digit' 
-}),
-id: msg.id,
-fromServer: true
-}));
+        const messages = data.map(msg => ({
+            sender: msg.sender_id === myUserId ? 'me' : 'other',
+            text: msg.content,
+            time: new Date(msg.created_at).toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            }),
+            id: msg.id,
+            fromServer: true
+        }));
 
-return messages;
+        return messages;
 
-} catch (error) {
-console.error('❌ Erro ao carregar mensagens:', error);
-return [];
-}
+    } catch (error) {
+        console.error('❌ Erro ao carregar mensagens:', error);
+        return [];
+    }
 }
 
 // ========== MESCLAR CONVERSAS ==========
 async function loadAllConversations() {
-console.log('🔄 Carregando TODAS as conversas...');
+    console.log('🔄 Carregando TODAS as conversas...');
 
-const localConversations = loadConversationsFromStorage();
-console.log('📱 localStorage:', localConversations.length);
+    const localConversations = loadConversationsFromStorage();
+    console.log('📱 localStorage:', localConversations.length);
 
-const backendConversations = await loadConversationsFromServer();
-console.log('☁️ backend:', backendConversations.length);
+    const backendConversations = await loadConversationsFromServer();
+    console.log('☁️ backend:', backendConversations.length);
 
-const conversationMap = new Map();
+    const conversationMap = new Map();
 
-backendConversations.forEach(conv => {
-conversationMap.set(conv.id, conv);
-});
+    // 🔥 PRIORIZA LOCALSTORAGE (tem as conversas mais recentes)
+    localConversations.forEach(conv => {
+        conversationMap.set(conv.id, conv);
+    });
 
-localConversations.forEach(conv => {
-if (conversationMap.has(conv.id)) {
-const existing = conversationMap.get(conv.id);
+    // Complementa com dados do backend
+    backendConversations.forEach(conv => {
+        if (!conversationMap.has(conv.id)) {
+            conversationMap.set(conv.id, conv);
+        }
+    });
 
-if (conv.messages && conv.messages.length > 0) {
-const localOnlyMessages = conv.messages.filter(m => !m.fromServer);
-existing.messages = [...existing.messages, ...localOnlyMessages];
-}
+    conversations = Array.from(conversationMap.values());
 
-if (conv.matchTimestamp > (existing.matchTimestamp || 0)) {
-existing.lastMessage = conv.lastMessage;
-existing.time = conv.time;
-}
-} else {
-conversationMap.set(conv.id, conv);
-}
-});
+    conversations.sort((a, b) => {
+        const timeA = a.matchTimestamp || 0;
+        const timeB = b.matchTimestamp || 0;
+        return timeB - timeA;
+    });
 
-conversations = Array.from(conversationMap.values());
+    console.log('✅ Total mesclado:', conversations.length);
+    
+    if (conversations.length > 0) {
+        console.log('📋 IDs disponíveis:', conversations.map(c => ({ 
+            id: c.id, 
+            name: c.name 
+        })));
+    }
 
-conversations.sort((a, b) => {
-const timeA = a.matchTimestamp || 0;
-const timeB = b.matchTimestamp || 0;
-return timeB - timeA;
-});
+    saveConversationsToStorage();
 
-console.log('✅ Total mesclado:', conversations.length);
-
-saveConversationsToStorage();
-
-return conversations;
+    return conversations;
 }
 
 // ========== RENDERIZAR LISTA ==========
 function renderChatList() {
-console.log('🎨 Renderizando lista...');
+    console.log('🎨 Renderizando lista...');
 
-if (conversations.length === 0) {
-chatList.innerHTML = '';
-noChats.classList.remove('hidden');
-return;
-}
+    if (conversations.length === 0) {
+        chatList.innerHTML = '';
+        noChats.classList.remove('hidden');
+        return;
+    }
 
-noChats.classList.add('hidden');
+    noChats.classList.add('hidden');
 
-chatList.innerHTML = conversations.map(conv => `
-       <div class="chat-item flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-50 cursor-pointer transition-all" data-chat-id="${conv.id}">
-           <div class="relative">
-               <img src="${conv.photo}" class="w-14 h-14 rounded-full object-cover border-2 border-white shadow" onerror="this.src='https://via.placeholder.com/100?text=Foto'">
-               ${conv.online ? '<div class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>' : ''}
-           </div>
-           <div class="flex-1 min-w-0">
-               <div class="flex justify-between items-center mb-1">
-                   <h3 class="font-bold text-gray-800">${conv.name}</h3>
-                   <span class="text-xs text-gray-400">${conv.time}</span>
-               </div>
-               <p class="text-sm text-gray-500 truncate">${conv.lastMessage}</p>
-           </div>
-           ${conv.unread > 0 ? `
-               <div class="bg-gradient-to-r from-orange-500 to-pink-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full">
-                   ${conv.unread}
-               </div>
-           ` : ''}
-       </div>
-   `).join('');
+    chatList.innerHTML = conversations.map(conv => `
+        <div class="chat-item flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-50 cursor-pointer transition-all" data-chat-id="${conv.id}">
+            <div class="relative">
+                <img src="${conv.photo}" class="w-14 h-14 rounded-full object-cover border-2 border-white shadow" onerror="this.src='https://via.placeholder.com/100?text=Foto'">
+                ${conv.online ? '<div class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>' : ''}
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex justify-between items-center mb-1">
+                    <h3 class="font-bold text-gray-800">${conv.name}</h3>
+                    <span class="text-xs text-gray-400">${conv.time}</span>
+                </div>
+                <p class="text-sm text-gray-500 truncate">${conv.lastMessage}</p>
+            </div>
+            ${conv.unread > 0 ? `
+                <div class="bg-gradient-to-r from-orange-500 to-pink-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full">
+                    ${conv.unread}
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
 
-document.querySelectorAll('.chat-item').forEach(item => {
-item.addEventListener('click', async () => {
-const chatId = parseInt(item.dataset.chatId);
-console.log('🖱️ Click on chat item, ID:', chatId);
-try {
-await openChat(chatId);
-} catch (err) {
+    document.querySelectorAll('.chat-item').forEach(item => {
+        item.addEventListener('click', async () => {
+            const chatId = parseInt(item.dataset.chatId);
+            console.log('🖱️ Click on chat item, ID:', chatId);
+            try {
+                await openChat(chatId);
+            } catch (err) {
                 console.error('❌ Erro ao abrir chat ao clicar:', err);
-alert('Erro ao abrir conversa. Por favor, tente novamente.');
-}
-});
-});
+                alert('Erro ao abrir conversa. Por favor, tente novamente.');
+            }
+        });
+    });
 }
 
 // ========== ABRIR CONVERSA ==========
 async function openChat(chatId) {
-console.log('💬 Abrindo chat ID:', chatId, '| Tipo:', typeof chatId);
+    console.log('💬 Abrindo chat ID:', chatId, '| Tipo:', typeof chatId);
 
-// 🔥 GARANTE QUE chatId É UM NÚMERO VÁLIDO
-const numericChatId = typeof chatId === 'string' ? parseInt(chatId) : chatId;
+    // 🔥 GARANTE QUE chatId É UM NÚMERO VÁLIDO
+    const numericChatId = typeof chatId === 'string' ? parseInt(chatId) : chatId;
 
-if (isNaN(numericChatId) || numericChatId <= 0) {
-console.error('❌ Chat ID inválido:', chatId);
-alert('Erro: ID de conversa inválido.');
-return;
-}
+    if (isNaN(numericChatId) || numericChatId <= 0) {
+        console.error('❌ Chat ID inválido:', chatId);
+        throw new Error('ID de conversa inválido');
+    }
 
-console.log('🔢 Chat ID numérico:', numericChatId);
+    console.log('🔢 Chat ID numérico:', numericChatId);
+    console.log('📊 Total de conversas disponíveis:', conversations.length);
 
-// 🔥 TENTA ENCONTRAR A CONVERSA
-currentChat = conversations.find(c => c.id === numericChatId);
+    // 🔥 TENTA ENCONTRAR A CONVERSA
+    currentChat = conversations.find(c => c.id === numericChatId);
 
-if (!currentChat) {
-console.error('❌ Conversa não encontrada no array local:', numericChatId);
-if (conversations.length > 0) {
-console.log('📋 Total de conversas disponíveis:', conversations.length);
-console.log('📋 Primeiros IDs:', conversations.slice(0, 5).map(c => ({ id: c.id, nome: c.name })));
-}
+    if (!currentChat) {
+        console.error('❌ Conversa não encontrada no array local');
+        console.log('🔍 Procurando por ID:', numericChatId);
+        console.log('📋 IDs disponíveis:', conversations.map(c => c.id));
+        
+        // 🔥 FORÇA RECARREGAR DO LOCALSTORAGE PRIMEIRO
+        console.log('🔄 Tentando recarregar do localStorage...');
+        const localConvs = loadConversationsFromStorage();
+        const foundInLocal = localConvs.find(c => c.id === numericChatId);
+        
+        if (foundInLocal) {
+            console.log('✅ Conversa encontrada no localStorage!');
+            currentChat = foundInLocal;
+            // Adiciona ao array global se não estiver
+            if (!conversations.find(c => c.id === numericChatId)) {
+                conversations.unshift(foundInLocal);
+            }
+        } else {
+            console.log('⚠️ Não encontrado no localStorage, tentando backend...');
+            // Tenta do backend como último recurso
+            await loadAllConversations();
+            currentChat = conversations.find(c => c.id === numericChatId);
+            
+            if (!currentChat) {
+                console.error('❌ Conversa não encontrada mesmo após recarregar');
+                throw new Error('Conversa não encontrada. ID: ' + numericChatId);
+            }
+        }
+    }
 
-// 🔥 TENTA RECARREGAR AS CONVERSAS DO BACKEND ANTES DE DESISTIR
-console.log('🔄 Tentando recarregar conversas do backend...');
-await loadAllConversations();
-currentChat = conversations.find(c => c.id === numericChatId);
+    console.log('✅ Conversa encontrada:', currentChat.name, '| Match ID:', currentChat.matchId);
 
-if (!currentChat) {
-console.error('❌ Conversa ainda não encontrada após recarregar. ID procurado:', numericChatId);
-console.error('📋 Total após recarregar:', conversations.length);
-alert('Erro ao abrir conversa. Tente novamente.');
-return;
-}
-}
+    // Atualiza UI
+    chatUserName.textContent = currentChat.name;
+    chatUserPhoto.src = currentChat.photo;
 
-console.log('✅ Conversa encontrada:', currentChat.name, '| Match ID:', currentChat.matchId);
-
-chatUserName.textContent = currentChat.name;
-chatUserPhoto.src = currentChat.photo;
-
-currentChat.unread = 0;
-saveConversationsToStorage();
+    currentChat.unread = 0;
+    saveConversationsToStorage();
     
+    // Carrega mensagens do servidor
     const serverMessages = await loadMessagesFromServer(numericChatId);
 
-if (serverMessages.length > 0) {
-const localMessages = currentChat.messages?.filter(m => m.sender === 'system') || [];
-currentChat.messages = [...localMessages, ...serverMessages];
-}
+    if (serverMessages.length > 0) {
+        const localMessages = currentChat.messages?.filter(m => m.sender === 'system') || [];
+        currentChat.messages = [...localMessages, ...serverMessages];
+    }
 
-if (!currentChat.messages || currentChat.messages.length === 0) {
-currentChat.messages = [
-{
-sender: 'system',
-text: `🎉 Parabéns! Você e ${currentChat.name} deram match!`,
-time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-}
-];
-}
+    // Garante que tem pelo menos a mensagem de sistema
+    if (!currentChat.messages || currentChat.messages.length === 0) {
+        currentChat.messages = [
+            {
+                sender: 'system',
+                text: `🎉 Parabéns! Você e ${currentChat.name} deram match!`,
+                time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+            }
+        ];
+    }
 
-renderMessages();
+    // Renderiza
+    renderMessages();
 
-chatListScreen.classList.add('hidden');
-if (bottomNav) bottomNav.classList.add('hidden');
-chatScreen.classList.remove('hidden');
+    // Muda tela
+    chatListScreen.classList.add('hidden');
+    if (bottomNav) bottomNav.classList.add('hidden');
+    chatScreen.classList.remove('hidden');
 
-setTimeout(() => scrollToBottom(), 150);
+    setTimeout(() => scrollToBottom(), 150);
 }
 
 // ========== RENDERIZAR MENSAGENS ==========
 function renderMessages() {
-if (!currentChat || !messagesContainer) {
-console.error('❌ Não é possível renderizar mensagens:', {
-currentChat: !!currentChat,
-messagesContainer: !!messagesContainer
-});
-return;
-}
+    if (!currentChat || !messagesContainer) {
+        console.error('❌ Não é possível renderizar mensagens:', {
+            currentChat: !!currentChat,
+            messagesContainer: !!messagesContainer
+        });
+        return;
+    }
 
-try {
-messagesContainer.innerHTML = currentChat.messages.map(msg => {
-if (msg.sender === 'system') {
-return `
-               <div class="flex justify-center my-4">
-                   <div class="bg-gradient-to-r from-pink-100 to-purple-100 text-gray-700 rounded-2xl px-4 py-2 text-sm text-center max-w-[80%]">
-                       ${msg.text}
-                   </div>
-               </div>
-           `;
-}
+    try {
+        messagesContainer.innerHTML = currentChat.messages.map(msg => {
+            if (msg.sender === 'system') {
+                return `
+                    <div class="flex justify-center my-4">
+                        <div class="bg-gradient-to-r from-pink-100 to-purple-100 text-gray-700 rounded-2xl px-4 py-2 text-sm text-center max-w-[80%]">
+                            ${msg.text}
+                        </div>
+                    </div>
+                `;
+            }
 
-const isMe = msg.sender === 'me';
-return `
-           <div class="flex ${isMe ? 'justify-end' : 'justify-start'}">
-               <div class="${isMe ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white' : 'bg-white text-gray-800'} 
-                           rounded-2xl px-4 py-2 max-w-[70%] shadow-sm">
-                   <p class="text-sm">${msg.text}</p>
-                   <span class="text-xs ${isMe ? 'text-white/70' : 'text-gray-400'} mt-1 block text-right">${msg.time}</span>
-               </div>
-           </div>
-       `;
-}).join('');
+            const isMe = msg.sender === 'me';
+            return `
+                <div class="flex ${isMe ? 'justify-end' : 'justify-start'}">
+                    <div class="${isMe ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white' : 'bg-white text-gray-800'} 
+                                rounded-2xl px-4 py-2 max-w-[70%] shadow-sm">
+                        <p class="text-sm">${msg.text}</p>
+                        <span class="text-xs ${isMe ? 'text-white/70' : 'text-gray-400'} mt-1 block text-right">${msg.time}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
 
-setTimeout(() => scrollToBottom(), 50);
-} catch (error) {
-console.error('❌ Erro ao renderizar mensagens:', error);
-messagesContainer.innerHTML = `
-           <div class="flex justify-center my-4">
-               <div class="bg-red-100 text-red-700 rounded-2xl px-4 py-2 text-sm text-center">
-                   ⚠️ Erro ao carregar mensagens. Tente novamente.
-               </div>
-           </div>
-       `;
-}
+        setTimeout(() => scrollToBottom(), 50);
+    } catch (error) {
+        console.error('❌ Erro ao renderizar mensagens:', error);
+        messagesContainer.innerHTML = `
+            <div class="flex justify-center my-4">
+                <div class="bg-red-100 text-red-700 rounded-2xl px-4 py-2 text-sm text-center">
+                    ⚠️ Erro ao carregar mensagens. Tente novamente.
+                </div>
+            </div>
+        `;
+    }
 }
 
 // ========== ENVIAR MENSAGEM ==========
 async function sendMessage() {
-const text = messageInput.value.trim();
-if (!text || !currentChat) return;
+    const text = messageInput.value.trim();
+    if (!text || !currentChat) return;
 
-const now = new Date();
-const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const now = new Date();
+    const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-if (!currentChat.messages) {
-currentChat.messages = [];
-}
+    if (!currentChat.messages) {
+        currentChat.messages = [];
+    }
 
-const newMessage = {
-sender: 'me',
-text: text,
-time: time,
-pending: true
-};
+    const newMessage = {
+        sender: 'me',
+        text: text,
+        time: time,
+        pending: true
+    };
 
-currentChat.messages.push(newMessage);
-currentChat.lastMessage = text;
-currentChat.time = "Agora";
+    currentChat.messages.push(newMessage);
+    currentChat.lastMessage = text;
+    currentChat.time = "Agora";
 
-messageInput.value = '';
-renderMessages();
-setTimeout(() => scrollToBottom(), 50);
+    messageInput.value = '';
+    renderMessages();
+    setTimeout(() => scrollToBottom(), 50);
 
-try {
-const response = await fetch(`${API_BASE_URL}/matches/${currentChat.id}/messages`, {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json',
-'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
-},
-body: JSON.stringify({
-content: text,
-telegram_id: myTelegramId
-})
-});
+    try {
+        const response = await fetch(`${API_BASE_URL}/matches/${currentChat.id}/messages`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+            },
+            body: JSON.stringify({
+                content: text,
+                telegram_id: myTelegramId
+            })
+        });
 
-if (response.ok) {
-const data = await response.json();
-newMessage.pending = false;
-newMessage.id = data.id;
-newMessage.fromServer = true;
-} else {
-newMessage.error = true;
-}
-} catch (error) {
-console.error('❌ Erro:', error);
-newMessage.error = true;
-}
+        if (response.ok) {
+            const data = await response.json();
+            newMessage.pending = false;
+            newMessage.id = data.id;
+            newMessage.fromServer = true;
+        } else {
+            newMessage.error = true;
+        }
+    } catch (error) {
+        console.error('❌ Erro:', error);
+        newMessage.error = true;
+    }
 
-saveConversationsToStorage();
+    saveConversationsToStorage();
 }
 
 // ========== SALVAR ==========
 function saveConversationsToStorage() {
-try {
-localStorage.setItem('sparkConversations', JSON.stringify(conversations));
-} catch (e) {
-console.error('❌ Erro ao salvar:', e);
-}
+    try {
+        localStorage.setItem('sparkConversations', JSON.stringify(conversations));
+        console.log('💾 Conversas salvas:', conversations.length);
+    } catch (e) {
+        console.error('❌ Erro ao salvar:', e);
+    }
 }
 
 // ========== SCROLL ==========
 function scrollToBottom() {
-if (messagesContainer) {
-messagesContainer.scrollTop = messagesContainer.scrollHeight;
-}
+    if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
 }
 
 // ========== EVENTOS ==========
 if (backToList) {
-backToList.addEventListener('click', () => {
-chatScreen.classList.add('hidden');
-chatListScreen.classList.remove('hidden');
-if (bottomNav) bottomNav.classList.remove('hidden');
-currentChat = null;
-renderChatList();
-});
+    backToList.addEventListener('click', () => {
+        chatScreen.classList.add('hidden');
+        chatListScreen.classList.remove('hidden');
+        if (bottomNav) bottomNav.classList.remove('hidden');
+        currentChat = null;
+        renderChatList();
+    });
 }
 
 if (sendBtn) {
-sendBtn.addEventListener('click', sendMessage);
+    sendBtn.addEventListener('click', sendMessage);
 }
 
 if (messageInput) {
-messageInput.addEventListener('keypress', (e) => {
-if (e.key === 'Enter') {
-sendMessage();
-}
-});
-}
-
-// ========== FUNÇÃO AUXILIAR PARA ABRIR CHAT AUTOMATICAMENTE ==========
-async function tryOpenChatById(chatId) {
-console.log('🔍 Procurando conversa com ID:', chatId);
-
-// Verifica se a conversa existe antes de abrir
-let chatExists = conversations.find(c => c.id === chatId);
-
-if (chatExists) {
-console.log('✅ Conversa encontrada, abrindo...');
-try {
-await openChat(chatId);
-} catch (err) {
-console.error('❌ Erro ao abrir chat:', err);
-}
-return;
+    messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
 }
 
-// Se não encontrou, tenta recarregar do backend
-console.warn('⚠️ Conversa não encontrada, recarregando do backend...');
-try {
-await loadAllConversations();
-chatExists = conversations.find(c => c.id === chatId);
-
-if (chatExists) {
-console.log('✅ Conversa encontrada após recarregar, abrindo...');
-await openChat(chatId);
-} else {
-console.error('❌ Conversa ainda não encontrada. ID:', chatId);
-console.log('📋 IDs disponíveis:', conversations.map(c => c.id));
-}
-} catch (err) {
-console.error('❌ Erro ao recarregar conversas:', err);
-}
+// ========== FUNÇÃO PARA ABRIR CHAT VINDO DO MATCH ==========
+async function tryOpenChatFromMatch(chatId) {
+    console.log('🎯 Tentando abrir chat vindo do match:', chatId);
+    
+    try {
+        // Aguarda um pouco para garantir que o localStorage está sincronizado
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Força recarregar do localStorage
+        const localConvs = loadConversationsFromStorage();
+        const foundInLocal = localConvs.find(c => c.id === chatId);
+        
+        if (foundInLocal) {
+            console.log('✅ Conversa encontrada no localStorage');
+            // Garante que está no array global
+            if (!conversations.find(c => c.id === chatId)) {
+                conversations.unshift(foundInLocal);
+            }
+            await openChat(chatId);
+            return true;
+        }
+        
+        // Se não encontrou no localStorage, tenta carregar tudo
+        console.log('⚠️ Não encontrado no localStorage, carregando tudo...');
+        await loadAllConversations();
+        
+        const found = conversations.find(c => c.id === chatId);
+        if (found) {
+            console.log('✅ Conversa encontrada após carregar tudo');
+            await openChat(chatId);
+            return true;
+        }
+        
+        console.error('❌ Conversa não encontrada mesmo após carregar tudo');
+        return false;
+        
+    } catch (err) {
+        console.error('❌ Erro ao abrir chat do match:', err);
+        return false;
+    }
 }
 
 // ========== INICIALIZAÇÃO ==========
 console.log('🚀 chat.js iniciando...');
 
 getMyUserId().then(async () => {
-await loadAllConversations();
-renderChatList();
+    // Carrega conversas
+    await loadAllConversations();
+    renderChatList();
 
-// ✅ ABRE CHAT AUTOMATICAMENTE SE VIER DO MATCH
-const openChatId = localStorage.getItem('openChatId');
+    // ✅ VERIFICA SE DEVE ABRIR CHAT AUTOMATICAMENTE
+    const openChatId = localStorage.getItem('openChatId');
 
-if (openChatId) {
-console.log('🎯 Solicitação para abrir chat automaticamente:', openChatId);
-console.log('📊 Total de conversas carregadas:', conversations.length);
+    if (openChatId) {
+        console.log('🎯 Solicitação para abrir chat:', openChatId);
+        console.log('📊 Total de conversas carregadas:', conversations.length);
 
-// 🔥 REMOVE O FLAG ANTES DE TENTAR ABRIR (evita loops)
-localStorage.removeItem('openChatId');
+        // Remove o flag IMEDIATAMENTE para evitar loops
+        localStorage.removeItem('openChatId');
 
-// Aguarda um pouco antes de tentar abrir (permite UI renderizar)
-setTimeout(() => {
-const chatId = parseInt(openChatId);
-// Chama a função async e trata qualquer erro não capturado
-tryOpenChatById(chatId).catch(err => {
-console.error('❌ Erro não capturado ao abrir chat:', err);
-});
-}, 500);
-}
+        // Tenta abrir o chat
+        const chatId = parseInt(openChatId);
+        
+        if (!isNaN(chatId) && chatId > 0) {
+            const success = await tryOpenChatFromMatch(chatId);
+            
+            if (!success) {
+                console.error('❌ Falha ao abrir chat automaticamente');
+                // Mostra mensagem amigável ao usuário
+                if (window.Telegram?.WebApp?.showAlert) {
+                    window.Telegram.WebApp.showAlert('Erro ao abrir conversa. Por favor, selecione a conversa manualmente.');
+                } else {
+                    alert('Erro ao abrir conversa. Por favor, selecione a conversa manualmente.');
+                }
+            }
+        } else {
+            console.error('❌ Chat ID inválido:', openChatId);
+        }
+    }
 });
 
 console.log('✅ chat.js carregado!');
