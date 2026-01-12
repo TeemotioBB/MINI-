@@ -165,7 +165,17 @@ function renderLikes() {
     if (likesGrid) {
         likesGrid.innerHTML = likes.map(like => {
             const isBlurred = like.is_blurred === true;
-            const photo = like.photo_url || like.photos?.[0] || 'https://via.placeholder.com/200x200?text=Foto';
+            
+            // Better photo URL handling
+            let photo = null;
+            if (like.photo_url && typeof like.photo_url === 'string' && like.photo_url.trim() !== '') {
+                photo = like.photo_url;
+            } else if (like.photos && Array.isArray(like.photos) && like.photos.length > 0 && like.photos[0] && typeof like.photos[0] === 'string' && like.photos[0].trim() !== '') {
+                photo = like.photos[0];
+            } else {
+                photo = 'https://via.placeholder.com/200x200/f3f4f6/9ca3af?text=Sem+Foto';
+            }
+            
             const name = like.name || '???';
             const age = like.age || '?';
             const isSuperLike = like.type === 'superlike';
@@ -181,7 +191,7 @@ function renderLikes() {
                         <img 
                             src="${photo}" 
                             class="w-full h-40 object-cover ${isBlurred ? 'blur-lg' : ''}"
-                            onerror="this.src='https://via.placeholder.com/200x200?text=Foto'"
+                            onerror="this.src='https://via.placeholder.com/200x200/f3f4f6/9ca3af?text=Sem+Foto'"
                         >
                         
                         ${isBlurred ? `
@@ -225,12 +235,22 @@ function openProfileModal(element) {
     
     console.log('👤 Abrindo perfil:', like);
     
+    // Better photo URL handling
+    let photoUrl = null;
+    if (like.photo_url && typeof like.photo_url === 'string' && like.photo_url.trim() !== '') {
+        photoUrl = like.photo_url;
+    } else if (like.photos && Array.isArray(like.photos) && like.photos.length > 0 && like.photos[0] && typeof like.photos[0] === 'string' && like.photos[0].trim() !== '') {
+        photoUrl = like.photos[0];
+    } else {
+        photoUrl = 'https://via.placeholder.com/400x300/f3f4f6/9ca3af?text=Sem+Foto';
+    }
+    
     // Preenche o modal
     const modalPhoto = document.getElementById('modal-photo');
     const modalName = document.getElementById('modal-name');
     const modalBio = document.getElementById('modal-bio');
     
-    if (modalPhoto) modalPhoto.src = like.photo_url || like.photos?.[0] || 'https://via.placeholder.com/400x300?text=Foto';
+    if (modalPhoto) modalPhoto.src = photoUrl;
     if (modalName) modalName.textContent = `${like.name}, ${like.age}`;
     if (modalBio) modalBio.textContent = like.bio || 'Sem descrição';
     
