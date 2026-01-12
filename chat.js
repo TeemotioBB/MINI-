@@ -228,22 +228,34 @@ async function loadMessagesFromServer(matchId) {
 async function loadAllConversations() {
     console.log('🔄 Carregando TODAS as conversas...');
 
-    const localConversations = loadConversationsFromStorage();
-    console.log('📱 localStorage:', localConversations.length);
-
+    // 🔥 PRIORIZA BACKEND (fonte da verdade!)
     const backendConversations = await loadConversationsFromServer();
     console.log('☁️ backend:', backendConversations.length);
 
+    const localConversations = loadConversationsFromStorage();
+    console.log('📱 localStorage:', localConversations.length);
+
     const conversationMap = new Map();
 
-    // 🔥 PRIORIZA LOCALSTORAGE (tem as conversas mais recentes)
-    localConversations.forEach(conv => {
+    // ✅ COMEÇA COM BACKEND (sempre correto)
+    backendConversations.forEach(conv => {
         conversationMap.set(conv.id, conv);
     });
 
-    // Complementa com dados do backend
-    backendConversations.forEach(conv => {
-        if (!conversationMap.has(conv.id)) {
+    // Complementa com mensagens locais não sincronizadas
+    localConversations.forEach(conv => {
+        if (conversationMap.has(conv.id)) {
+            // Se já existe no backend, só adiciona mensagens locais
+            const existing = conversationMap.get(conv.id);
+            if (conv.messages && conv.messages.length > 0) {
+                const localOnlyMessages = conv.messages.filter(m => !m.fromServer && m.sender !== 'system');
+                if (localOnlyMessages.length > 0) {
+                    existing.messages = [...existing.messages, ...localOnlyMessages];
+                }
+            }
+        } else {
+            // Se não existe no backend, é uma conversa local não sincronizada
+            console.log('⚠️ Conversa apenas no localStorage:', conv.id, conv.name);
             conversationMap.set(conv.id, conv);
         }
     });
@@ -265,6 +277,7 @@ async function loadAllConversations() {
         })));
     }
 
+    // Salva resultado mesclado
     saveConversationsToStorage();
 
     return conversations;
@@ -340,28 +353,14 @@ async function openChat(chatId) {
         console.log('🔍 Procurando por ID:', numericChatId);
         console.log('📋 IDs disponíveis:', conversations.map(c => c.id));
         
-        // 🔥 FORÇA RECARREGAR DO LOCALSTORAGE PRIMEIRO
-        console.log('🔄 Tentando recarregar do localStorage...');
-        const localConvs = loadConversationsFromStorage();
-        const foundInLocal = localConvs.find(c => c.id === numericChatId);
+        // 🔥 FORÇA RECARREGAR DO BACKEND
+        console.log('🔄 Tentando recarregar do backend...');
+        await loadAllConversations();
+        currentChat = conversations.find(c => c.id === numericChatId);
         
-        if (foundInLocal) {
-            console.log('✅ Conversa encontrada no localStorage!');
-            currentChat = foundInLocal;
-            // Adiciona ao array global se não estiver
-            if (!conversations.find(c => c.id === numericChatId)) {
-                conversations.unshift(foundInLocal);
-            }
-        } else {
-            console.log('⚠️ Não encontrado no localStorage, tentando backend...');
-            // Tenta do backend como último recurso
-            await loadAllConversations();
-            currentChat = conversations.find(c => c.id === numericChatId);
-            
-            if (!currentChat) {
-                console.error('❌ Conversa não encontrada mesmo após recarregar');
-                throw new Error('Conversa não encontrada. ID: ' + numericChatId);
-            }
+        if (!currentChat) {
+            console.error('❌ Conversa não encontrada mesmo após recarregar do backend');
+            throw new Error('Conversa não encontrada. ID: ' + numericChatId);
         }
     }
 
@@ -555,32 +554,21 @@ async function tryOpenChatFromMatch(chatId) {
         // Aguarda um pouco para garantir que o localStorage está sincronizado
         await new Promise(resolve => setTimeout(resolve, 300));
         
-        // Força recarregar do localStorage
-        const localConvs = loadConversationsFromStorage();
-        const foundInLocal = localConvs.find(c => c.id === chatId);
-        
-        if (foundInLocal) {
-            console.log('✅ Conversa encontrada no localStorage');
-            // Garante que está no array global
-            if (!conversations.find(c => c.id === chatId)) {
-                conversations.unshift(foundInLocal);
-            }
-            await openChat(chatId);
-            return true;
-        }
-        
-        // Se não encontrou no localStorage, tenta carregar tudo
-        console.log('⚠️ Não encontrado no localStorage, carregando tudo...');
+        // 🔥 FORÇA RECARREGAR DO BACKEND PRIMEIRO!
+        console.log('☁️ Recarregando conversas do backend...');
         await loadAllConversations();
         
+        // Agora busca a conversa
         const found = conversations.find(c => c.id === chatId);
+        
         if (found) {
-            console.log('✅ Conversa encontrada após carregar tudo');
+            console.log('✅ Conversa encontrada após carregar do backend');
             await openChat(chatId);
             return true;
         }
         
-        console.error('❌ Conversa não encontrada mesmo após carregar tudo');
+        console.error('❌ Conversa não encontrada mesmo após carregar do backend');
+        console.log('📋 IDs disponíveis:', conversations.map(c => c.id));
         return false;
         
     } catch (err) {
