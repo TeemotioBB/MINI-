@@ -302,9 +302,69 @@ async function likeBack(telegramId) {
             renderLikes();
             
             return data;
+        } else {
+            console.error('❌ Erro ao dar like:', response.status);
+            showErrorToast('Erro ao curtir. Tente novamente.');
+            return null;
         }
     } catch (error) {
         console.error('❌ Erro ao dar like:', error);
+        showErrorToast('Erro de conexão. Tente novamente.');
+        return null;
+    }
+}
+
+// ========== DAR DISLIKE EM LIKE RECEBIDO ==========
+async function dislikeFromReceivedLikes(telegramId, userId) {
+    try {
+        const myTelegramId = getMyTelegramId();
+        
+        console.log('👎 Dando dislike em:', telegramId);
+        
+        const response = await fetch(`${API_BASE_URL}/likes`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+            },
+            body: JSON.stringify({
+                from_telegram_id: myTelegramId,
+                to_telegram_id: telegramId,
+                type: 'dislike'
+            })
+        });
+        
+        if (response.ok) {
+            console.log('✅ Dislike registrado com sucesso');
+            
+            // Remove o usuário da lista local de likes recebidos
+            // Note: Direct mutation is acceptable here since we immediately update all related UI
+            receivedLikes = receivedLikes.filter(like => like.id !== userId);
+            
+            // Atualiza o contador
+            if (receivedCount) {
+                receivedCount.textContent = receivedLikes.length;
+            }
+            
+            // Atualiza badge
+            updateBadge(receivedLikes.length);
+            
+            // Re-renderiza a grid
+            renderLikes();
+            
+            // Mostra feedback ao usuário
+            showDislikeToast();
+            
+            return true;
+        } else {
+            console.error('❌ Erro ao dar dislike:', response.status);
+            showErrorToast('Erro ao rejeitar. Tente novamente.');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Erro ao dar dislike:', error);
+        showErrorToast('Erro de conexão. Tente novamente.');
+        return false;
     }
 }
 
@@ -313,6 +373,26 @@ function showMatchToast() {
     const toast = document.createElement('div');
     toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-pink-500 to-red-500 text-white px-6 py-3 rounded-full shadow-lg z-[9999] text-sm font-bold';
     toast.innerHTML = '🎉 É um Match! Veja no Chat';
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// ========== TOAST DE DISLIKE ==========
+function showDislikeToast() {
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-gray-700 text-white px-6 py-3 rounded-full shadow-lg z-[9999] text-sm font-bold';
+    toast.innerHTML = '👋 Usuário removido da lista';
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.remove(), 2000);
+}
+
+// ========== TOAST DE ERRO ==========
+function showErrorToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full shadow-lg z-[9999] text-sm font-bold';
+    toast.innerHTML = `❌ ${message}`;
     document.body.appendChild(toast);
     
     setTimeout(() => toast.remove(), 3000);
@@ -366,8 +446,20 @@ if (modalLike && profileModal) {
 // Modal dislike button
 const modalDislike = document.getElementById('modal-dislike');
 if (modalDislike && profileModal) {
-    modalDislike.addEventListener('click', () => {
-        profileModal.classList.add('hidden');
+    modalDislike.addEventListener('click', async () => {
+        const telegramId = profileModal.dataset.currentTelegramId;
+        const userId = parseInt(profileModal.dataset.currentId, 10);
+        
+        if (telegramId && currentTab === 'received') {
+            // Se estamos na aba de likes recebidos, dar dislike e remover da lista
+            const success = await dislikeFromReceivedLikes(telegramId, userId);
+            if (success) {
+                profileModal.classList.add('hidden');
+            }
+        } else {
+            // Se não, apenas fecha o modal
+            profileModal.classList.add('hidden');
+        }
     });
 }
 
@@ -413,5 +505,6 @@ if (document.readyState === 'loading') {
 // Expõe funções globalmente
 window.openProfileModal = openProfileModal;
 window.likeBack = likeBack;
+window.dislikeFromReceivedLikes = dislikeFromReceivedLikes;
 
 console.log('✅ likes.js carregado!');
