@@ -920,13 +920,13 @@ app.get('/api/users/:telegramId/premium', optionalTelegramAuth, async (req, res)
             limits: {
                 likes: {
                     used: user.daily_likes || 0,
-                    max: maxLikes,
+                    max: isActive ? 'unlimited' : maxLikes,
                     remaining: isActive ? 'unlimited' : Math.max(0, maxLikes - (user.daily_likes || 0))
                 },
                 super_likes: {
                     used: user.daily_super_likes || 0,
                     max: maxSuperLikes,
-                    remaining: isActive ? Math.max(0, maxSuperLikes - (user.daily_super_likes || 0)) : 0
+                    remaining: isActive ? Math.max(0, maxSuperLikes - (user.daily_super_likes || 0)) : 'none'
                 },
                 last_reset: user.last_reset_date
             }
@@ -946,7 +946,11 @@ app.post('/api/users/:telegramId/premium', optionalTelegramAuth, async (req, res
         
         // Simple security check (in production, use proper payment verification)
         // Check if secret is provided and matches environment variable
-        const ADMIN_SECRET = process.env.ADMIN_SECRET || 'spark_admin_2024';
+        const ADMIN_SECRET = process.env.ADMIN_SECRET;
+        if (!ADMIN_SECRET) {
+            console.error('❌ ADMIN_SECRET não configurado!');
+            return res.status(500).json({ error: 'Configuração do servidor incompleta' });
+        }
         if (secret && secret !== ADMIN_SECRET) {
             return res.status(403).json({ error: 'Acesso negado' });
         }
@@ -1020,7 +1024,7 @@ app.post('/api/users/:telegramId/premium', optionalTelegramAuth, async (req, res
 });
 
 // ========== DEBUG PREMIUM ENDPOINTS ==========
-// Note: These endpoints should be disabled in production
+// Note: These endpoints are automatically disabled in production via NODE_ENV check
 
 // Activate premium (debug mode)
 app.get('/api/debug/activate-premium/:telegramId', async (req, res) => {
