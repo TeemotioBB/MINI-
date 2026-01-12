@@ -170,7 +170,7 @@ function renderLikes() {
             let photo = null;
             if (like.photo_url && like.photo_url.trim() !== '') {
                 photo = like.photo_url;
-            } else if (like.photos && Array.isArray(like.photos) && like.photos.length > 0 && like.photos[0]) {
+            } else if (like.photos && Array.isArray(like.photos) && like.photos.length > 0 && like.photos[0] && like.photos[0].trim() !== '') {
                 photo = like.photos[0];
             } else {
                 photo = 'https://via.placeholder.com/200x200/f3f4f6/9ca3af?text=Sem+Foto';
@@ -239,7 +239,7 @@ function openProfileModal(element) {
     let photoUrl = null;
     if (like.photo_url && like.photo_url.trim() !== '') {
         photoUrl = like.photo_url;
-    } else if (like.photos && Array.isArray(like.photos) && like.photos.length > 0 && like.photos[0]) {
+    } else if (like.photos && Array.isArray(like.photos) && like.photos.length > 0 && like.photos[0] && like.photos[0].trim() !== '') {
         photoUrl = like.photos[0];
     } else {
         photoUrl = 'https://via.placeholder.com/400x300/f3f4f6/9ca3af?text=Sem+Foto';

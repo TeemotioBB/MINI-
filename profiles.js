@@ -53,7 +53,7 @@ async function loadProfiles() {
                         photoUrl = user.photo_url;
                     }
                     // Then try first item in photos array
-                    else if (user.photos && Array.isArray(user.photos) && user.photos.length > 0 && user.photos[0]) {
+                    else if (user.photos && Array.isArray(user.photos) && user.photos.length > 0 && user.photos[0] && user.photos[0].trim() !== '') {
                         photoUrl = user.photos[0];
                     }
                     // Fallback to placeholder
