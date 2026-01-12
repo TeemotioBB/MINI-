@@ -300,31 +300,42 @@ function renderChatList() {
     `).join('');
 
     document.querySelectorAll('.chat-item').forEach(item => {
-        item.addEventListener('click', () => {
+        item.addEventListener('click', async () => {
             const chatId = parseInt(item.dataset.chatId);
-            openChat(chatId);
+            console.log('🖱️ Click no chat item, ID:', chatId);
+            try {
+                await openChat(chatId);
+            } catch (err) {
+                console.error('❌ Erro ao abrir chat do click:', err);
+                alert('Erro ao abrir conversa. Por favor, tente novamente.');
+            }
         });
     });
 }
 
 // ========== ABRIR CONVERSA ==========
 async function openChat(chatId) {
-    console.log('💬 Abrindo chat ID:', chatId);
+    console.log('💬 Abrindo chat ID:', chatId, '| Tipo:', typeof chatId);
+    
+    // 🔥 GARANTE QUE chatId É UM NÚMERO
+    const numericChatId = typeof chatId === 'string' ? parseInt(chatId) : chatId;
+    console.log('🔢 Chat ID numérico:', numericChatId);
     
     // 🔥 TENTA ENCONTRAR A CONVERSA
-    currentChat = conversations.find(c => c.id === chatId);
+    currentChat = conversations.find(c => c.id === numericChatId);
     
     if (!currentChat) {
-        console.error('❌ Conversa não encontrada no array local:', chatId);
-        console.log('📋 Conversas disponíveis:', conversations.map(c => ({ id: c.id, name: c.name })));
+        console.error('❌ Conversa não encontrada no array local:', numericChatId);
+        console.log('📋 Conversas disponíveis:', conversations.map(c => ({ id: c.id, tipo: typeof c.id, name: c.name })));
         
         // 🔥 TENTA RECARREGAR AS CONVERSAS DO BACKEND ANTES DE DESISTIR
         console.log('🔄 Tentando recarregar conversas do backend...');
         await loadAllConversations();
-        currentChat = conversations.find(c => c.id === chatId);
+        currentChat = conversations.find(c => c.id === numericChatId);
         
         if (!currentChat) {
-            console.error('❌ Conversa ainda não encontrada após recarregar. ID procurado:', chatId);
+            console.error('❌ Conversa ainda não encontrada após recarregar. ID procurado:', numericChatId);
+            console.error('📋 IDs após recarregar:', conversations.map(c => c.id));
             alert('Erro ao abrir conversa. Tente novamente.');
             return;
         }
@@ -366,9 +377,16 @@ async function openChat(chatId) {
 
 // ========== RENDERIZAR MENSAGENS ==========
 function renderMessages() {
-    if (!currentChat || !messagesContainer) return;
+    if (!currentChat || !messagesContainer) {
+        console.error('❌ Não é possível renderizar mensagens:', {
+            currentChat: !!currentChat,
+            messagesContainer: !!messagesContainer
+        });
+        return;
+    }
 
-    messagesContainer.innerHTML = currentChat.messages.map(msg => {
+    try {
+        messagesContainer.innerHTML = currentChat.messages.map(msg => {
         if (msg.sender === 'system') {
             return `
                 <div class="flex justify-center my-4">
@@ -391,7 +409,17 @@ function renderMessages() {
         `;
     }).join('');
 
-    setTimeout(() => scrollToBottom(), 50);
+        setTimeout(() => scrollToBottom(), 50);
+    } catch (error) {
+        console.error('❌ Erro ao renderizar mensagens:', error);
+        messagesContainer.innerHTML = `
+            <div class="flex justify-center my-4">
+                <div class="bg-red-100 text-red-700 rounded-2xl px-4 py-2 text-sm text-center">
+                    ⚠️ Erro ao carregar mensagens. Tente novamente.
+                </div>
+            </div>
+        `;
+    }
 }
 
 // ========== ENVIAR MENSAGEM ==========
