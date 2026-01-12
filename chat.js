@@ -358,7 +358,13 @@ async function openChat(chatId) {
     debugLog('✅ Conversa encontrada:', { id: currentChat.id, name: currentChat.name });
 
     chatUserName.textContent = currentChat.name;
-    chatUserPhoto.src = currentChat.photo;
+    
+    // Ensure photo is valid before setting
+    if (currentChat.photo && currentChat.photo.trim() !== '') {
+        chatUserPhoto.src = currentChat.photo;
+    } else {
+        chatUserPhoto.src = 'https://via.placeholder.com/100x100/f3f4f6/9ca3af?text=Sem+Foto';
+    }
 
     currentChat.unread = 0;
     
