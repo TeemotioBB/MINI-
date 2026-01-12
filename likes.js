@@ -114,7 +114,11 @@ async function loadSentLikes() {
             const data = await response.json();
             console.log('✅ Likes enviados:', data);
             
-            sentLikes = data || [];
+            // Sent likes should never be blurred (user can see who they liked)
+            sentLikes = (data || []).map(like => ({
+                ...like,
+                is_blurred: false
+            }));
             
             // Atualiza contador
             if (sentCount) {
