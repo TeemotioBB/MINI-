@@ -1,4 +1,4 @@
-// ========== SISTEMA DE LIKES - VERSÃO CORRIGIDA ==========
+// ========== SISTEMA DE LIKES - VERSÃO CORRIGIDA COM REFRESH ==========
 
 const API_BASE_URL = 'https://mini-production-cf60.up.railway.app/api';
 
@@ -6,6 +6,7 @@ const API_BASE_URL = 'https://mini-production-cf60.up.railway.app/api';
 let receivedLikes = [];
 let sentLikes = [];
 let currentTab = 'received';
+let refreshInterval = null;
 
 // Elementos DOM
 const likesGrid = document.getElementById('likes-grid');
@@ -19,60 +20,60 @@ const profileModal = document.getElementById('profile-modal');
 
 // ========== PEGAR TELEGRAM ID ==========
 function getMyTelegramId() {
-    // Primeiro tenta da variável global (definida no index.html)
     if (window.SPARK_TELEGRAM_ID) {
         return window.SPARK_TELEGRAM_ID;
     }
-    
-    // Depois tenta do Telegram WebApp
     if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
         return window.Telegram.WebApp.initDataUnsafe.user.id;
     }
-    
-    // Por último, do localStorage
     return localStorage.getItem('testTelegramId') || '123456789';
 }
 
 // ========== CARREGAR LIKES RECEBIDOS ==========
-async function loadReceivedLikes() {
+async function loadReceivedLikes(forceRefresh = false) {
     try {
         const telegramId = getMyTelegramId();
-        console.log('📥 Carregando likes recebidos para:', telegramId);
+        console.log('📥 Carregando likes recebidos para:', telegramId, forceRefresh ? '(FORCE)' : '');
         
-        const response = await fetch(`${API_BASE_URL}/likes/received/preview?telegram_id=${telegramId}`, {
+        // 🔥 FORÇA CACHE BUST
+        const cacheBuster = forceRefresh ? `&_=${Date.now()}` : '';
+        const response = await fetch(`${API_BASE_URL}/likes/received/preview?telegram_id=${telegramId}${cacheBuster}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0',
                 'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
             }
         });
         
         if (response.ok) {
             const data = await response.json();
-            console.log('✅ Likes recebidos:', data);
+            console.log('✅ Likes recebidos (do servidor):', data.likes?.length || 0);
             
             receivedLikes = data.likes || [];
             
-            // Atualiza contador
             if (receivedCount) {
                 receivedCount.textContent = receivedLikes.length;
             }
             
-            // Atualiza badge
             updateBadge(receivedLikes.length);
             
             return receivedLikes;
         } else {
             console.error('❌ Erro ao buscar likes recebidos:', response.status);
             
-            // Se for 403 (não autorizado), tenta a rota de contagem
             if (response.status === 403) {
-                const countResponse = await fetch(`${API_BASE_URL}/likes/count?telegram_id=${telegramId}`);
+                const countResponse = await fetch(`${API_BASE_URL}/likes/count?telegram_id=${telegramId}${cacheBuster}`, {
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate'
+                    }
+                });
                 if (countResponse.ok) {
                     const countData = await countResponse.json();
                     console.log('📊 Contagem de likes:', countData);
                     
-                    // Cria likes "falsos" para mostrar a quantidade
                     receivedLikes = Array(countData.count).fill().map((_, i) => ({
                         id: i,
                         name: '???',
@@ -97,30 +98,32 @@ async function loadReceivedLikes() {
 }
 
 // ========== CARREGAR LIKES ENVIADOS ==========
-async function loadSentLikes() {
+async function loadSentLikes(forceRefresh = false) {
     try {
         const telegramId = getMyTelegramId();
-        console.log('📤 Carregando likes enviados por:', telegramId);
+        console.log('📤 Carregando likes enviados por:', telegramId, forceRefresh ? '(FORCE)' : '');
         
-        const response = await fetch(`${API_BASE_URL}/likes/sent?telegram_id=${telegramId}`, {
+        const cacheBuster = forceRefresh ? `&_=${Date.now()}` : '';
+        const response = await fetch(`${API_BASE_URL}/likes/sent?telegram_id=${telegramId}${cacheBuster}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0',
                 'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
             }
         });
         
         if (response.ok) {
             const data = await response.json();
-            console.log('✅ Likes enviados:', data);
+            console.log('✅ Likes enviados (do servidor):', data.length);
             
-            // Sent likes should never be blurred (user can see who they liked)
             sentLikes = (data || []).map(like => ({
                 ...like,
                 is_blurred: false
             }));
             
-            // Atualiza contador
             if (sentCount) {
                 sentCount.textContent = sentLikes.length;
             }
@@ -176,7 +179,6 @@ function renderLikes() {
                      data-telegram-id="${like.telegram_id}"
                      ${!isBlurred ? 'onclick="openProfileModal(this)"' : ''}>
                     
-                    <!-- Foto -->
                     <div class="relative">
                         <img 
                             src="${photo}" 
@@ -185,7 +187,6 @@ function renderLikes() {
                         >
                         
                         ${isBlurred ? `
-                            <!-- Overlay para Premium -->
                             <div class="absolute inset-0 bg-black/40 flex flex-col items-center justify-center">
                                 <i class="fa-solid fa-lock text-white text-2xl mb-2"></i>
                                 <span class="text-white text-xs font-bold">Premium</span>
@@ -193,14 +194,12 @@ function renderLikes() {
                         ` : ''}
                         
                         ${isSuperLike ? `
-                            <!-- Badge Super Like -->
                             <div class="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
                                 <i class="fa-solid fa-star text-[10px]"></i> Super
                             </div>
                         ` : ''}
                     </div>
                     
-                    <!-- Info -->
                     <div class="p-2 bg-white">
                         <h4 class="font-bold text-gray-800 text-sm truncate">${name}${!isBlurred && age !== '?' ? ', ' + age : ''}</h4>
                         ${like.city && !isBlurred ? `<p class="text-gray-500 text-xs truncate">${like.city}</p>` : ''}
@@ -218,14 +217,12 @@ function openProfileModal(element) {
     const like = likes.find(l => l.id === id);
     
     if (!like || like.is_blurred) {
-        // Se for blurred, mostra modal de premium
         showPremiumModal();
         return;
     }
     
     console.log('👤 Abrindo perfil:', like);
     
-    // Preenche o modal
     const modalPhoto = document.getElementById('modal-photo');
     const modalName = document.getElementById('modal-name');
     const modalBio = document.getElementById('modal-bio');
@@ -234,7 +231,6 @@ function openProfileModal(element) {
     if (modalName) modalName.textContent = `${like.name}, ${like.age}`;
     if (modalBio) modalBio.textContent = like.bio || 'Sem descrição';
     
-    // Salva o ID do perfil atual
     if (profileModal) {
         profileModal.dataset.currentId = like.id;
         profileModal.dataset.currentTelegramId = like.telegram_id;
@@ -292,14 +288,12 @@ async function likeBack(telegramId) {
             console.log('✅ Resposta:', data);
             
             if (data.match) {
-                // Match!
                 console.log('🎉 MATCH!');
                 showMatchToast();
             }
             
-            // Recarrega os likes
-            await loadReceivedLikes();
-            renderLikes();
+            // 🔥 FORÇA REFRESH IMEDIATO
+            await refreshLikes(true);
             
             return data;
         }
@@ -318,9 +312,39 @@ function showMatchToast() {
     setTimeout(() => toast.remove(), 3000);
 }
 
+// ========== REFRESH AUTOMÁTICO ==========
+async function refreshLikes(force = false) {
+    console.log('🔄 Atualizando likes...', force ? '(FORÇADO)' : '');
+    
+    await Promise.all([
+        loadReceivedLikes(force),
+        loadSentLikes(force)
+    ]);
+    
+    renderLikes();
+    
+    console.log('✅ Likes atualizados!');
+}
+
+function startAutoRefresh() {
+    // Atualiza a cada 5 segundos
+    refreshInterval = setInterval(() => {
+        refreshLikes(true);
+    }, 5000);
+    
+    console.log('🔄 Auto-refresh ativado (5s)');
+}
+
+function stopAutoRefresh() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+        console.log('⏹️ Auto-refresh desativado');
+    }
+}
+
 // ========== EVENT LISTENERS ==========
 
-// Tabs
 if (tabReceived) {
     tabReceived.addEventListener('click', () => {
         currentTab = 'received';
@@ -343,7 +367,6 @@ if (tabSent) {
     });
 }
 
-// Modal close
 const closeModal = document.getElementById('close-modal');
 if (closeModal && profileModal) {
     closeModal.addEventListener('click', () => {
@@ -351,7 +374,6 @@ if (closeModal && profileModal) {
     });
 }
 
-// Modal like button
 const modalLike = document.getElementById('modal-like');
 if (modalLike && profileModal) {
     modalLike.addEventListener('click', async () => {
@@ -363,7 +385,6 @@ if (modalLike && profileModal) {
     });
 }
 
-// Modal dislike button
 const modalDislike = document.getElementById('modal-dislike');
 if (modalDislike && profileModal) {
     modalDislike.addEventListener('click', () => {
@@ -371,7 +392,6 @@ if (modalDislike && profileModal) {
     });
 }
 
-// Click outside modal
 if (profileModal) {
     profileModal.addEventListener('click', (e) => {
         if (e.target === profileModal) {
@@ -380,27 +400,34 @@ if (profileModal) {
     });
 }
 
+// ========== VISIBILIDADE DA PÁGINA ==========
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        stopAutoRefresh();
+    } else {
+        // Quando voltar para a página, força refresh
+        refreshLikes(true);
+        startAutoRefresh();
+    }
+});
+
+// Limpa interval ao fechar
+window.addEventListener('beforeunload', stopAutoRefresh);
+
 // ========== INICIALIZAÇÃO ==========
 async function init() {
     console.log('🚀 Inicializando likes.js...');
     
     try {
-        // Carrega likes em paralelo
-        await Promise.all([
-            loadReceivedLikes(),
-            loadSentLikes()
-        ]);
+        await refreshLikes(true);
+        startAutoRefresh();
         
-        // Renderiza a tab ativa
-        renderLikes();
-        
-        console.log('✅ likes.js inicializado!');
+        console.log('✅ likes.js inicializado com auto-refresh!');
     } catch (error) {
         console.error('❌ Erro ao inicializar likes.js:', error);
     }
 }
 
-// Inicia quando o DOM carregar
 console.log('📜 likes.js carregado, estado do documento:', document.readyState);
 if (document.readyState === 'loading') {
     console.log('⏳ Aguardando DOMContentLoaded...');
@@ -410,8 +437,8 @@ if (document.readyState === 'loading') {
     init();
 }
 
-// Expõe funções globalmente
 window.openProfileModal = openProfileModal;
 window.likeBack = likeBack;
+window.refreshLikes = refreshLikes;
 
-console.log('✅ likes.js carregado!');
+console.log('✅ likes.js carregado com auto-refresh!');
