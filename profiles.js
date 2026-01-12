@@ -44,18 +44,36 @@ async function loadProfiles() {
             
             profiles = data
                 .filter(user => !seenProfiles.includes(user.telegram_id))
-                .map(user => ({
-                    id: user.id,
-                    telegram_id: user.telegram_id,
-                    name: user.name,
-                    age: user.age,
-                    gender: user.gender,
-                    photo: user.photo_url || user.photos?.[0] || 'https://via.placeholder.com/500x600?text=Sem+Foto',
-                    photos: user.photos || [],
-                    bio: user.bio || '',
-                    city: user.city || '',
-                    verified: user.is_premium || false
-                }));
+                .map(user => {
+                    // Better photo URL handling
+                    let photoUrl = null;
+                    
+                    // Try photo_url first
+                    if (user.photo_url && user.photo_url.trim() !== '') {
+                        photoUrl = user.photo_url;
+                    }
+                    // Then try first item in photos array
+                    else if (user.photos && Array.isArray(user.photos) && user.photos.length > 0 && user.photos[0]) {
+                        photoUrl = user.photos[0];
+                    }
+                    // Fallback to placeholder
+                    else {
+                        photoUrl = 'https://via.placeholder.com/500x600/f3f4f6/9ca3af?text=Sem+Foto';
+                    }
+                    
+                    return {
+                        id: user.id,
+                        telegram_id: user.telegram_id,
+                        name: user.name,
+                        age: user.age,
+                        gender: user.gender,
+                        photo: photoUrl,
+                        photos: user.photos || [],
+                        bio: user.bio || '',
+                        city: user.city || '',
+                        verified: user.is_premium || false
+                    };
+                });
             
             console.log('✅ Perfis carregados:', profiles.length);
             console.log('🚫 Perfis já vistos filtrados:', seenProfiles.length);
