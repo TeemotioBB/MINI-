@@ -169,6 +169,7 @@ function renderLikes() {
             const name = like.name || '???';
             const age = like.age || '?';
             const isSuperLike = like.type === 'superlike';
+            const hasMatch = like.has_match === true;
             
             return `
                 <div class="like-card relative rounded-2xl overflow-hidden shadow-lg cursor-pointer transform hover:scale-105 transition-all" 
@@ -192,7 +193,14 @@ function renderLikes() {
                             </div>
                         ` : ''}
                         
-                        ${isSuperLike ? `
+                        ${hasMatch ? `
+                            <!-- Badge Match -->
+                            <div class="absolute top-2 left-2 bg-gradient-to-r from-pink-500 to-red-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                                <i class="fa-solid fa-heart text-[10px]"></i> Match!
+                            </div>
+                        ` : ''}
+                        
+                        ${isSuperLike && !hasMatch ? `
                             <!-- Badge Super Like -->
                             <div class="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
                                 <i class="fa-solid fa-star text-[10px]"></i> Super

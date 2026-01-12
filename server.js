@@ -565,7 +565,8 @@ app.get('/api/likes/received/preview', optionalTelegramAuth, async (req, res) =>
         const user = userResult.rows[0];
         const isPremium = user.is_premium;
         
-        // Busca likes recebidos (exceto dislikes e usuários com match ativo)
+        // Busca likes recebidos (exceto dislikes)
+        // Mostra likes mesmo que já tenha match para o usuário ver quem curtiu
         const result = await pool.query(`
             SELECT 
                 u.id,
@@ -577,17 +578,17 @@ app.get('/api/likes/received/preview', optionalTelegramAuth, async (req, res) =>
                 u.photo_url,
                 u.city,
                 l.type,
-                l.created_at as liked_at
+                l.created_at as liked_at,
+                EXISTS (
+                    SELECT 1 FROM matches m
+                    WHERE ((m.user1_id = $1 AND m.user2_id = u.id)
+                       OR (m.user2_id = $1 AND m.user1_id = u.id))
+                       AND m.is_active = TRUE
+                ) as has_match
             FROM likes l
             JOIN users u ON l.from_user_id = u.id
             WHERE l.to_user_id = $1
               AND l.type IN ('like', 'superlike')
-              AND NOT EXISTS (
-                  SELECT 1 FROM matches m
-                  WHERE ((m.user1_id = $1 AND m.user2_id = u.id)
-                     OR (m.user2_id = $1 AND m.user1_id = u.id))
-                     AND m.is_active = TRUE
-              )
             ORDER BY l.created_at DESC
         `, [user.id]);
         
@@ -605,7 +606,8 @@ app.get('/api/likes/received/preview', optionalTelegramAuth, async (req, res) =>
                     photo_url: like.photo_url || (like.photos && like.photos[0]),
                     city: like.city,
                     type: like.type,
-                    is_blurred: false
+                    is_blurred: false,
+                    has_match: like.has_match // Indica se já formou match
                 };
             } else {
                 // Usuário FREE - mostra borrado
@@ -618,7 +620,8 @@ app.get('/api/likes/received/preview', optionalTelegramAuth, async (req, res) =>
                     photo_url: like.photo_url || (like.photos && like.photos[0]),
                     city: null,
                     type: like.type,
-                    is_blurred: true
+                    is_blurred: true,
+                    has_match: like.has_match // Indica se já formou match
                 };
             }
         });
@@ -833,7 +836,7 @@ app.get('/api/likes/count', optionalTelegramAuth, async (req, res) => {
         
         const userId = userResult.rows[0].id;
         
-        // 🔥 CONTA LIKES RECEBIDOS (excluindo usuários com match ativo)
+        // 🔥 CONTA LIKES RECEBIDOS (incluindo os que formaram match)
         const countResult = await pool.query(`
             SELECT 
                 COUNT(*) FILTER (WHERE type = 'like') as likes,
@@ -842,12 +845,6 @@ app.get('/api/likes/count', optionalTelegramAuth, async (req, res) => {
             FROM likes l
             WHERE l.to_user_id = $1 
               AND l.type IN ('like', 'superlike')
-              AND NOT EXISTS (
-                  SELECT 1 FROM matches m
-                  WHERE ((m.user1_id = $1 AND m.user2_id = l.from_user_id)
-                     OR (m.user2_id = $1 AND m.user1_id = l.from_user_id))
-                     AND m.is_active = TRUE
-              )
         `, [userId]);
         
         const counts = countResult.rows[0];
