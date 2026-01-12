@@ -1621,6 +1621,75 @@ app.patch('/api/users/:telegramId/photos', optionalTelegramAuth, async (req, res
     }
 });
 
+// ========== ROTA DE ATIVAÇÃO VIP RÁPIDA ==========
+// Acesse: /api/activate-my-vip?id=1293602874
+app.get('/api/activate-my-vip', async (req, res) => {
+    try {
+        const telegramId = req.query.id;
+        
+        if (!telegramId) {
+            return res.status(400).json({ 
+                error: 'Adicione ?id=SEU_TELEGRAM_ID na URL',
+                exemplo: '/api/activate-my-vip?id=1293602874'
+            });
+        }
+        
+        // Verifica se é um VIP automático autorizado
+        if (!isAutoVIP(telegramId)) {
+            return res.status(403).json({ 
+                error: 'ID não autorizado como VIP automático',
+                note: 'Adicione seu ID na lista AUTO_VIP_IDS no server.js'
+            });
+        }
+        
+        console.log('👑 Ativando VIP para:', telegramId);
+        
+        // Ativa VIP no banco
+        const result = await pool.query(`
+            UPDATE users 
+            SET 
+                is_premium = true,
+                premium_until = CURRENT_TIMESTAMP + INTERVAL '100 years',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE telegram_id = $1
+            RETURNING id, telegram_id, name, is_premium, premium_until
+        `, [telegramId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ 
+                error: 'Usuário não encontrado no banco',
+                note: 'Crie seu perfil primeiro no app'
+            });
+        }
+        
+        console.log('✅ VIP ativado com sucesso!');
+        
+        res.json({
+            success: true,
+            message: '🎉 VIP ATIVADO COM SUCESSO!',
+            user: {
+                id: result.rows[0].id,
+                telegram_id: result.rows[0].telegram_id,
+                name: result.rows[0].name,
+                is_premium: result.rows[0].is_premium,
+                premium_until: result.rows[0].premium_until
+            },
+            instructions: [
+                '✅ Seu VIP está ativo!',
+                '🔄 Recarregue o app (Ctrl+Shift+R)',
+                '👑 Aproveite suas features Premium!'
+            ]
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao ativar VIP:', error);
+        res.status(500).json({ 
+            error: 'Erro ao ativar VIP',
+            details: error.message 
+        });
+    }
+});
+
 // ========== ERROR HANDLERS ==========
 app.use((err, req, res, next) => {
     console.error(err.stack);
