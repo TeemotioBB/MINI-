@@ -926,7 +926,7 @@ app.get('/api/users/:telegramId/premium', optionalTelegramAuth, async (req, res)
                 super_likes: {
                     used: user.daily_super_likes || 0,
                     max: maxSuperLikes,
-                    remaining: isActive ? Math.max(0, maxSuperLikes - (user.daily_super_likes || 0)) : 'none'
+                    remaining: isActive ? Math.max(0, maxSuperLikes - (user.daily_super_likes || 0)) : 0
                 },
                 last_reset: user.last_reset_date
             }
