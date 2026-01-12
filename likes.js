@@ -305,10 +305,12 @@ async function likeBack(telegramId) {
         } else {
             console.error('❌ Erro ao dar like:', response.status);
             showErrorToast('Erro ao curtir. Tente novamente.');
+            return null;
         }
     } catch (error) {
         console.error('❌ Erro ao dar like:', error);
         showErrorToast('Erro de conexão. Tente novamente.');
+        return null;
     }
 }
 
@@ -336,6 +338,7 @@ async function dislikeFromReceivedLikes(telegramId, userId) {
             console.log('✅ Dislike registrado com sucesso');
             
             // Remove o usuário da lista local de likes recebidos
+            // Note: Direct mutation is acceptable here since we immediately update all related UI
             receivedLikes = receivedLikes.filter(like => like.id !== userId);
             
             // Atualiza o contador
@@ -445,7 +448,7 @@ const modalDislike = document.getElementById('modal-dislike');
 if (modalDislike && profileModal) {
     modalDislike.addEventListener('click', async () => {
         const telegramId = profileModal.dataset.currentTelegramId;
-        const userId = parseInt(profileModal.dataset.currentId);
+        const userId = parseInt(profileModal.dataset.currentId, 10);
         
         if (telegramId && currentTab === 'received') {
             // Se estamos na aba de likes recebidos, dar dislike e remover da lista
