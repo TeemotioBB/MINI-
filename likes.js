@@ -1,6 +1,6 @@
 // ========== SISTEMA DE LIKES - VERSÃO CORRIGIDA ==========
 
-const API_BASE_URL = 'https://mini-production-cf60.up.railway.app/api';
+// API_BASE_URL já foi declarado em vip.js que carrega antes deste arquivo
 
 // Estado
 let receivedLikes = [];
