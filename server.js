@@ -1135,6 +1135,247 @@ app.post('/api/admin/reset-likes-between-users', async (req, res) => {
     }
 });
 
+// POST - Ativar Premium (para testes ou após pagamento confirmado)
+app.post('/api/users/:telegramId/premium', optionalTelegramAuth, async (req, res) => {
+    try {
+        const { telegramId } = req.params;
+        const { action, duration_days = 30, secret } = req.body;
+        
+        // 🔒 SEGURANÇA: Em produção, valide o pagamento antes!
+        // Por enquanto, aceita secret para testes
+        const ADMIN_SECRET = process.env.ADMIN_SECRET || 'spark_admin_2024';
+        
+        if (secret !== ADMIN_SECRET) {
+            // Em produção, aqui você validaria o pagamento PIX/Telegram Stars
+            console.log('⚠️ Tentativa de ativar premium sem autorização');
+            return res.status(403).json({ 
+                error: 'Não autorizado',
+                code: 'UNAUTHORIZED'
+            });
+        }
+        
+        console.log('💎 Requisição Premium:', { telegramId, action, duration_days });
+        
+        const userResult = await pool.query(
+            'SELECT id, name, is_premium, premium_until FROM users WHERE telegram_id = $1',
+            [telegramId]
+        );
+        
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+        
+        const user = userResult.rows[0];
+        
+        if (action === 'activate') {
+            // Calcula data de expiração
+            const premiumUntil = new Date();
+            premiumUntil.setDate(premiumUntil.getDate() + duration_days);
+            
+            const result = await pool.query(`
+                UPDATE users 
+                SET 
+                    is_premium = TRUE,
+                    premium_until = $1,
+                    daily_likes = 0,
+                    daily_super_likes = 0,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE telegram_id = $2
+                RETURNING id, name, is_premium, premium_until
+            `, [premiumUntil, telegramId]);
+            
+            console.log('✅ Premium ATIVADO para:', user.name);
+            console.log('📅 Válido até:', premiumUntil);
+            
+            res.json({
+                success: true,
+                message: 'Premium ativado com sucesso!',
+                user: {
+                    id: result.rows[0].id,
+                    name: result.rows[0].name,
+                    is_premium: result.rows[0].is_premium,
+                    premium_until: result.rows[0].premium_until
+                },
+                benefits: {
+                    unlimited_likes: true,
+                    super_likes_per_day: 5,
+                    boosts_per_week: 1,
+                    can_see_likes: true
+                }
+            });
+            
+        } else if (action === 'deactivate') {
+            const result = await pool.query(`
+                UPDATE users 
+                SET 
+                    is_premium = FALSE,
+                    premium_until = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE telegram_id = $1
+                RETURNING id, name, is_premium
+            `, [telegramId]);
+            
+            console.log('📉 Premium DESATIVADO para:', user.name);
+            
+            res.json({
+                success: true,
+                message: 'Premium desativado',
+                user: {
+                    id: result.rows[0].id,
+                    name: result.rows[0].name,
+                    is_premium: result.rows[0].is_premium
+                }
+            });
+            
+        } else {
+            return res.status(400).json({ error: 'Ação inválida. Use "activate" ou "deactivate"' });
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao gerenciar premium:', error);
+        res.status(500).json({ error: 'Erro interno' });
+    }
+});
+
+// GET - Verificar status Premium
+app.get('/api/users/:telegramId/premium', optionalTelegramAuth, async (req, res) => {
+    try {
+        const { telegramId } = req.params;
+        
+        const result = await pool.query(`
+            SELECT 
+                id, name, is_premium, premium_until,
+                daily_likes, daily_super_likes
+            FROM users 
+            WHERE telegram_id = $1
+        `, [telegramId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+        
+        const user = result.rows[0];
+        
+        // Verifica se premium expirou
+        let isPremiumActive = user.is_premium;
+        if (user.is_premium && user.premium_until) {
+            if (new Date(user.premium_until) < new Date()) {
+                // Premium expirou, desativa
+                await pool.query(
+                    'UPDATE users SET is_premium = FALSE WHERE telegram_id = $1',
+                    [telegramId]
+                );
+                isPremiumActive = false;
+                console.log('⏰ Premium expirado para:', user.name);
+            }
+        }
+        
+        const limits = isPremiumActive ? {
+            likes: { used: 0, max: 'unlimited', remaining: 'unlimited' },
+            super_likes: { used: user.daily_super_likes, max: 5, remaining: 5 - user.daily_super_likes },
+            boosts: { used: 0, max: 1, remaining: 1 }
+        } : {
+            likes: { used: user.daily_likes, max: 10, remaining: Math.max(0, 10 - user.daily_likes) },
+            super_likes: { used: 0, max: 0, remaining: 0 },
+            boosts: { used: 0, max: 0, remaining: 0 }
+        };
+        
+        res.json({
+            user: {
+                id: user.id,
+                name: user.name
+            },
+            premium: {
+                is_active: isPremiumActive,
+                expires_at: user.premium_until,
+                plan: isPremiumActive ? 'PREMIUM' : 'FREE'
+            },
+            limits: limits,
+            benefits: {
+                unlimited_likes: isPremiumActive,
+                super_likes_enabled: isPremiumActive,
+                boosts_enabled: isPremiumActive,
+                can_see_likes: isPremiumActive
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao verificar premium:', error);
+        res.status(500).json({ error: 'Erro interno' });
+    }
+});
+
+// ========== DEBUG - Ativar Premium para testes ==========
+app.get('/api/debug/activate-premium/:telegramId', async (req, res) => {
+    try {
+        const { telegramId } = req.params;
+        
+        console.log('🧪 DEBUG: Ativando premium para:', telegramId);
+        
+        const result = await pool.query(`
+            UPDATE users 
+            SET 
+                is_premium = TRUE,
+                premium_until = CURRENT_TIMESTAMP + INTERVAL '30 days',
+                daily_likes = 0,
+                daily_super_likes = 0
+            WHERE telegram_id = $1
+            RETURNING id, name, is_premium, premium_until
+        `, [telegramId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+        
+        console.log('✅ Premium ativado via DEBUG para:', result.rows[0].name);
+        
+        res.json({
+            success: true,
+            message: 'Premium ativado (DEBUG)!',
+            user: result.rows[0]
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ========== DEBUG - Desativar Premium ==========
+app.get('/api/debug/deactivate-premium/:telegramId', async (req, res) => {
+    try {
+        const { telegramId } = req.params;
+        
+        console.log('🧪 DEBUG: Desativando premium para:', telegramId);
+        
+        const result = await pool.query(`
+            UPDATE users 
+            SET 
+                is_premium = FALSE,
+                premium_until = NULL
+            WHERE telegram_id = $1
+            RETURNING id, name, is_premium
+        `, [telegramId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+        
+        console.log('📉 Premium desativado via DEBUG para:', result.rows[0].name);
+        
+        res.json({
+            success: true,
+            message: 'Premium desativado (DEBUG)',
+            user: result.rows[0]
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 // ========== ERROR HANDLERS ==========
 app.use((err, req, res, next) => {
     console.error(err.stack);
@@ -1150,3 +1391,4 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
+
