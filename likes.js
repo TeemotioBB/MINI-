@@ -414,9 +414,64 @@ document.addEventListener('visibilitychange', () => {
 // Limpa interval ao fechar
 window.addEventListener('beforeunload', stopAutoRefresh);
 
+// ========== DIAGNÓSTICO COMPLETO ==========
+async function diagnosticCheck() {
+    console.log('🔍 ========== DIAGNÓSTICO COMPLETO ==========');
+    console.log('📍 URL atual:', window.location.href);
+    console.log('📄 Página:', window.location.pathname);
+    
+    // Verifica elementos DOM
+    console.log('🎯 Elementos DOM:');
+    console.log('  - likesGrid:', likesGrid ? '✅ ENCONTRADO' : '❌ NÃO ENCONTRADO');
+    console.log('  - noLikes:', noLikes ? '✅ ENCONTRADO' : '❌ NÃO ENCONTRADO');
+    console.log('  - tabReceived:', tabReceived ? '✅ ENCONTRADO' : '❌ NÃO ENCONTRADO');
+    console.log('  - tabSent:', tabSent ? '✅ ENCONTRADO' : '❌ NÃO ENCONTRADO');
+    console.log('  - receivedCount:', receivedCount ? '✅ ENCONTRADO' : '❌ NÃO ENCONTRADO');
+    console.log('  - sentCount:', sentCount ? '✅ ENCONTRADO' : '❌ NÃO ENCONTRADO');
+    console.log('  - likesBadge:', likesBadge ? '✅ ENCONTRADO' : '❌ NÃO ENCONTRADO');
+    
+    // Verifica Telegram ID
+    const telegramId = getMyTelegramId();
+    console.log('🆔 Telegram ID:', telegramId);
+    
+    // Testa API
+    console.log('🌐 Testando conexão com API...');
+    try {
+        const response = await fetch(`${API_BASE_URL}/likes/received/preview?telegram_id=${telegramId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+            }
+        });
+        
+        console.log('📡 Status da resposta:', response.status, response.statusText);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('📦 Dados recebidos:', data);
+            console.log('📊 Quantidade de likes:', data.likes?.length || 0);
+            
+            if (data.likes && data.likes.length > 0) {
+                console.log('👥 Primeiros 3 likes:', data.likes.slice(0, 3));
+            }
+        } else {
+            const errorText = await response.text();
+            console.error('❌ Erro na resposta:', errorText);
+        }
+    } catch (error) {
+        console.error('❌ Erro na conexão:', error);
+    }
+    
+    console.log('🔍 ========== FIM DO DIAGNÓSTICO ==========\n');
+}
+
 // ========== INICIALIZAÇÃO ==========
 async function init() {
     console.log('🚀 Inicializando likes.js...');
+    
+    // Executa diagnóstico primeiro
+    await diagnosticCheck();
     
     try {
         await refreshLikes(true);
