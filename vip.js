@@ -1,5 +1,11 @@
 // ========== SISTEMA VIP - SINCRONIZADO COM BACKEND ==========
 
+// 👑 VIPs AUTOMÁTICOS - IDs que sempre serão Premium!
+const AUTO_VIP_IDS = [
+    1293602874  // Seu ID - sempre VIP!
+    // Adicione mais IDs aqui se necessário
+];
+
 const VIP_CONFIG = {
     FREE: {
         name: 'Spark Free',
@@ -23,10 +29,21 @@ const API_BASE_URL = 'https://mini-production-cf60.up.railway.app/api';
 
 class VIPSystem {
     constructor() {
-        this.userPlan = this.loadUserPlan();
+        this.telegramId = this.getTelegramId();
+        
+        // 👑 VERIFICAR SE É VIP AUTOMÁTICO
+        this.isAutoVIP = AUTO_VIP_IDS.includes(parseInt(this.telegramId));
+        
+        if (this.isAutoVIP) {
+            console.log('👑 VIP AUTOMÁTICO DETECTADO! Forçando Premium...');
+            this.userPlan = 'PREMIUM';
+            this.saveUserPlan('PREMIUM');
+        } else {
+            this.userPlan = this.loadUserPlan();
+        }
+        
         this.dailyLimits = this.loadDailyLimits();
         this.weeklyLimits = this.loadWeeklyLimits();
-        this.telegramId = this.getTelegramId();
         this.checkAndResetLimits();
         
         // ✅ BUSCA STATUS DO BACKEND AO INICIAR
@@ -48,6 +65,15 @@ class VIPSystem {
     async syncWithBackend() {
         try {
             console.log('🔄 Sincronizando VIP com backend para:', this.telegramId);
+            
+            // 👑 FORÇA PREMIUM PARA VIPs AUTOMÁTICOS
+            if (this.isAutoVIP) {
+                console.log('👑 VIP AUTOMÁTICO - Forçando Premium localmente');
+                this.userPlan = 'PREMIUM';
+                this.saveUserPlan('PREMIUM');
+                this.updateUI();
+                return { auto_vip: true, premium: { is_active: true } };
+            }
             
             const url = `${API_BASE_URL}/users/${this.telegramId}/premium`;
             console.log('🌐 URL:', url);
