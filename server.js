@@ -45,6 +45,37 @@ const LIMITS = {
     PREMIUM_DURATION_DAYS: 30
 };
 
+// ========== VIPs AUTOMÁTICOS ==========
+// IDs que sempre terão Premium ativo automaticamente
+const AUTO_VIP_IDS = [
+    1293602874  // Seu ID - sempre VIP! 👑
+    // Adicione mais IDs aqui se necessário
+];
+
+// Função helper para verificar se é VIP automático
+function isAutoVIP(telegramId) {
+    return AUTO_VIP_IDS.includes(parseInt(telegramId));
+}
+
+// Middleware para garantir VIP automático
+async function ensureAutoVIP(telegramId) {
+    if (isAutoVIP(telegramId)) {
+        try {
+            // Garante que está como premium no banco
+            await pool.query(`
+                UPDATE users 
+                SET is_premium = true,
+                    premium_until = CURRENT_TIMESTAMP + INTERVAL '100 years',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE telegram_id = $1 AND is_premium = false
+            `, [telegramId]);
+            console.log('👑 VIP automático garantido para:', telegramId);
+        } catch (error) {
+            console.error('Erro ao garantir VIP automático:', error);
+        }
+    }
+}
+
 // ========== MIDDLEWARES ==========
 app.use(helmet({
   contentSecurityPolicy: false,
@@ -97,6 +128,9 @@ app.use('/api/upload', optionalTelegramAuth, uploadRoutes);
 app.get('/api/users/:telegramId', async (req, res) => {
     try {
         const { telegramId } = req.params;
+        
+        // 👑 Garante VIP automático
+        await ensureAutoVIP(telegramId);
         
         const result = await pool.query(
             'SELECT * FROM users WHERE telegram_id = $1',
@@ -166,6 +200,9 @@ app.post('/api/users', optionalTelegramAuth, async (req, res) => {
             photos, pref_gender || 'masculino', pref_age_min || 18, pref_age_max || 99
         ]);
         
+        // 👑 Garante VIP automático após salvar
+        await ensureAutoVIP(finalTelegramId);
+        
         console.log('✅ Usuário salvo:', result.rows[0].id);
         res.json(result.rows[0]);
     } catch (error) {
@@ -181,6 +218,9 @@ app.get('/api/users/:telegramId/discover', optionalTelegramAuth, async (req, res
         const { limit = 10 } = req.query;
         
         const finalTelegramId = req.telegramUser?.telegram_id || telegramId;
+        
+        // 👑 Garante VIP automático
+        await ensureAutoVIP(finalTelegramId);
         
         console.log('🔍 Buscando perfis para:', finalTelegramId);
         
@@ -550,6 +590,9 @@ app.get('/api/likes/received/preview', optionalTelegramAuth, async (req, res) =>
         if (!telegram_id) {
             return res.status(400).json({ error: 'telegram_id é obrigatório' });
         }
+        
+        // 👑 Garante VIP automático
+        await ensureAutoVIP(telegram_id);
         
         console.log('📥 Buscando likes recebidos para:', telegram_id);
         
