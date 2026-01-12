@@ -301,12 +301,12 @@ function renderChatList() {
 
     document.querySelectorAll('.chat-item').forEach(item => {
         item.addEventListener('click', async () => {
-            const chatId = parseInt(item.dataset.chatId);
+            const chatId = parseInt(item.dataset.chatId, 10);
             console.log('🖱️ Click on chat item, ID:', chatId);
             try {
                 await openChat(chatId);
             } catch (err) {
-                console.error('❌ Erro ao abrir chat ao clicar:', err);
+                console.error('❌ Error opening chat:', err);
                 alert('Erro ao abrir conversa. Por favor, tente novamente.');
             }
         });
@@ -318,7 +318,7 @@ async function openChat(chatId) {
     console.log('💬 Abrindo chat ID:', chatId, '| Tipo:', typeof chatId);
     
     // 🔥 GARANTE QUE chatId É UM NÚMERO VÁLIDO
-    const numericChatId = typeof chatId === 'string' ? parseInt(chatId) : chatId;
+    const numericChatId = typeof chatId === 'string' ? parseInt(chatId, 10) : chatId;
     
     if (isNaN(numericChatId) || numericChatId <= 0) {
         console.error('❌ Chat ID inválido:', chatId);
