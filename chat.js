@@ -306,7 +306,7 @@ function renderChatList() {
             try {
                 await openChat(chatId);
             } catch (err) {
-                console.error('❌ Erro ao abrir chat no click:', err);
+                console.error('❌ Erro ao abrir chat ao clicar:', err);
                 alert('Erro ao abrir conversa. Por favor, tente novamente.');
             }
         });
@@ -359,7 +359,7 @@ async function openChat(chatId) {
     currentChat.unread = 0;
     saveConversationsToStorage();
 
-    const serverMessages = await loadMessagesFromServer(chatId);
+    const serverMessages = await loadMessagesFromServer(numericChatId);
     
     if (serverMessages.length > 0) {
         const localMessages = currentChat.messages?.filter(m => m.sender === 'system') || [];
