@@ -323,23 +323,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Salva fotos
     async function savePhotos() {
-        if (userData.photos.length === 0) {
-            showToast('❌ Adicione pelo menos 1 foto', 'error');
-            return;
-        }
-        
-        // Salva localmente
-        localStorage.setItem('userData', JSON.stringify(userData));
-        
-        // Envia para o servidor
-        await saveToServer();
+    if (userData.photos.length === 0) {
+        showToast('❌ Adicione pelo menos 1 foto', 'error');
+        return;
+    }
+    
+    // Salva localmente primeiro
+    localStorage.setItem('userData', JSON.stringify(userData));
+    
+    showToast('📤 Salvando fotos...', 'info');
+    
+    try {
+        // ✅ USA A NOVA ROTA ESPECÍFICA PARA FOTOS
+        await savePhotosToServer();
         
         renderUserPhotos();
         loadUserProfile();
         closeModal(modalPhotos);
-        showToast('✅ Fotos salvas com sucesso!');
+        showToast('✅ Fotos salvas com sucesso!', 'success');
         console.log('📸 Fotos salvas:', userData.photos);
+        
+    } catch (error) {
+        console.error('❌ Erro ao salvar fotos:', error);
+        
+        // Se o usuário não existe no servidor, precisa preencher o perfil primeiro
+        if (error.message.includes('não encontrado') || error.message.includes('Preencha')) {
+            showToast('⚠️ Preencha seu nome e idade primeiro!', 'warning');
+            closeModal(modalPhotos);
+            openEditModal(); // Abre o modal de editar perfil
+        } else {
+            showToast('❌ Erro ao salvar: ' + error.message, 'error');
+        }
     }
+}
 
     // Carrega dados do usuário
     function loadUserProfile() {
@@ -874,4 +890,5 @@ async function savePhotosToServer() {
     `;
     document.head.appendChild(style);
 });
+
 
