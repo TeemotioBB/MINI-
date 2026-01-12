@@ -1,10 +1,10 @@
 {
   "name": "spark-backend",
-  "version": "1.0.0",
-  "description": "Backend completo para Spark Dating Mini App",
+  "version": "1.1.0",
+  "description": "Backend completo para Spark Dating Mini App com VIP automático",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node start.js",
     "dev": "nodemon server.js",
     "db:migrate": "node scripts/migrate.js",
     "db:seed": "node scripts/seed.js"
