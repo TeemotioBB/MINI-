@@ -476,7 +476,7 @@ app.get('/api/likes/received', optionalTelegramAuth, async (req, res) => {
 
 // ========== ROTAS DE MATCHES ==========
 
-// 🔥 GET - Matches do usuário (AJUSTADO PARA AMBOS OS USUÁRIOS)
+// 🔥 GET - Matches do usuário (COM ÚLTIMA MENSAGEM!)
 app.get('/api/matches', optionalTelegramAuth, async (req, res) => {
     try {
         const telegram_id = req.telegramUser?.telegram_id || req.query.telegram_id;
@@ -503,7 +503,7 @@ app.get('/api/matches', optionalTelegramAuth, async (req, res) => {
         console.log('👤 Usuário encontrado:', userName, '(ID:', userId, ')');
         console.log('🔍 Buscando matches para user ID:', userId);
         
-        // Query ajustada para retornar dados completos de ambos os usuários
+        // 🔥 Query COM última mensagem usando subquery
         const result = await pool.query(`
             SELECT 
                 m.id as match_id,
@@ -521,13 +521,23 @@ app.get('/api/matches', optionalTelegramAuth, async (req, res) => {
                 u2.name as user2_name,
                 u2.age as user2_age,
                 u2.photo_url as user2_photo,
-                u2.photos as user2_photos
+                u2.photos as user2_photos,
+                last_msg.content as last_message_content,
+                last_msg.sender_id as last_message_sender_id,
+                last_msg.created_at as last_message_time
             FROM matches m
             JOIN users u1 ON m.user1_id = u1.id
             JOIN users u2 ON m.user2_id = u2.id
+            LEFT JOIN LATERAL (
+                SELECT content, sender_id, created_at
+                FROM messages
+                WHERE match_id = m.id
+                ORDER BY created_at DESC
+                LIMIT 1
+            ) last_msg ON true
             WHERE (m.user1_id = $1 OR m.user2_id = $1)
               AND m.is_active = TRUE
-            ORDER BY m.last_message_at DESC
+            ORDER BY COALESCE(last_msg.created_at, m.created_at) DESC
         `, [userId]);
         
         console.log('✅ Matches encontrados:', result.rows.length);
@@ -536,7 +546,8 @@ app.get('/api/matches', optionalTelegramAuth, async (req, res) => {
             console.log('📋 Matches:');
             result.rows.forEach(match => {
                 const otherUser = match.user1_id === userId ? match.user2_name : match.user1_name;
-                console.log(`  - Match ID ${match.match_id}: ${userName} ↔️ ${otherUser}`);
+                const lastMsg = match.last_message_content ? match.last_message_content.substring(0, 30) + '...' : 'Novo match!';
+                console.log(`  - Match ID ${match.match_id}: ${userName} ↔️ ${otherUser} | Última: "${lastMsg}"`);
             });
         }
         
@@ -549,22 +560,43 @@ app.get('/api/matches', optionalTelegramAuth, async (req, res) => {
 
 // ========== ROTAS DE CHAT ==========
 
-// GET - Mensagens
+// GET - Mensagens (com suporte a polling via last_id)
 app.get('/api/matches/:matchId/messages', optionalTelegramAuth, async (req, res) => {
     try {
         const { matchId } = req.params;
-        const { limit = 50, offset = 0 } = req.query;
+        const { limit = 50, offset = 0, after_id } = req.query;
         
-        const result = await pool.query(`
-            SELECT m.*, u.name as sender_name, u.photo_url as sender_photo
-            FROM messages m
-            JOIN users u ON m.sender_id = u.id
-            WHERE m.match_id = $1
-            ORDER BY m.created_at DESC
-            LIMIT $2 OFFSET $3
-        `, [matchId, limit, offset]);
+        let query;
+        let params;
         
-        res.json(result.rows.reverse());
+        // 🔥 Se after_id foi passado, busca apenas mensagens mais novas (para polling)
+        if (after_id) {
+            query = `
+                SELECT m.*, u.name as sender_name, u.photo_url as sender_photo
+                FROM messages m
+                JOIN users u ON m.sender_id = u.id
+                WHERE m.match_id = $1 AND m.id > $2
+                ORDER BY m.created_at ASC
+            `;
+            params = [matchId, after_id];
+        } else {
+            query = `
+                SELECT m.*, u.name as sender_name, u.photo_url as sender_photo
+                FROM messages m
+                JOIN users u ON m.sender_id = u.id
+                WHERE m.match_id = $1
+                ORDER BY m.created_at DESC
+                LIMIT $2 OFFSET $3
+            `;
+            params = [matchId, limit, offset];
+        }
+        
+        const result = await pool.query(query, params);
+        
+        // Se não é polling, inverte para ordem cronológica
+        const messages = after_id ? result.rows : result.rows.reverse();
+        
+        res.json(messages);
     } catch (error) {
         console.error('Erro:', error);
         res.status(500).json({ error: 'Erro interno' });
