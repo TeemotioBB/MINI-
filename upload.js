@@ -4,7 +4,7 @@ const router = express.Router();
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 
-// ⚠️ CREDENCIAIS DIRETAS - para debug (em produção, use variáveis de ambiente!)
+// ⚠️ CREDENCIAIS DIRETAS - para debug
 cloudinary.config({
     cloud_name: 'dx5ki2s1d',
     api_key: '568959253727239',
@@ -13,17 +13,17 @@ cloudinary.config({
 
 console.log('✅ Cloudinary configurado com cloud_name:', 'dx5ki2s1d');
 
-// Configuração do Multer (aceita até 4 fotos, SEM limite de tamanho por arquivo)
+// Configuração do Multer (aceita até 4 fotos)
 const storage = multer.memoryStorage();
-
 const upload = multer({
     storage: storage,
     limits: {
-        // fileSize: 5 * 1024 * 1024, // COMENTADO = SEM LIMITE DE TAMANHO POR FOTO
-        files: 4 // Máximo 4 arquivos simultâneos
+        fileSize: 20 * 1024 * 1024, // 5MB máximo
+        files: 4 // Máximo 4 fotos
     },
     fileFilter: (req, file, cb) => {
-        console.log('📁 Arquivo recebido:', file.originalname, 'Tipo:', file.mimetype, 'Tamanho:', file.size + ' bytes');
+        console.log('📁 Arquivo recebido:', file.originalname, 'Tipo:', file.mimetype);
+        // Aceita apenas imagens
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
         } else {
@@ -32,25 +32,22 @@ const upload = multer({
     }
 });
 
-// Log de debug para confirmar configuração (aparece no console do Railway ao iniciar)
-console.log('⚙️ Multer configurado:');
-console.log('   - Limite de tamanho por arquivo: SEM LIMITE (fileSize comentado)');
-console.log('   - Limite de quantidade de arquivos: 4');
-
 // ========== UPLOAD DE FOTO ÚNICA ==========
 router.post('/photo', upload.single('photo'), async (req, res) => {
-    console.log('🚀 Iniciando upload de foto única...');
+    console.log('🚀 Iniciando upload de foto...');
     
     try {
         if (!req.file) {
             console.log('❌ Nenhum arquivo recebido');
             return res.status(400).json({ error: 'Nenhuma foto enviada' });
         }
+
         console.log('📦 Arquivo recebido:', {
             originalname: req.file.originalname,
             mimetype: req.file.mimetype,
             size: req.file.size
         });
+
         const telegram_id = req.body.telegram_id || 'unknown';
         console.log('👤 Telegram ID:', telegram_id);
 
@@ -82,6 +79,7 @@ router.post('/photo', upload.single('photo'), async (req, res) => {
             stream.write(req.file.buffer);
             stream.end();
         });
+
         const result = await uploadPromise;
 
         // Tenta atualizar no banco (opcional - não falha se der erro)
@@ -91,7 +89,7 @@ router.post('/photo', upload.single('photo'), async (req, res) => {
                     'UPDATE users SET photo_url = $1, updated_at = CURRENT_TIMESTAMP WHERE telegram_id = $2',
                     [result.secure_url, telegram_id]
                 );
-                console.log('💾 Banco atualizado (foto única)');
+                console.log('💾 Banco atualizado');
             }
         } catch (dbError) {
             console.log('⚠️ Erro ao atualizar banco (ignorado):', dbError.message);
@@ -102,11 +100,12 @@ router.post('/photo', upload.single('photo'), async (req, res) => {
             url: result.secure_url,
             public_id: result.public_id
         });
+
     } catch (error) {
-        console.error('❌ Erro no upload único:', error);
-        res.status(500).json({
+        console.error('❌ Erro no upload:', error);
+        res.status(500).json({ 
             error: 'Erro ao fazer upload da foto',
-            details: error.message
+            details: error.message 
         });
     }
 });
@@ -119,6 +118,7 @@ router.post('/photos', upload.array('photos', 4), async (req, res) => {
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: 'Nenhuma foto enviada' });
         }
+
         const telegram_id = req.body.telegram_id || 'unknown';
         console.log('👤 Telegram ID:', telegram_id);
         console.log('📦 Arquivos recebidos:', req.files.length);
@@ -146,6 +146,7 @@ router.post('/photos', upload.array('photos', 4), async (req, res) => {
                 stream.end();
             });
         });
+
         const urls = await Promise.all(uploadPromises);
         console.log('✅ Todas as fotos enviadas:', urls.length);
 
@@ -156,7 +157,7 @@ router.post('/photos', upload.array('photos', 4), async (req, res) => {
                     'UPDATE users SET photos = $1, photo_url = $2, updated_at = CURRENT_TIMESTAMP WHERE telegram_id = $3',
                     [urls, urls[0], telegram_id]
                 );
-                console.log('💾 Banco atualizado (múltiplas fotos)');
+                console.log('💾 Banco atualizado');
             }
         } catch (dbError) {
             console.log('⚠️ Erro ao atualizar banco (ignorado):', dbError.message);
@@ -167,11 +168,12 @@ router.post('/photos', upload.array('photos', 4), async (req, res) => {
             urls: urls,
             count: urls.length
         });
+
     } catch (error) {
         console.error('❌ Erro no upload múltiplo:', error);
-        res.status(500).json({
+        res.status(500).json({ 
             error: 'Erro ao fazer upload das fotos',
-            details: error.message
+            details: error.message 
         });
     }
 });
@@ -180,16 +182,20 @@ router.post('/photos', upload.array('photos', 4), async (req, res) => {
 router.delete('/photo', async (req, res) => {
     try {
         const { telegram_id, public_id } = req.body;
+
         if (!public_id) {
             return res.status(400).json({ error: 'public_id é obrigatório' });
         }
+
         // Deleta do Cloudinary
         await cloudinary.uploader.destroy(public_id);
         console.log('🗑️ Foto deletada do Cloudinary:', public_id);
+
         res.json({
             success: true,
             message: 'Foto deletada'
         });
+
     } catch (error) {
         console.error('❌ Erro ao deletar foto:', error);
         res.status(500).json({ error: 'Erro ao deletar foto' });
