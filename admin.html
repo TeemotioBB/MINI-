@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Spark</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gradient-to-br from-purple-500 to-pink-500 min-h-screen p-4">
+    <div class="max-w-md mx-auto mt-10 bg-white rounded-3xl shadow-2xl overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white">
+            <div class="flex items-center gap-3 mb-2">
+                <i class="fa-solid fa-crown text-3xl text-yellow-300"></i>
+                <h1 class="text-2xl font-black">Admin Panel</h1>
+            </div>
+            <p class="text-sm text-white/80">Gerenciar Premium do Spark</p>
+        </div>
+
+        <!-- Status Atual -->
+        <div class="p-6 border-b">
+            <h2 class="text-lg font-bold mb-3 text-gray-800">Status Atual</h2>
+            <div id="status-container" class="bg-gray-50 rounded-xl p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm text-gray-600">Plano:</span>
+                    <span id="current-plan" class="font-bold text-lg">...</span>
+                </div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm text-gray-600">Telegram ID:</span>
+                    <span id="telegram-id" class="font-mono text-sm">...</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-600">Expira em:</span>
+                    <span id="expires-at" class="text-sm">...</span>
+                </div>
+            </div>
+            <button id="btn-refresh" class="mt-3 w-full bg-gray-100 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-all">
+                <i class="fa-solid fa-rotate"></i> Atualizar Status
+            </button>
+        </div>
+
+        <!-- Ações -->
+        <div class="p-6 border-b">
+            <h2 class="text-lg font-bold mb-3 text-gray-800">Ações</h2>
+            
+            <!-- Ativar Premium -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Duração (dias):</label>
+                <input type="number" id="duration-days" value="30" min="1" max="365" 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+            </div>
+
+            <button id="btn-activate" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all mb-3">
+                <i class="fa-solid fa-crown"></i> Ativar Premium
+            </button>
+
+            <button id="btn-deactivate" class="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition-all">
+                <i class="fa-solid fa-xmark"></i> Desativar Premium
+            </button>
+        </div>
+
+        <!-- Admin Secret -->
+        <div class="p-6 bg-yellow-50">
+            <div class="flex items-start gap-2 mb-3">
+                <i class="fa-solid fa-key text-yellow-600 mt-1"></i>
+                <div>
+                    <h3 class="font-bold text-gray-800 text-sm">Admin Secret</h3>
+                    <p class="text-xs text-gray-600 mt-1">Configure no Railway: ADMIN_SECRET</p>
+                </div>
+            </div>
+            <input type="password" id="admin-secret" placeholder="Digite o admin secret" 
+                   class="w-full px-4 py-2 border border-yellow-200 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent">
+            <p class="text-xs text-gray-500 mt-2">💡 Deixe vazio para usar modo debug (apenas em development)</p>
+        </div>
+
+        <!-- Logs -->
+        <div class="p-6">
+            <h2 class="text-lg font-bold mb-3 text-gray-800">Logs</h2>
+            <div id="logs-container" class="bg-gray-50 rounded-xl p-4 h-40 overflow-y-auto text-xs font-mono">
+                <div class="text-gray-400">Aguardando ações...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://mini-production-cf60.up.railway.app/api';
+        
+        // Elementos
+        const currentPlanEl = document.getElementById('current-plan');
+        const telegramIdEl = document.getElementById('telegram-id');
+        const expiresAtEl = document.getElementById('expires-at');
+        const durationInput = document.getElementById('duration-days');
+        const secretInput = document.getElementById('admin-secret');
+        const logsContainer = document.getElementById('logs-container');
+
+        // Pega Telegram ID
+        function getTelegramId() {
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
+                return window.Telegram.WebApp.initDataUnsafe.user.id;
+            }
+            return localStorage.getItem('testTelegramId') || prompt('Digite seu Telegram ID:');
+        }
+
+        const telegramId = getTelegramId();
+        telegramIdEl.textContent = telegramId;
+
+        // Log
+        function log(message, type = 'info') {
+            const colors = {
+                info: 'text-blue-600',
+                success: 'text-green-600',
+                error: 'text-red-600',
+                warning: 'text-yellow-600'
+            };
+
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `mb-1 ${colors[type]}`;
+            logEntry.textContent = `[${time}] ${message}`;
+            logsContainer.appendChild(logEntry);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        // Buscar status
+        async function fetchStatus() {
+            try {
+                log('Buscando status...');
+                const response = await fetch(`${API_URL}/users/${telegramId}/premium`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Atualiza UI
+                    const isPremium = data.premium.is_active;
+                    currentPlanEl.textContent = isPremium ? '👑 PREMIUM' : '📦 FREE';
+                    currentPlanEl.className = isPremium ? 'font-bold text-lg text-purple-600' : 'font-bold text-lg text-gray-600';
+                    
+                    if (data.premium.expires_at) {
+                        const expiryDate = new Date(data.premium.expires_at);
+                        expiresAtEl.textContent = expiryDate.toLocaleDateString('pt-BR');
+                    } else {
+                        expiresAtEl.textContent = '-';
+                    }
+                    
+                    log(`Status: ${isPremium ? 'PREMIUM' : 'FREE'}`, 'success');
+                } else {
+                    throw new Error('Erro ao buscar status');
+                }
+            } catch (error) {
+                log('Erro: ' + error.message, 'error');
+            }
+        }
+
+        // Ativar premium
+        async function activatePremium() {
+            const duration = parseInt(durationInput.value);
+            const secret = secretInput.value.trim();
+
+            if (duration < 1 || duration > 365) {
+                log('Duração inválida (1-365 dias)', 'error');
+                return;
+            }
+
+            try {
+                log(`Ativando premium por ${duration} dias...`);
+
+                const response = await fetch(`${API_URL}/users/${telegramId}/premium`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+                    },
+                    body: JSON.stringify({
+                        action: 'activate',
+                        duration_days: duration,
+                        secret: secret || undefined
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ Premium ativado com sucesso!', 'success');
+                    await fetchStatus();
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Erro desconhecido');
+                }
+            } catch (error) {
+                log('❌ Erro: ' + error.message, 'error');
+            }
+        }
+
+        // Desativar premium
+        async function deactivatePremium() {
+            const secret = secretInput.value.trim();
+
+            if (confirm('Tem certeza que deseja desativar o Premium?')) {
+                try {
+                    log('Desativando premium...');
+
+                    const response = await fetch(`${API_URL}/users/${telegramId}/premium`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+                        },
+                        body: JSON.stringify({
+                            action: 'deactivate',
+                            secret: secret || undefined
+                        })
+                    });
+
+                    if (response.ok) {
+                        log('✅ Premium desativado', 'success');
+                        await fetchStatus();
+                    } else {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Erro desconhecido');
+                    }
+                } catch (error) {
+                    log('❌ Erro: ' + error.message, 'error');
+                }
+            }
+        }
+
+        // Event listeners
+        document.getElementById('btn-refresh').addEventListener('click', fetchStatus);
+        document.getElementById('btn-activate').addEventListener('click', activatePremium);
+        document.getElementById('btn-deactivate').addEventListener('click', deactivatePremium);
+
+        // Carrega status inicial
+        fetchStatus();
+
+        // Sugestão de secret do localStorage se existir
+        const savedSecret = localStorage.getItem('adminSecret');
+        if (savedSecret) {
+            secretInput.value = savedSecret;
+        }
+
+        // Salva secret no localStorage quando alterar
+        secretInput.addEventListener('change', () => {
+            if (secretInput.value) {
+                localStorage.setItem('adminSecret', secretInput.value);
+            }
+        });
+    </script>
+</body>
+</html>
