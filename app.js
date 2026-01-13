@@ -164,10 +164,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // ✅ VERIFICAÇÃO VIP - PODE DAR LIKE?
-        if (window.vipSystem && !window.vipSystem.registerLike()) {
-            console.log('❌ VIP bloqueou o like');
-            return;
-        }
         
         const profile = profiles[currentProfileIndex];
         likedProfiles.push(profile);
@@ -251,11 +247,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (!profiles || currentProfileIndex >= profiles.length) return;
         
-        // ✅ VERIFICAÇÃO VIP - PODE DAR SUPER LIKE?
-        if (window.vipSystem && !window.vipSystem.registerSuperLike()) {
-            console.log('❌ VIP bloqueou o super like');
-            return;
-        }
         
         const profile = profiles[currentProfileIndex];
         superLikedProfiles.push(profile);
@@ -307,11 +298,6 @@ document.addEventListener('DOMContentLoaded', function() {
     btnBoost.addEventListener('click', () => {
         console.log('🖱️ Botão BOOST clicado!');
         
-        // ✅ VERIFICAÇÃO VIP - PODE DAR BOOST?
-        if (window.vipSystem && !window.vipSystem.registerBoost()) {
-            console.log('❌ VIP bloqueou o boost');
-            return;
-        }
         
         console.log('⚡ BOOST ativado com sucesso!');
     });
@@ -361,16 +347,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // ========== AGUARDA VIP SYSTEM CARREGAR ==========
-    setTimeout(() => {
-        if (window.vipSystem) {
-            window.vipSystem.updateUI();
-            console.log('✅ Sistema VIP integrado!');
-            console.log('📊 Stats:', window.vipSystem.getStats());
-        } else {
-            console.warn('⚠️ VIP System não encontrado - Funcionando sem limites');
-        }
-    }, 200);
 
     // ========== ESCUTA QUANDO OS PERFIS CARREGAREM ==========
     window.addEventListener('profilesLoaded', (event) => {
