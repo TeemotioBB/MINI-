@@ -747,15 +747,54 @@ async function savePhotosToServer() {
     if (btnUpgrade) btnUpgrade.addEventListener('click', () => openModal(modalPremium));
 
     if (btnSubscribe) {
-        btnSubscribe.addEventListener('click', () => {
-            if (confirm('ðŸ’Ž Confirmar assinatura Spark Premium por R$ 29,90/mÃªs?')) {
-                showToast('ðŸŽ‰ Processando pagamento...', 'info');
-                setTimeout(() => {
-                    userData.plan = 'Spark Premium';
-                    loadUserProfile();
-                    closeModal(modalPremium);
-                    showToast('ðŸ‘‘ Bem-vindo ao Spark Premium!', 'success');
-                }, 2000);
+        btnSubscribe.addEventListener('click', async () => {
+            // ✅ INTEGRAÇÃO COM SISTEMA VIP REAL
+            
+            // Em produção: aqui você adicionaria o fluxo de pagamento
+            // Por enquanto, vou mostrar instruções ou ativar via admin
+            
+            const useAdminMode = confirm('💎 Ativar Spark Premium?\n\n⚠️ MODO TESTE: Ativar sem pagamento?\n\nOK = Sim (teste)\nCancelar = Ir para pagamento (não implementado)');
+            
+            if (useAdminMode) {
+                // Modo teste/admin - ativa direto
+                showToast('📤 Ativando Premium...', 'info');
+                
+                try {
+                    // Tenta ativar via sistema VIP
+                    if (window.vipSystem) {
+                        const success = await window.vipSystem.activatePremiumDebug();
+                        
+                        if (success) {
+                            userData.plan = 'Spark Premium';
+                            userData.verified = true;
+                            loadUserProfile();
+                            closeModal(modalPremium);
+                            showToast('👑 Bem-vindo ao Spark Premium!', 'success');
+                            
+                            // Recarrega após 2 segundos para atualizar tudo
+                            setTimeout(() => location.reload(), 2000);
+                        } else {
+                            showToast('❌ Erro ao ativar Premium. Use o painel admin.', 'error');
+                        }
+                    } else {
+                        showToast('❌ Sistema VIP não inicializado', 'error');
+                    }
+                } catch (error) {
+                    console.error('❌ Erro:', error);
+                    showToast('❌ Erro ao ativar Premium', 'error');
+                }
+            } else {
+                // Modo pagamento (a ser implementado)
+                showToast('💳 Sistema de pagamento em breve!', 'info');
+                
+                // AQUI VOCÊ ADICIONARIA:
+                // 1. Criar preferência de pagamento no Mercado Pago/Stripe
+                // 2. Redirecionar para checkout
+                // 3. Após pagamento confirmado (webhook) → ativar premium
+                
+                // Exemplo:
+                // const payment = await createPayment(userData.telegram_id);
+                // window.open(payment.checkout_url, '_blank');
             }
         });
     }
@@ -898,3 +937,41 @@ async function savePhotosToServer() {
     `;
     document.head.appendChild(style);
 });
+
+
+
+    // ========== ATUALIZA STATUS VIP NA UI ==========
+    function updateVIPStatus() {
+        if (window.vipSystem) {
+            const isPremium = window.vipSystem.isPremium();
+            const userPlan = document.getElementById('user-plan');
+            
+            if (userPlan) {
+                if (isPremium) {
+                    userPlan.innerHTML = '<i class="fa-solid fa-crown text-yellow-500"></i> Spark Premium';
+                    userPlan.className = 'text-sm font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent';
+                } else {
+                    userPlan.textContent = 'Spark Free';
+                    userPlan.className = 'text-sm font-bold text-gray-800';
+                }
+            }
+            
+            // Atualiza badge verificado
+            if (verifiedBadge) {
+                verifiedBadge.style.display = isPremium ? 'inline' : 'none';
+            }
+            
+            console.log('👑 Status VIP atualizado:', isPremium ? 'PREMIUM' : 'FREE');
+        }
+    }
+    
+    // Atualiza status VIP quando o sistema carregar
+    if (window.vipSystem) {
+        updateVIPStatus();
+    } else {
+        // Se ainda não carregou, espera um pouco
+        setTimeout(updateVIPStatus, 500);
+    }
+    
+    // Também atualiza quando sincronizar com backend
+    window.addEventListener('vipStatusUpdated', updateVIPStatus);
