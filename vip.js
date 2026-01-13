@@ -29,12 +29,12 @@ class VIPSystem {
         this.telegramId = this.getTelegramId();
         this.checkAndResetLimits();
         
-        // ✅ BUSCA STATUS DO BACKEND AO INICIAR
+        // âœ… BUSCA STATUS DO BACKEND AO INICIAR
         this.syncWithBackend();
         
-        console.log('✅ Sistema VIP inicializado');
-        console.log('📊 Plano atual:', this.userPlan);
-        console.log('💎 Limites diários:', this.dailyLimits);
+        console.log('âœ… Sistema VIP inicializado');
+        console.log('ðŸ“Š Plano atual:', this.userPlan);
+        console.log('ðŸ’Ž Limites diÃ¡rios:', this.dailyLimits);
     }
 
     getTelegramId() {
@@ -44,32 +44,32 @@ class VIPSystem {
         return localStorage.getItem('testTelegramId') || '123456789';
     }
 
-    // ✅ SINCRONIZA COM BACKEND
+    // âœ… SINCRONIZA COM BACKEND
     async syncWithBackend() {
         try {
-            console.log('🔄 Sincronizando VIP com backend para:', this.telegramId);
+            console.log('ðŸ”„ Sincronizando VIP com backend para:', this.telegramId);
             
             const url = `${API_BASE_URL}/users/${this.telegramId}/premium`;
-            console.log('🌐 URL:', url);
+            console.log('ðŸŒ URL:', url);
             
             const response = await fetch(url);
             
             if (response.ok) {
                 const data = await response.json();
-                console.log('📥 Status Premium do backend:', data);
+                console.log('ðŸ“¥ Status Premium do backend:', data);
                 
-                // ✅ ATUALIZA PLANO COM O STATUS DO BANCO
+                // âœ… ATUALIZA PLANO COM O STATUS DO BANCO
                 if (data.premium.is_active) {
                     this.userPlan = 'PREMIUM';
                     this.saveUserPlan('PREMIUM');
-                    console.log('👑 Usuário é PREMIUM!');
+                    console.log('ðŸ‘‘ UsuÃ¡rio Ã© PREMIUM!');
                 } else {
                     this.userPlan = 'FREE';
                     this.saveUserPlan('FREE');
-                    console.log('📦 Usuário é FREE');
+                    console.log('ðŸ“¦ UsuÃ¡rio Ã© FREE');
                 }
                 
-                // ✅ ATUALIZA LIMITES
+                // âœ… ATUALIZA LIMITES
                 if (data.limits) {
                     this.dailyLimits = {
                         likes: data.limits.likes.used || 0,
@@ -79,7 +79,7 @@ class VIPSystem {
                     this.saveDailyLimits();
                 }
                 
-                console.log('✅ Sincronizado com backend!', {
+                console.log('âœ… Sincronizado com backend!', {
                     plano: this.userPlan,
                     is_premium: data.premium.is_active,
                     expires: data.premium.expires_at
@@ -90,11 +90,11 @@ class VIPSystem {
                 
                 return data;
             } else {
-                console.warn('⚠️ Não foi possível sincronizar (status', response.status, ')');
+                console.warn('âš ï¸ NÃ£o foi possÃ­vel sincronizar (status', response.status, ')');
                 return null;
             }
         } catch (error) {
-            console.error('❌ Erro ao sincronizar com backend:', error);
+            console.error('âŒ Erro ao sincronizar com backend:', error);
             return null;
         }
     }
@@ -111,7 +111,7 @@ class VIPSystem {
     saveUserPlan(plan) {
         this.userPlan = plan;
         localStorage.setItem('sparkUserPlan', plan);
-        console.log('💾 Plano salvo localmente:', plan);
+        console.log('ðŸ’¾ Plano salvo localmente:', plan);
     }
 
     loadDailyLimits() {
@@ -159,7 +159,7 @@ class VIPSystem {
         const weekStart = this.getWeekStart();
 
         if (this.dailyLimits.lastReset !== today) {
-            console.log('🔄 Resetando limites diários');
+            console.log('ðŸ”„ Resetando limites diÃ¡rios');
             this.dailyLimits = {
                 likes: 0,
                 superLikes: 0,
@@ -169,7 +169,7 @@ class VIPSystem {
         }
 
         if (this.weeklyLimits.lastReset !== weekStart) {
-            console.log('🔄 Resetando limites semanais');
+            console.log('ðŸ”„ Resetando limites semanais');
             this.weeklyLimits = {
                 boosts: 0,
                 lastReset: weekStart
@@ -182,10 +182,10 @@ class VIPSystem {
         return this.userPlan === 'PREMIUM';
     }
 
-    // ✅ ATIVAR PREMIUM - AGORA SINCRONIZA COM BACKEND!
+    // âœ… ATIVAR PREMIUM - AGORA SINCRONIZA COM BACKEND!
     async activatePremium(secret = null) {
         try {
-            console.log('💎 Ativando Premium no backend...');
+            console.log('ðŸ’Ž Ativando Premium no backend...');
             
             const response = await fetch(`${API_BASE_URL}/users/${this.telegramId}/premium`, {
                 method: 'POST',
@@ -196,13 +196,13 @@ class VIPSystem {
                 body: JSON.stringify({
                     action: 'activate',
                     duration_days: 30,
-                    secret: secret || 'spark_admin_2024' // Em produção, remova isso!
+                    secret: secret || 'spark_admin_2024' // Em produÃ§Ã£o, remova isso!
                 })
             });
             
             if (response.ok) {
                 const data = await response.json();
-                console.log('✅ Premium ativado no backend:', data);
+                console.log('âœ… Premium ativado no backend:', data);
                 
                 // Atualiza local
                 this.saveUserPlan('PREMIUM');
@@ -211,26 +211,26 @@ class VIPSystem {
                 this.saveDailyLimits();
                 
                 this.updateUI();
-                this.showToast('🎉 Premium ativado com sucesso!', 'success');
+                this.showToast('ðŸŽ‰ Premium ativado com sucesso!', 'success');
                 
                 return true;
             } else {
                 const error = await response.json();
-                console.error('❌ Erro ao ativar premium:', error);
-                this.showToast('❌ Erro ao ativar Premium', 'error');
+                console.error('âŒ Erro ao ativar premium:', error);
+                this.showToast('âŒ Erro ao ativar Premium', 'error');
                 return false;
             }
         } catch (error) {
-            console.error('❌ Erro:', error);
-            this.showToast('❌ Erro de conexão', 'error');
+            console.error('âŒ Erro:', error);
+            this.showToast('âŒ Erro de conexÃ£o', 'error');
             return false;
         }
     }
 
-    // ✅ DESATIVAR PREMIUM - SINCRONIZA COM BACKEND
+    // âœ… DESATIVAR PREMIUM - SINCRONIZA COM BACKEND
     async deactivatePremium(secret = null) {
         try {
-            console.log('📉 Desativando Premium no backend...');
+            console.log('ðŸ“‰ Desativando Premium no backend...');
             
             const response = await fetch(`${API_BASE_URL}/users/${this.telegramId}/premium`, {
                 method: 'POST',
@@ -246,33 +246,33 @@ class VIPSystem {
             
             if (response.ok) {
                 const data = await response.json();
-                console.log('📉 Premium desativado:', data);
+                console.log('ðŸ“‰ Premium desativado:', data);
                 
                 this.saveUserPlan('FREE');
                 this.updateUI();
-                this.showToast('📉 Voltou para o plano FREE', 'info');
+                this.showToast('ðŸ“‰ Voltou para o plano FREE', 'info');
                 
                 return true;
             } else {
-                console.error('❌ Erro ao desativar premium');
+                console.error('âŒ Erro ao desativar premium');
                 return false;
             }
         } catch (error) {
-            console.error('❌ Erro:', error);
+            console.error('âŒ Erro:', error);
             return false;
         }
     }
 
-    // ✅ ATIVAR VIA DEBUG (mais fácil para testes)
+    // âœ… ATIVAR VIA DEBUG (mais fÃ¡cil para testes)
     async activatePremiumDebug() {
         try {
-            console.log('🧪 Ativando Premium via DEBUG...');
+            console.log('ðŸ§ª Ativando Premium via DEBUG...');
             
             const response = await fetch(`${API_BASE_URL}/debug/activate-premium/${this.telegramId}`);
             
             if (response.ok) {
                 const data = await response.json();
-                console.log('✅ Premium ativado (DEBUG):', data);
+                console.log('âœ… Premium ativado (DEBUG):', data);
                 
                 this.saveUserPlan('PREMIUM');
                 this.dailyLimits.likes = 0;
@@ -280,33 +280,33 @@ class VIPSystem {
                 this.saveDailyLimits();
                 
                 this.updateUI();
-                this.showToast('🎉 Premium ativado (DEBUG)!', 'success');
+                this.showToast('ðŸŽ‰ Premium ativado (DEBUG)!', 'success');
                 
                 return true;
             }
             return false;
         } catch (error) {
-            console.error('❌ Erro:', error);
+            console.error('âŒ Erro:', error);
             return false;
         }
     }
 
-    // ✅ DESATIVAR VIA DEBUG
+    // âœ… DESATIVAR VIA DEBUG
     async deactivatePremiumDebug() {
         try {
-            console.log('🧪 Desativando Premium via DEBUG...');
+            console.log('ðŸ§ª Desativando Premium via DEBUG...');
             
             const response = await fetch(`${API_BASE_URL}/debug/deactivate-premium/${this.telegramId}`);
             
             if (response.ok) {
                 this.saveUserPlan('FREE');
                 this.updateUI();
-                this.showToast('📉 Premium desativado (DEBUG)', 'info');
+                this.showToast('ðŸ“‰ Premium desativado (DEBUG)', 'info');
                 return true;
             }
             return false;
         } catch (error) {
-            console.error('❌ Erro:', error);
+            console.error('âŒ Erro:', error);
             return false;
         }
     }
@@ -331,22 +331,22 @@ class VIPSystem {
     }
 
     registerLike() {
-        console.log('🔍 Verificando permissão para like...');
+        console.log('ðŸ” Verificando permissÃ£o para like...');
         const check = this.canLike();
         
         if (!check.allowed) {
-            console.log('❌ Limite de likes atingido!');
+            console.log('âŒ Limite de likes atingido!');
             this.showUpgradeModal('likes');
             return false;
         }
 
-        // Só incrementa se não for premium (backend controla para premium)
+        // SÃ³ incrementa se nÃ£o for premium (backend controla para premium)
         if (!this.isPremium()) {
             this.dailyLimits.likes++;
             this.saveDailyLimits();
         }
 
-        console.log('✅ Like permitido! Restantes:', this.canLike().remaining);
+        console.log('âœ… Like permitido! Restantes:', this.canLike().remaining);
         this.updateUI();
         return true;
     }
@@ -372,17 +372,17 @@ class VIPSystem {
     }
 
     registerSuperLike() {
-        console.log('🔍 Verificando permissão para Super Like...');
+        console.log('ðŸ” Verificando permissÃ£o para Super Like...');
         const check = this.canSuperLike();
         
         if (check.isPremiumFeature) {
-            console.log('❌ Super Like é recurso Premium!');
+            console.log('âŒ Super Like Ã© recurso Premium!');
             this.showUpgradeModal('superLikes');
             return false;
         }
 
         if (!check.allowed) {
-            console.log('❌ Limite de Super Likes atingido!');
+            console.log('âŒ Limite de Super Likes atingido!');
             this.showLimitReachedModal('Super Likes', check.limit);
             return false;
         }
@@ -390,7 +390,7 @@ class VIPSystem {
         this.dailyLimits.superLikes++;
         this.saveDailyLimits();
 
-        console.log('✅ Super Like permitido! Restantes:', this.canSuperLike().remaining);
+        console.log('âœ… Super Like permitido! Restantes:', this.canSuperLike().remaining);
         this.updateUI();
         return true;
     }
@@ -416,17 +416,17 @@ class VIPSystem {
     }
 
     registerBoost() {
-        console.log('🔍 Verificando permissão para Boost...');
+        console.log('ðŸ” Verificando permissÃ£o para Boost...');
         const check = this.canBoost();
         
         if (check.isPremiumFeature) {
-            console.log('❌ Boost é recurso Premium!');
+            console.log('âŒ Boost Ã© recurso Premium!');
             this.showUpgradeModal('boost');
             return false;
         }
 
         if (!check.allowed) {
-            console.log('❌ Limite de Boosts atingido!');
+            console.log('âŒ Limite de Boosts atingido!');
             this.showLimitReachedModal('Boosts', check.limit, 'semanais');
             return false;
         }
@@ -434,7 +434,7 @@ class VIPSystem {
         this.weeklyLimits.boosts++;
         this.saveWeeklyLimits();
 
-        console.log('✅ Boost permitido!');
+        console.log('âœ… Boost permitido!');
         this.updateUI();
         
         this.activateBoost();
@@ -444,7 +444,7 @@ class VIPSystem {
     activateBoost() {
         const endTime = Date.now() + (60 * 60 * 1000);
         localStorage.setItem('sparkBoostActive', endTime);
-        this.showToast('⚡ Boost ativado por 1 hora!', 'success');
+        this.showToast('âš¡ Boost ativado por 1 hora!', 'success');
     }
 
     checkBoostStatus() {
@@ -463,23 +463,23 @@ class VIPSystem {
     showUpgradeModal(feature) {
         const messages = {
             likes: {
-                title: '❤️ Likes Esgotados!',
-                text: 'Você usou seus 10 likes diários gratuitos.',
+                title: 'â¤ï¸ Likes Esgotados!',
+                text: 'VocÃª usou seus 10 likes diÃ¡rios gratuitos.',
                 benefit: 'Premium tem likes ILIMITADOS!'
             },
             superLikes: {
-                title: '⭐ Super Like Premium',
-                text: 'Super Likes são exclusivos para membros Premium.',
+                title: 'â­ Super Like Premium',
+                text: 'Super Likes sÃ£o exclusivos para membros Premium.',
                 benefit: 'Ganhe 5 Super Likes por dia!'
             },
             boost: {
-                title: '⚡ Boost Premium',
-                text: 'Boost é exclusivo para membros Premium.',
-                benefit: 'Ganhe 1 Boost grátis por semana!'
+                title: 'âš¡ Boost Premium',
+                text: 'Boost Ã© exclusivo para membros Premium.',
+                benefit: 'Ganhe 1 Boost grÃ¡tis por semana!'
             },
             viewLikes: {
-                title: '👁️ Recurso Premium',
-                text: 'Ver quem te deu like é exclusivo para Premium.',
+                title: 'ðŸ‘ï¸ Recurso Premium',
+                text: 'Ver quem te deu like Ã© exclusivo para Premium.',
                 benefit: 'Veja todos que te curtiram!'
             }
         };
@@ -497,13 +497,13 @@ class VIPSystem {
                     <h2 class="text-2xl font-black text-gray-800 mb-2">${msg.title}</h2>
                     <p class="text-gray-600 mb-4">${msg.text}</p>
                     <div class="bg-gradient-to-r from-orange-50 to-pink-50 rounded-2xl p-4 mb-6">
-                        <p class="text-sm font-bold text-orange-600">✨ ${msg.benefit}</p>
+                        <p class="text-sm font-bold text-orange-600">âœ¨ ${msg.benefit}</p>
                     </div>
                     <button id="upgrade-now" class="w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold py-4 rounded-2xl shadow-lg mb-3">
-                        Assinar Premium - R$ 29,90/mês
+                        Assinar Premium - R$ 29,90/mÃªs
                     </button>
                     <button id="close-upgrade" class="w-full text-gray-500 font-medium py-2">
-                        Agora não
+                        Agora nÃ£o
                     </button>
                 </div>
             </div>
@@ -525,7 +525,7 @@ class VIPSystem {
         });
     }
 
-    showLimitReachedModal(type, limit, period = 'diários') {
+    showLimitReachedModal(type, limit, period = 'diÃ¡rios') {
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4';
         modal.innerHTML = `
@@ -535,8 +535,8 @@ class VIPSystem {
                         <i class="fa-solid fa-clock text-4xl text-orange-500"></i>
                     </div>
                     <h2 class="text-2xl font-black text-gray-800 mb-2">Limite Atingido</h2>
-                    <p class="text-gray-600 mb-4">Você já usou seus ${limit} ${type} ${period}.</p>
-                    <p class="text-sm text-gray-500 mb-6">Volte amanhã ou assine o Premium!</p>
+                    <p class="text-gray-600 mb-4">VocÃª jÃ¡ usou seus ${limit} ${type} ${period}.</p>
+                    <p class="text-sm text-gray-500 mb-6">Volte amanhÃ£ ou assine o Premium!</p>
                     <button id="close-limit" class="w-full bg-gray-200 text-gray-700 font-bold py-3 rounded-2xl">
                         Entendi
                     </button>
@@ -561,8 +561,8 @@ class VIPSystem {
         if (existingModal) {
             existingModal.classList.remove('hidden');
         } else {
-            // Cria um modal simples se não existir
-            this.showToast('💳 Integração de pagamento em breve!', 'info');
+            // Cria um modal simples se nÃ£o existir
+            this.showToast('ðŸ’³ IntegraÃ§Ã£o de pagamento em breve!', 'info');
         }
     }
 
@@ -574,7 +574,7 @@ class VIPSystem {
             if (this.isPremium()) {
                 likesCounter.innerHTML = `
                     <p class="text-[10px] uppercase font-bold opacity-90">Likes hoje</p>
-                    <p class="text-xl font-black">∞ Ilimitados</p>
+                    <p class="text-xl font-black">âˆž Ilimitados</p>
                 `;
             } else {
                 likesCounter.innerHTML = `
@@ -593,13 +593,13 @@ class VIPSystem {
                 : 'bg-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-bold';
         }
 
-        // Atualiza badge de verificado (só premium)
+        // Atualiza badge de verificado (sÃ³ premium)
         const verifiedBadge = document.getElementById('verified-badge');
         if (verifiedBadge) {
             verifiedBadge.style.display = this.isPremium() ? 'flex' : 'none';
         }
 
-        // Atualiza botão de Super Like
+        // Atualiza botÃ£o de Super Like
         const btnStar = document.getElementById('btn-star');
         if (btnStar) {
             if (this.isPremium()) {
@@ -607,9 +607,17 @@ class VIPSystem {
                 btnStar.title = `Super Likes: ${this.canSuperLike().remaining} restantes`;
             } else {
                 btnStar.classList.add('opacity-50');
-                btnStar.title = 'Super Like é Premium';
+                btnStar.title = 'Super Like Ã© Premium';
             }
         }
+        
+        // ✅ Dispara evento personalizado para outras partes da UI
+        window.dispatchEvent(new CustomEvent("vipStatusUpdated", {
+            detail: {
+                isPremium: this.isPremium(),
+                plan: this.userPlan
+            }
+        }));
     }
 
     showToast(message, type = 'info') {
@@ -645,23 +653,23 @@ class VIPSystem {
     }
 }
 
-// ✅ Inicializa o sistema VIP
+// âœ… Inicializa o sistema VIP
 if (!window.vipSystem) {
     window.vipSystem = new VIPSystem();
-    console.log('✅ vipSystem criado');
+    console.log('âœ… vipSystem criado');
 } else {
-    console.log('ℹ️ vipSystem já existe');
+    console.log('â„¹ï¸ vipSystem jÃ¡ existe');
 }
 
-// ✅ Funções globais de conveniência
+// âœ… FunÃ§Ãµes globais de conveniÃªncia
 window.activatePremium = () => window.vipSystem.activatePremiumDebug();
 window.deactivatePremium = () => window.vipSystem.deactivatePremiumDebug();
 window.getVIPStats = () => window.vipSystem.getStats();
 window.syncVIP = () => window.vipSystem.syncWithBackend();
 
-console.log('✅ vip.js carregado!');
+console.log('âœ… vip.js carregado!');
 console.log('');
-console.log('💡 COMANDOS DO CONSOLE:');
+console.log('ðŸ’¡ COMANDOS DO CONSOLE:');
 console.log('   activatePremium()   - Ativa Premium (sincroniza com banco)');
 console.log('   deactivatePremium() - Desativa Premium');
 console.log('   getVIPStats()       - Ver status completo');
