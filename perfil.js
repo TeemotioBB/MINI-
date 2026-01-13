@@ -270,14 +270,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ✅ REMOVE FOTO - Agora deleta do Cloudinary também
     async function removePhoto(index) {
-        if (index === 0 && userData.photos.length > 1) {
-            showToast('⚠️ A primeira foto é a principal. Mova as outras antes de remover.', 'warning');
-            return;
-        }
-        
-        if (userData.photos.length === 1) {
-            showToast('⚠️ Você precisa ter pelo menos 1 foto', 'warning');
-            return;
         }
         
         // ✅ Deleta do Cloudinary
@@ -889,6 +881,7 @@ async function savePhotosToServer() {
     `;
     document.head.appendChild(style);
 });
+
 
 
 
