@@ -14,15 +14,16 @@ cloudinary.config({
 console.log('✅ Cloudinary configurado com cloud_name:', 'dx5ki2s1d');
 
 // Configuração do Multer (aceita até 4 fotos)
+const storage = multer.memoryStorage();   // ← ADICIONE ESSA LINHA AQUI!
+
 const upload = multer({
     storage: storage,
     limits: {
-        // fileSize: 5 * 1024 * 1024,  // ← COMENTE ou REMOVA esta linha para aceitar arquivos de qualquer tamanho
-        files: 4 // Máximo 4 fotos (mantém o limite de quantidade)
+        // fileSize: 5 * 1024 * 1024,  // comentado = sem limite de tamanho por foto
+        files: 4 // Máximo 4 fotos
     },
     fileFilter: (req, file, cb) => {
         console.log('📁 Arquivo recebido:', file.originalname, 'Tipo:', file.mimetype);
-        // Aceita apenas imagens
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
         } else {
@@ -214,4 +215,5 @@ router.get('/test', (req, res) => {
 });
 
 module.exports = router;
+
 
