@@ -1,4 +1,4 @@
-// ========== SISTEMA DE LIKES - VERSÃO CORRIGIDA ==========
+// ========== SISTEMA DE LIKES - SEM VIP - TUDO LIBERADO ==========
 
 // API_BASE_URL já foi declarado em vip.js que carrega antes deste arquivo
 
@@ -19,17 +19,14 @@ const profileModal = document.getElementById('profile-modal');
 
 // ========== PEGAR TELEGRAM ID ==========
 function getMyTelegramId() {
-    // Primeiro tenta da variável global (definida no index.html)
     if (window.SPARK_TELEGRAM_ID) {
         return window.SPARK_TELEGRAM_ID;
     }
     
-    // Depois tenta do Telegram WebApp
     if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
         return window.Telegram.WebApp.initDataUnsafe.user.id;
     }
     
-    // Por último, do localStorage
     return localStorage.getItem('testTelegramId') || '123456789';
 }
 
@@ -51,43 +48,21 @@ async function loadReceivedLikes() {
             const data = await response.json();
             console.log('✅ Likes recebidos:', data);
             
-            receivedLikes = data.likes || [];
+            // Remove blur de TODOS os likes (não tem mais sistema VIP)
+            receivedLikes = (data.likes || []).map(like => ({
+                ...like,
+                is_blurred: false // Sempre visível!
+            }));
             
-            // Atualiza contador
             if (receivedCount) {
                 receivedCount.textContent = receivedLikes.length;
             }
             
-            // Atualiza badge
             updateBadge(receivedLikes.length);
             
             return receivedLikes;
         } else {
             console.error('❌ Erro ao buscar likes recebidos:', response.status);
-            
-            // Se for 403 (não autorizado), tenta a rota de contagem
-            if (response.status === 403) {
-                const countResponse = await fetch(`${API_BASE_URL}/likes/count?telegram_id=${telegramId}`);
-                if (countResponse.ok) {
-                    const countData = await countResponse.json();
-                    console.log('📊 Contagem de likes:', countData);
-                    
-                    // Cria likes "falsos" para mostrar a quantidade
-                    receivedLikes = Array(countData.count).fill().map((_, i) => ({
-                        id: i,
-                        name: '???',
-                        photo_url: 'https://via.placeholder.com/200x200?text=%3F',
-                        is_blurred: true
-                    }));
-                    
-                    if (receivedCount) {
-                        receivedCount.textContent = countData.count;
-                    }
-                    
-                    updateBadge(countData.count);
-                }
-            }
-            
             return [];
         }
     } catch (error) {
@@ -114,13 +89,11 @@ async function loadSentLikes() {
             const data = await response.json();
             console.log('✅ Likes enviados:', data);
             
-            // Sent likes should never be blurred (user can see who they liked)
             sentLikes = (data || []).map(like => ({
                 ...like,
                 is_blurred: false
             }));
             
-            // Atualiza contador
             if (sentCount) {
                 sentCount.textContent = sentLikes.length;
             }
@@ -164,9 +137,9 @@ function renderLikes() {
     
     if (likesGrid) {
         likesGrid.innerHTML = likes.map(like => {
-            const isBlurred = like.is_blurred === true;
+            // NUNCA tem blur - sistema VIP removido
             const photo = like.photo_url || like.photos?.[0] || 'https://via.placeholder.com/200x200?text=Foto';
-            const name = like.name || '???';
+            const name = like.name || 'Usuário';
             const age = like.age || '?';
             const isSuperLike = like.type === 'superlike';
             
@@ -174,25 +147,17 @@ function renderLikes() {
                 <div class="like-card relative rounded-2xl overflow-hidden shadow-lg cursor-pointer transform hover:scale-105 transition-all" 
                      data-id="${like.id}" 
                      data-telegram-id="${like.telegram_id || ''}"
-                     ${!isBlurred ? 'onclick="openProfileModal(this)"' : 'onclick="showPremiumModal()"'}>
+                     onclick="openProfileModal(this)">
                     
-                    <!-- Foto -->
+                    <!-- Foto - SEMPRE VISÍVEL -->
                     <div class="relative">
                         <img 
                             src="${photo}" 
-                            class="w-full h-40 object-cover ${isBlurred ? 'blur-lg' : ''}"
+                            class="w-full h-40 object-cover"
                             onerror="this.src='https://via.placeholder.com/200x200?text=Foto'"
                         >
                         
-                        ${isBlurred ? `
-                            <!-- Overlay para Premium -->
-                            <div class="absolute inset-0 bg-black/40 flex flex-col items-center justify-center">
-                                <i class="fa-solid fa-lock text-white text-2xl mb-2"></i>
-                                <span class="text-white text-xs font-bold">Premium</span>
-                            </div>
-                        ` : ''}
-                        
-                        ${isSuperLike && !isBlurred ? `
+                        ${isSuperLike ? `
                             <!-- Badge Super Like -->
                             <div class="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
                                 <i class="fa-solid fa-star text-[10px]"></i> Super
@@ -200,10 +165,10 @@ function renderLikes() {
                         ` : ''}
                     </div>
                     
-                    <!-- Info -->
+                    <!-- Info - SEMPRE VISÍVEL -->
                     <div class="p-2 bg-white">
-                        <h4 class="font-bold text-gray-800 text-sm truncate">${name}${!isBlurred && age !== '?' ? ', ' + age : ''}</h4>
-                        ${like.city && !isBlurred ? `<p class="text-gray-500 text-xs truncate">${like.city}</p>` : ''}
+                        <h4 class="font-bold text-gray-800 text-sm truncate">${name}${age !== '?' ? ', ' + age : ''}</h4>
+                        ${like.city ? `<p class="text-gray-500 text-xs truncate">${like.city}</p>` : ''}
                     </div>
                 </div>
             `;
@@ -217,9 +182,8 @@ function openProfileModal(element) {
     const id = parseInt(element.dataset.id);
     const like = likes.find(l => l.id === id);
     
-    if (!like || like.is_blurred) {
-        // Se for blurred, mostra modal de premium
-        showPremiumModal();
+    if (!like) {
+        console.error('Like não encontrado');
         return;
     }
     
@@ -231,7 +195,7 @@ function openProfileModal(element) {
     const modalBio = document.getElementById('modal-bio');
     
     if (modalPhoto) modalPhoto.src = like.photo_url || like.photos?.[0] || 'https://via.placeholder.com/400x300?text=Foto';
-    if (modalName) modalName.textContent = `${like.name}, ${like.age}`;
+    if (modalName) modalName.textContent = `${like.name}${like.age ? ', ' + like.age : ''}`;
     if (modalBio) modalBio.textContent = like.bio || 'Sem descrição';
     
     // Salva o ID do perfil atual
@@ -240,31 +204,6 @@ function openProfileModal(element) {
         profileModal.dataset.currentTelegramId = like.telegram_id;
         profileModal.classList.remove('hidden');
     }
-}
-
-// ========== MODAL DE PREMIUM ==========
-function showPremiumModal() {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4';
-    modal.innerHTML = `
-        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center">
-            <div class="w-20 h-20 bg-gradient-to-br from-orange-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fa-solid fa-crown text-4xl text-white"></i>
-            </div>
-            <h2 class="text-2xl font-black text-gray-800 mb-2">Quem te curtiu?</h2>
-            <p class="text-gray-600 mb-4">Desbloqueie o Premium para ver quem curtiu você!</p>
-            <div class="bg-gradient-to-r from-orange-50 to-pink-50 rounded-2xl p-4 mb-6">
-                <p class="text-sm font-bold text-orange-600">✨ Veja todos os seus admiradores!</p>
-            </div>
-            <button onclick="this.closest('.fixed').remove()" class="w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold py-4 rounded-2xl shadow-lg mb-3">
-                Assinar Premium - R$ 29,90/mês
-            </button>
-            <button onclick="this.closest('.fixed').remove()" class="w-full text-gray-500 font-medium py-2">
-                Agora não
-            </button>
-        </div>
-    `;
-    document.body.appendChild(modal);
 }
 
 // ========== DAR LIKE DE VOLTA ==========
@@ -292,12 +231,10 @@ async function likeBack(telegramId) {
             console.log('✅ Resposta:', data);
             
             if (data.match) {
-                // Match!
                 console.log('🎉 MATCH!');
                 showMatchToast();
             }
             
-            // Recarrega os likes
             await loadReceivedLikes();
             renderLikes();
             
@@ -337,21 +274,14 @@ async function dislikeFromReceivedLikes(telegramId, userId) {
         if (response.ok) {
             console.log('✅ Dislike registrado com sucesso');
             
-            // Remove o usuário da lista local de likes recebidos
             receivedLikes = receivedLikes.filter(like => like.id !== userId);
             
-            // Atualiza o contador
             if (receivedCount) {
                 receivedCount.textContent = receivedLikes.length;
             }
             
-            // Atualiza badge
             updateBadge(receivedLikes.length);
-            
-            // Re-renderiza a grid
             renderLikes();
-            
-            // Mostra feedback ao usuário
             showDislikeToast();
             
             return true;
@@ -450,13 +380,11 @@ if (modalDislike && profileModal) {
         const userId = parseInt(profileModal.dataset.currentId, 10);
         
         if (telegramId && currentTab === 'received') {
-            // Se estamos na aba de likes recebidos, dar dislike e remover da lista
             const success = await dislikeFromReceivedLikes(telegramId, userId);
             if (success) {
                 profileModal.classList.add('hidden');
             }
         } else {
-            // Se não, apenas fecha o modal
             profileModal.classList.add('hidden');
         }
     });
@@ -473,31 +401,26 @@ if (profileModal) {
 
 // ========== INICIALIZAÇÃO ==========
 async function init() {
-    console.log('🚀 Inicializando likes.js...');
+    console.log('🚀 Inicializando likes.js (sem sistema VIP)...');
     
     try {
-        // Carrega likes em paralelo
         await Promise.all([
             loadReceivedLikes(),
             loadSentLikes()
         ]);
         
-        // Renderiza a tab ativa
         renderLikes();
         
-        console.log('✅ likes.js inicializado!');
+        console.log('✅ likes.js inicializado! Todos os likes visíveis! 🎉');
     } catch (error) {
         console.error('❌ Erro ao inicializar likes.js:', error);
     }
 }
 
 // Inicia quando o DOM carregar
-console.log('📜 likes.js carregado, estado do documento:', document.readyState);
 if (document.readyState === 'loading') {
-    console.log('⏳ Aguardando DOMContentLoaded...');
     document.addEventListener('DOMContentLoaded', init);
 } else {
-    console.log('✅ DOM já carregado, iniciando imediatamente...');
     init();
 }
 
@@ -505,6 +428,5 @@ if (document.readyState === 'loading') {
 window.openProfileModal = openProfileModal;
 window.likeBack = likeBack;
 window.dislikeFromReceivedLikes = dislikeFromReceivedLikes;
-window.showPremiumModal = showPremiumModal;
 
-console.log('✅ likes.js carregado!');
+console.log('✅ likes.js carregado - Sistema VIP removido!');
