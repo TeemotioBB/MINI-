@@ -32,7 +32,13 @@
             <!-- Profile Card (visível quando tem perfis) -->
             <div id="profile-card-area">
                 <div class="relative">
-                    <img id="profile-image" src="" class="profile-img mb-4" alt="Perfil">
+                    <img 
+                        id="profile-image" 
+                        src="" 
+                        class="profile-img mb-4" 
+                        alt="Perfil"
+                        onerror="this.onerror=null; this.src='https://via.placeholder.com/500x600?text=Sem+Foto';"
+                    >
                     <div id="verified-badge" class="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1">
                         <i class="fa-solid fa-circle-check text-blue-500 text-xs"></i>
                         <span class="text-[10px] font-bold text-gray-700 uppercase">Verificado</span>
@@ -378,3 +384,4 @@ console.log('   setMyId("8542013089")');
 </script>
 </body>
 </html>
+
