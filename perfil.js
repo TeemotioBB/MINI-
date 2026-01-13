@@ -1,6 +1,6 @@
 // Aguarda o DOM carregar completamente
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ Iniciando perfil.js completo...');
+    console.log('âœ… Iniciando perfil.js completo...');
 
     // ========== ELEMENTOS DO HTML ==========
     const userName = document.getElementById('user-name');
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const verifiedBadge = document.getElementById('verified-badge');
     const userPhotosGrid = document.getElementById('user-photos-grid');
 
-    // Botões principais
+    // BotÃµes principais
     const btnManagePhotos = document.getElementById('btn-manage-photos');
     const btnEditProfile = document.getElementById('btn-edit-profile');
     const btnPrivacy = document.getElementById('btn-privacy');
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalPremium = document.getElementById('modal-premium');
     const modalHelp = document.getElementById('modal-help');
 
-    // Inputs do modal de edição
+    // Inputs do modal de ediÃ§Ã£o
     const inputName = document.getElementById('input-name');
     const inputAge = document.getElementById('input-age');
     const inputBio = document.getElementById('input-bio');
@@ -44,23 +44,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const photosManagerGrid = document.getElementById('photos-manager-grid');
     const btnSavePhotos = document.getElementById('btn-save-photos');
 
-    // Botões de fechar modais
+    // BotÃµes de fechar modais
     const btnCloseEdit = document.getElementById('btn-close-edit');
     const btnSave = document.getElementById('btn-save');
     const btnSubscribe = document.getElementById('btn-subscribe');
     const btnBoostOnly = document.getElementById('btn-boost-only');
 
-    // ========== CONFIGURAÇÃO DA API ==========
+    // ========== CONFIGURAÃ‡ÃƒO DA API ==========
     const API_URL = 'https://mini-production-cf60.up.railway.app/api';
 
-    // ========== DADOS DO USUÁRIO ==========
+    // ========== DADOS DO USUÃRIO ==========
     let userData = {
         telegram_id: null,
         name: "",
         age: null,
         gender: "feminino",
-        photos: [], // ✅ Agora serão URLs do Cloudinary
-        photoPublicIds: [], // ✅ IDs públicos para deletar depois
+        photos: [], // âœ… Agora serÃ£o URLs do Cloudinary
+        photoPublicIds: [], // âœ… IDs pÃºblicos para deletar depois
         bio: "",
         instagram: "",
         city: "",
@@ -100,9 +100,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return '';
     }
 
-    // ========== FUNÇÕES PRINCIPAIS ==========
+    // ========== FUNÃ‡Ã•ES PRINCIPAIS ==========
 
-    // Verifica se o perfil está completo
+    // Verifica se o perfil estÃ¡ completo
     function isProfileComplete() {
         return userData.name && 
                userData.age && 
@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
                userData.photos.length > 0;
     }
 
-    // Renderiza fotos do usuário no grid principal
+    // Renderiza fotos do usuÃ¡rio no grid principal
     function renderUserPhotos() {
         if (!userPhotosGrid) return;
         
@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ✅ FUNÇÃO CORRIGIDA - FAZ UPLOAD REAL PARA CLOUDINARY
+    // âœ… FUNÃ‡ÃƒO CORRIGIDA - FAZ UPLOAD REAL PARA CLOUDINARY
     async function selectPhoto(index) {
         const input = document.createElement('input');
         input.type = 'file';
@@ -212,41 +212,42 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!file) return;
             
             if (!file.type.startsWith('image/')) {
-                showToast('❌ Por favor, selecione uma imagem', 'error');
+                showToast('âŒ Por favor, selecione uma imagem', 'error');
                 return;
             }
             
             if (file.size > 20 * 1024 * 1024) {
-                showToast('❌ Imagem muito grande! Máx 20MB', 'error');
+                showToast('âŒ Imagem muito grande! Máx 20MB', 'error');
+                return;
             }
             
-            // ✅ MOSTRA LOADING
-            showToast('📤 Fazendo upload...', 'info');
+            // âœ… MOSTRA LOADING
+            showToast('ðŸ“¤ Fazendo upload...', 'info');
             
             try {
-                // ✅ FAZ UPLOAD PARA CLOUDINARY
+                // âœ… FAZ UPLOAD PARA CLOUDINARY
                 const telegramId = getTelegramId();
                 const result = await uploadPhotoToCloudinary(file, telegramId);
                 
-                console.log('✅ Upload concluído:', result);
+                console.log('âœ… Upload concluÃ­do:', result);
                 
-                // ✅ SALVA URL DO CLOUDINARY (não base64!)
+                // âœ… SALVA URL DO CLOUDINARY (nÃ£o base64!)
                 userData.photos[index] = result.url;
                 userData.photoPublicIds[index] = result.public_id;
                 
                 renderPhotosManager();
-                showToast('✅ Foto enviada com sucesso!', 'success');
+                showToast('âœ… Foto enviada com sucesso!', 'success');
                 
             } catch (error) {
-                console.error('❌ Erro no upload:', error);
-                showToast('❌ Erro ao enviar foto: ' + error.message, 'error');
+                console.error('âŒ Erro no upload:', error);
+                showToast('âŒ Erro ao enviar foto: ' + error.message, 'error');
             }
         });
         
         input.click();
     }
 
-    // ✅ FUNÇÃO NOVA - FAZ UPLOAD PARA CLOUDINARY
+    // âœ… FUNÃ‡ÃƒO NOVA - FAZ UPLOAD PARA CLOUDINARY
     async function uploadPhotoToCloudinary(file, telegramId) {
         const formData = new FormData();
         formData.append('photo', file);
@@ -270,7 +271,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ✅ REMOVE FOTO - Agora deleta do Cloudinary também
     async function removePhoto(index) {
-        }
         
         // ✅ Deleta do Cloudinary
         if (userData.photoPublicIds[index]) {
@@ -284,11 +284,28 @@ document.addEventListener('DOMContentLoaded', function() {
         
         userData.photos.splice(index, 1);
         userData.photoPublicIds.splice(index, 1);
+        
+        // ✅ Atualiza a foto de perfil
+        const userPhotoElement = document.getElementById('user-photo');
+        if (userPhotoElement) {
+            if (userData.photos.length > 0) {
+                userPhotoElement.src = userData.photos[0];
+            } else {
+                userPhotoElement.src = "https://via.placeholder.com/300x300/e5e7eb/9ca3af?text=Sem+Foto";
+            }
+        }
+        
+        // ✅ Salva no localStorage
+        localStorage.setItem('userData', JSON.stringify(userData));
+        
+        // ✅ Salva no servidor
+        await saveToServer();
+        
         renderPhotosManager();
         showToast('🗑️ Foto removida');
     }
 
-    // ✅ FUNÇÃO NOVA - DELETA DO CLOUDINARY
+    // âœ… FUNÃ‡ÃƒO NOVA - DELETA DO CLOUDINARY
     async function deletePhotoFromCloudinary(publicId) {
         const telegramId = getTelegramId();
         
@@ -315,40 +332,40 @@ document.addEventListener('DOMContentLoaded', function() {
     // Salva fotos
     async function savePhotos() {
     if (userData.photos.length === 0) {
-        showToast('❌ Adicione pelo menos 1 foto', 'error');
+        showToast('âŒ Adicione pelo menos 1 foto', 'error');
         return;
     }
     
     // Salva localmente primeiro
     localStorage.setItem('userData', JSON.stringify(userData));
     
-    showToast('📤 Salvando fotos...', 'info');
+    showToast('ðŸ“¤ Salvando fotos...', 'info');
     
     try {
-        // ✅ USA A NOVA ROTA ESPECÍFICA PARA FOTOS
+        // âœ… USA A NOVA ROTA ESPECÃFICA PARA FOTOS
         await savePhotosToServer();
         
         renderUserPhotos();
         loadUserProfile();
         closeModal(modalPhotos);
-        showToast('✅ Fotos salvas com sucesso!', 'success');
-        console.log('📸 Fotos salvas:', userData.photos);
+        showToast('âœ… Fotos salvas com sucesso!', 'success');
+        console.log('ðŸ“¸ Fotos salvas:', userData.photos);
         
     } catch (error) {
-        console.error('❌ Erro ao salvar fotos:', error);
+        console.error('âŒ Erro ao salvar fotos:', error);
         
-        // Se o usuário não existe no servidor, precisa preencher o perfil primeiro
-        if (error.message.includes('não encontrado') || error.message.includes('Preencha')) {
-            showToast('⚠️ Preencha seu nome e idade primeiro!', 'warning');
+        // Se o usuÃ¡rio nÃ£o existe no servidor, precisa preencher o perfil primeiro
+        if (error.message.includes('nÃ£o encontrado') || error.message.includes('Preencha')) {
+            showToast('âš ï¸ Preencha seu nome e idade primeiro!', 'warning');
             closeModal(modalPhotos);
             openEditModal(); // Abre o modal de editar perfil
         } else {
-            showToast('❌ Erro ao salvar: ' + error.message, 'error');
+            showToast('âŒ Erro ao salvar: ' + error.message, 'error');
         }
     }
 }
 
-    // Carrega dados do usuário
+    // Carrega dados do usuÃ¡rio
     function loadUserProfile() {
         if (userName) userName.textContent = userData.name || "Seu Nome";
         if (userAge) userAge.textContent = userData.age ? `, ${userData.age}` : "";
@@ -369,14 +386,14 @@ document.addEventListener('DOMContentLoaded', function() {
         renderUserPhotos();
     }
 
-    // Abre modal genérico
+    // Abre modal genÃ©rico
     function openModal(modal) {
         if (!modal) return;
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     }
 
-    // Fecha modal genérico
+    // Fecha modal genÃ©rico
     function closeModal(modal) {
         if (!modal) return;
         modal.classList.add('hidden');
@@ -390,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Mostra toast (notificação temporária)
+    // Mostra toast (notificaÃ§Ã£o temporÃ¡ria)
     function showToast(message, type = 'success') {
         const colors = {
             success: 'bg-green-500',
@@ -417,13 +434,13 @@ document.addEventListener('DOMContentLoaded', function() {
         bioCount.textContent = inputBio.value.length;
     }
 
-    // ✅ NOVA FUNÇÃO - Salva APENAS as fotos (usa rota PATCH)
+    // âœ… NOVA FUNÃ‡ÃƒO - Salva APENAS as fotos (usa rota PATCH)
 async function savePhotosToServer() {
     try {
         const telegramId = getTelegramId();
         
-        console.log('📸 Enviando fotos para o servidor...');
-        console.log('📷 Fotos:', userData.photos);
+        console.log('ðŸ“¸ Enviando fotos para o servidor...');
+        console.log('ðŸ“· Fotos:', userData.photos);
         
         const response = await fetch(`${API_URL}/users/${telegramId}/photos`, {
             method: 'PATCH',
@@ -440,14 +457,14 @@ async function savePhotosToServer() {
         const data = await response.json();
         
         if (response.ok) {
-            console.log('✅ Fotos salvas no servidor:', data);
+            console.log('âœ… Fotos salvas no servidor:', data);
             return data;
         } else {
-            console.error('❌ Erro do servidor:', data);
+            console.error('âŒ Erro do servidor:', data);
             throw new Error(data.error || 'Erro ao salvar fotos');
         }
     } catch (error) {
-        console.error('❌ Erro ao enviar fotos:', error);
+        console.error('âŒ Erro ao enviar fotos:', error);
         throw error;
     }
 }
@@ -457,8 +474,8 @@ async function savePhotosToServer() {
         try {
             const telegramId = getTelegramId();
             
-            console.log('📤 Enviando perfil para o servidor...');
-            console.log('📱 Telegram ID:', telegramId);
+            console.log('ðŸ“¤ Enviando perfil para o servidor...');
+            console.log('ðŸ“± Telegram ID:', telegramId);
             
             const response = await fetch(`${API_URL}/users`, {
                 method: 'POST',
@@ -473,8 +490,8 @@ async function savePhotosToServer() {
                     gender: userData.gender || 'feminino',
                     bio: userData.bio || '',
                     city: userData.city || '',
-                    photo_url: userData.photos[0] || null, // ✅ URL do Cloudinary
-                    photos: userData.photos, // ✅ Array de URLs do Cloudinary
+                    photo_url: userData.photos[0] || null, // âœ… URL do Cloudinary
+                    photos: userData.photos, // âœ… Array de URLs do Cloudinary
                     pref_gender: userData.pref_gender || 'masculino',
                     pref_age_min: userData.pref_age_min || 18,
                     pref_age_max: userData.pref_age_max || 99
@@ -483,16 +500,16 @@ async function savePhotosToServer() {
             
             if (response.ok) {
                 const data = await response.json();
-                console.log('✅ Perfil salvo no servidor:', data);
+                console.log('âœ… Perfil salvo no servidor:', data);
                 return data;
             } else {
                 const error = await response.json();
-                console.error('❌ Erro do servidor:', error);
+                console.error('âŒ Erro do servidor:', error);
                 throw new Error(error.error || 'Erro ao salvar');
             }
         } catch (error) {
-            console.error('❌ Erro ao enviar para servidor:', error);
-            showToast('⚠️ Salvo localmente. Sem conexão com servidor.', 'warning');
+            console.error('âŒ Erro ao enviar para servidor:', error);
+            showToast('âš ï¸ Salvo localmente. Sem conexÃ£o com servidor.', 'warning');
             return null;
         }
     }
@@ -502,7 +519,7 @@ async function savePhotosToServer() {
         try {
             const telegramId = getTelegramId();
             
-            console.log('📥 Buscando perfil do servidor...');
+            console.log('ðŸ“¥ Buscando perfil do servidor...');
             
             const response = await fetch(`${API_URL}/users/${telegramId}`, {
                 method: 'GET',
@@ -514,7 +531,7 @@ async function savePhotosToServer() {
             
             if (response.ok) {
                 const data = await response.json();
-                console.log('✅ Perfil carregado do servidor:', data);
+                console.log('âœ… Perfil carregado do servidor:', data);
                 
                 // Atualiza userData com dados do servidor
                 userData.telegram_id = data.telegram_id;
@@ -529,18 +546,18 @@ async function savePhotosToServer() {
                 userData.pref_age_max = data.pref_age_max || userData.pref_age_max;
                 userData.verified = data.is_premium || false;
                 
-                // Salva localmente também
+                // Salva localmente tambÃ©m
                 localStorage.setItem('userData', JSON.stringify(userData));
                 
                 return data;
             } else if (response.status === 404) {
-                console.log('📭 Usuário não encontrado no servidor (novo usuário)');
+                console.log('ðŸ“­ UsuÃ¡rio nÃ£o encontrado no servidor (novo usuÃ¡rio)');
                 return null;
             } else {
                 throw new Error('Erro ao buscar perfil');
             }
         } catch (error) {
-            console.error('❌ Erro ao carregar do servidor:', error);
+            console.error('âŒ Erro ao carregar do servidor:', error);
             return null;
         }
     }
@@ -561,12 +578,12 @@ async function savePhotosToServer() {
 
     async function saveProfile() {
         if (!inputName || !inputName.value.trim()) {
-            showToast('❌ Nome não pode estar vazio', 'error');
+            showToast('âŒ Nome nÃ£o pode estar vazio', 'error');
             return;
         }
         
         if (!inputAge || inputAge.value < 18 || inputAge.value > 99) {
-            showToast('❌ Idade deve estar entre 18 e 99', 'error');
+            showToast('âŒ Idade deve estar entre 18 e 99', 'error');
             return;
         }
         
@@ -581,20 +598,20 @@ async function savePhotosToServer() {
         // Salva localmente
         localStorage.setItem('userData', JSON.stringify(userData));
         
-        // ✅ ENVIA PARA O SERVIDOR!
-        showToast('📤 Salvando...', 'info');
+        // âœ… ENVIA PARA O SERVIDOR!
+        showToast('ðŸ“¤ Salvando...', 'info');
         const result = await saveToServer();
         
         loadUserProfile();
         closeModal(modalEdit);
         
         if (result) {
-            showToast('✅ Perfil salvo no servidor!', 'success');
+            showToast('âœ… Perfil salvo no servidor!', 'success');
         } else {
-            showToast('✅ Perfil salvo localmente!', 'success');
+            showToast('âœ… Perfil salvo localmente!', 'success');
         }
         
-        console.log('📝 Dados salvos:', userData);
+        console.log('ðŸ“ Dados salvos:', userData);
     }
 
     // ========== TROCAR FOTO ==========
@@ -604,7 +621,7 @@ async function savePhotosToServer() {
     
     function openPhotoManager(e) {
         if (e) e.preventDefault();
-        console.log('📸 Abrindo gerenciador de fotos!');
+        console.log('ðŸ“¸ Abrindo gerenciador de fotos!');
         renderPhotosManager();
         openModal(modalPhotos);
     }
@@ -646,11 +663,11 @@ async function savePhotosToServer() {
         };
         
         localStorage.setItem('userData', JSON.stringify(userData));
-        console.log('🔒 Privacidade salva:', userData.privacy);
-        showToast('🔒 Configurações de privacidade salvas!');
+        console.log('ðŸ”’ Privacidade salva:', userData.privacy);
+        showToast('ðŸ”’ ConfiguraÃ§Ãµes de privacidade salvas!');
     }
 
-    // ========== NOTIFICAÇÕES ==========
+    // ========== NOTIFICAÃ‡Ã•ES ==========
 
     function loadNotificationSettings() {
         const notifLikes = document.getElementById('notif-likes');
@@ -682,8 +699,8 @@ async function savePhotosToServer() {
         };
         
         localStorage.setItem('userData', JSON.stringify(userData));
-        console.log('🔔 Notificações salvas:', userData.notifications);
-        showToast('🔔 Preferências de notificação salvas!');
+        console.log('ðŸ”” NotificaÃ§Ãµes salvas:', userData.notifications);
+        showToast('ðŸ”” PreferÃªncias de notificaÃ§Ã£o salvas!');
     }
 
     // ========== EVENT LISTENERS ==========
@@ -731,13 +748,13 @@ async function savePhotosToServer() {
 
     if (btnSubscribe) {
         btnSubscribe.addEventListener('click', () => {
-            if (confirm('💎 Confirmar assinatura Spark Premium por R$ 29,90/mês?')) {
-                showToast('🎉 Processando pagamento...', 'info');
+            if (confirm('ðŸ’Ž Confirmar assinatura Spark Premium por R$ 29,90/mÃªs?')) {
+                showToast('ðŸŽ‰ Processando pagamento...', 'info');
                 setTimeout(() => {
                     userData.plan = 'Spark Premium';
                     loadUserProfile();
                     closeModal(modalPremium);
-                    showToast('👑 Bem-vindo ao Spark Premium!', 'success');
+                    showToast('ðŸ‘‘ Bem-vindo ao Spark Premium!', 'success');
                 }, 2000);
             }
         });
@@ -745,8 +762,8 @@ async function savePhotosToServer() {
 
     if (btnBoostOnly) {
         btnBoostOnly.addEventListener('click', () => {
-            if (confirm('⚡ Comprar 1 Boost de 1 hora por R$ 4,90?')) {
-                showToast('⚡ Boost ativado por 1 hora!', 'success');
+            if (confirm('âš¡ Comprar 1 Boost de 1 hora por R$ 4,90?')) {
+                showToast('âš¡ Boost ativado por 1 hora!', 'success');
                 closeModal(modalPremium);
             }
         });
@@ -756,8 +773,8 @@ async function savePhotosToServer() {
 
     if (btnLogout) {
         btnLogout.addEventListener('click', () => {
-            if (confirm('🚪 Tem certeza que deseja sair da conta?')) {
-                showToast('👋 Saindo...', 'info');
+            if (confirm('ðŸšª Tem certeza que deseja sair da conta?')) {
+                showToast('ðŸ‘‹ Saindo...', 'info');
                 setTimeout(() => {
                     window.location.href = 'index.html';
                 }, 1000);
@@ -781,7 +798,7 @@ async function savePhotosToServer() {
         }
     });
 
-    // ========== INICIALIZAÇÃO ==========
+    // ========== INICIALIZAÃ‡ÃƒO ==========
     
     // Primeiro carrega dados locais
     const savedData = localStorage.getItem('userData');
@@ -789,23 +806,23 @@ async function savePhotosToServer() {
         try {
             const parsedData = JSON.parse(savedData);
             userData = { ...userData, ...parsedData };
-            console.log('✅ Dados carregados do localStorage:', userData);
+            console.log('âœ… Dados carregados do localStorage:', userData);
         } catch (e) {
-            console.error('❌ Erro ao carregar dados:', e);
+            console.error('âŒ Erro ao carregar dados:', e);
         }
     }
     
-    // Pega dados do Telegram se disponível
+    // Pega dados do Telegram se disponÃ­vel
     if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user) {
         const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
         userData.telegram_id = tgUser.id;
         
-        // Se não tem nome, usa do Telegram
+        // Se nÃ£o tem nome, usa do Telegram
         if (!userData.name) {
             userData.name = tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '');
         }
         
-        console.log('📱 Dados do Telegram:', tgUser);
+        console.log('ðŸ“± Dados do Telegram:', tgUser);
     }
     
     // Depois tenta carregar do servidor (atualiza se tiver dados mais recentes)
@@ -814,9 +831,9 @@ async function savePhotosToServer() {
     });
     
     loadUserProfile();
-    console.log('🎉 perfil.js carregado com sucesso!');
+    console.log('ðŸŽ‰ perfil.js carregado com sucesso!');
 
-    // ========== CSS PARA TOGGLES E ANIMAÇÕES ==========
+    // ========== CSS PARA TOGGLES E ANIMAÃ‡Ã•ES ==========
     const style = document.createElement('style');
     style.textContent = `
         @keyframes slide-up {
@@ -881,7 +898,3 @@ async function savePhotosToServer() {
     `;
     document.head.appendChild(style);
 });
-
-
-
-
