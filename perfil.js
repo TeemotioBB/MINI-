@@ -368,10 +368,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const userPhotoElement = document.getElementById('user-photo');
         if (userPhotoElement) {
-            if (userData.photos.length > 0) {
+            if (userData.photos.length > 0 && userData.photos[0] && userData.photos[0].trim() !== '') {
                 userPhotoElement.src = userData.photos[0];
             } else {
-                userPhotoElement.src = "https://via.placeholder.com/300x300/e5e7eb/9ca3af?text=Sem+Foto";
+                userPhotoElement.src = "https://via.placeholder.com/300x300/f3f4f6/9ca3af?text=Sem+Foto";
             }
         }
         

@@ -137,7 +137,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         profileName.textContent = `${profile.name}, ${profile.age}`;
         profileBio.innerHTML = profile.bio || '';
-        profileImage.src = profile.photo;
+        
+        // Ensure photo is valid before setting
+        if (profile.photo && typeof profile.photo === 'string' && profile.photo.trim() !== '') {
+            profileImage.src = profile.photo;
+        } else {
+            profileImage.src = 'https://via.placeholder.com/500x600/f3f4f6/9ca3af?text=Sem+Foto';
+        }
         
         // Mostra/esconde badge de verificado
         if (verifiedBadge) {
