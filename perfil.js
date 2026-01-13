@@ -216,9 +216,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            if (file.size > 5 * 1024 * 1024) {
-                showToast('❌ Imagem muito grande! Máx 5MB', 'error');
-                return;
+            if (file.size > 20 * 1024 * 1024) {
+                showToast('❌ Imagem muito grande! Máx 20MB', 'error');
             }
             
             // ✅ MOSTRA LOADING
@@ -890,5 +889,6 @@ async function savePhotosToServer() {
     `;
     document.head.appendChild(style);
 });
+
 
 
