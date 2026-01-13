@@ -7,7 +7,7 @@ body {
   font-family: 'Inter', sans-serif;
   margin: 0;
   padding: 0;
-  /* 🔥 REMOVIDO overflow: hidden para permitir scroll! */
+  /* ðŸ”¥ REMOVIDO overflow: hidden para permitir scroll! */
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -54,7 +54,7 @@ body {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* ========== SETAS DE NAVEGAÇÃO ========== */
+/* ========== SETAS DE NAVEGAÃ‡ÃƒO ========== */
 #arrow-left,
 #arrow-right {
   transition: all 0.2s ease;
@@ -71,7 +71,7 @@ body {
   transform: translateY(-50%) scale(0.95);
 }
 
-/* ========== ANIMAÇÕES DE SWIPE SUAVES ========== */
+/* ========== ANIMAÃ‡Ã•ES DE SWIPE SUAVES ========== */
 
 /* Swipe pra DIREITA (LIKE) */
 @keyframes swipeRight {
@@ -109,7 +109,7 @@ body {
   }
 }
 
-/* Classes que ativam as animações */
+/* Classes que ativam as animaÃ§Ãµes */
 .swipe-right {
   animation: swipeRight 0.5s ease-out forwards !important;
 }
@@ -122,7 +122,7 @@ body {
   animation: swipeUp 0.6s ease-out forwards !important;
 }
 
-/* ========== CORAÇÃO SUAVE E ELEGANTE ========== */
+/* ========== CORAÃ‡ÃƒO SUAVE E ELEGANTE ========== */
 @keyframes heartSmooth {
   0% { 
       transform: translate(-50%, -50%) scale(0.5); 
@@ -178,7 +178,7 @@ body {
   text-shadow: 0 0 30px rgba(239, 68, 68, 0.6) !important;
 }
 
-/* ========== ESTRELA SUAVE COM ROTAÇÃO LEVE ========== */
+/* ========== ESTRELA SUAVE COM ROTAÃ‡ÃƒO LEVE ========== */
 @keyframes starSmooth {
   0% { 
       transform: translate(-50%, -50%) scale(0.5) rotate(0deg); 
@@ -244,7 +244,7 @@ body {
   animation: fadeInSmooth 0.3s ease-out !important;
 }
 
-/* ========== ANIMAÇÕES DE MATCH - MOBILE RESPONSIVE ========== */
+/* ========== ANIMAÃ‡Ã•ES DE MATCH - MOBILE RESPONSIVE ========== */
 
 .match-overlay {
   position: fixed !important;
@@ -601,4 +601,27 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.3);
+}
+
+/* ========== ANIMAÇÕES DO TOAST ========== */
+@keyframes slideDown {
+    from {
+        transform: translate(-50%, -100%);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+    to {
+        transform: translate(-50%, -100%);
+        opacity: 0;
+    }
 }
